@@ -23,17 +23,6 @@ DHT dht[] = {
 LiquidCrystal_I2C lcd(0x27, 16, 2); // set the LCD address to 0x27 for a 16 chars and 2 line display  
 //SDA = A4 pin
 //SCL = A5 pin
-//byte customChar[8] = {
-//  0b00110,
-//  0b01001,
-//  0b01001,
-//  0b00110,
-//  0b00000,
-//  0b00000,
-//  0b00000,
-//  0b00000
-//};
-
 
 const uint8_t AIR_SENSOR_COUNT = 2;
 const uint8_t FLOOR_SENSOR_COUNT = 2;
@@ -362,7 +351,7 @@ void updateTEMP()
             //check tank levels
             uint16_t tankReading = analogRead(WATER_LEVEL_PIN);
             Serial.print(F("Level: "));
-            if (tankReading > 999)
+            if (tankReading > 900)
             { //~1023
                 Serial.print(F("< 25%"));
             }
@@ -406,15 +395,15 @@ void updateTEMP()
 
         uint16_t tankReading = analogRead(WATER_LEVEL_PIN);
         String waterDisplay = "";
-        if (tankReading > 999)
+        if (tankReading > 896)
         { //~1023
             waterDisplay = "<25%";
         }
-        else if (tankReading > 685)
+        else if (tankReading > 657)
         { //~750
             waterDisplay = "<50%";
         }
-        else if (tankReading > 32)
+        else if (tankReading > 267)
         { //~330
             waterDisplay = "<75%";
         }
@@ -422,7 +411,7 @@ void updateTEMP()
         { //~0
             waterDisplay = ">75%";
         }
-        lcd.clear();
+        
         lcd.setCursor(0,0);
         //lcd.print("Temp: ");
         lcd.print(airSensor[0].currentEMA[0],1);
@@ -712,22 +701,20 @@ void setup()
 void loop()
 { //************************************************************************************************* LOOP
     currentTime = millis();
-    if (currentTime >= (lastPumpUpdate + pumpUpdateInterval))
-    { //pump update timer
+    if (currentTime >= (lastPumpUpdate + pumpUpdateInterval)) { //pump update timer
         checkPumpCycleState();
         lastPumpUpdate += pumpUpdateInterval;
     }
-    if (checkPump != 0 && currentTime >= checkPump)
-    { //special case pump check i.e. initialization, after thermostat changes
+
+    if (checkPump != 0 && currentTime >= checkPump) { //special case pump check i.e. initialization, after thermostat changes
         checkPumpCycleState();
         checkPump = 0;
         //switch display back to temperature?
     }
 
-    if (currentTime >= (lastTemperatureRead + TEMPERATURE_READ_INTERVAL))
-    { //Read temperature
-        if (waterCounter != 0)
-        {
+    if (currentTime >= (lastTemperatureRead + TEMPERATURE_READ_INTERVAL)) { //Read temperature
+
+        if (waterCounter != 0) {                                                    //not working
             float thisDuration = (currentTime - lastTemperatureRead) / 1000;
             //this cycle's duration in seconds
             // Pulse frequency (Hz) = 7.5Q, Q is flow rate in L/min.    (Pulse frequency x 60 min) / 7.5Q = flowrate in L/hour
@@ -769,8 +756,8 @@ void loop()
             lcd.print(airSensor[0].currentEMA[0],1);
             lcd.print((char)223);
             lcd.print("F");
-            lcd.setCursor(1,1);
-            lcd.print("Set: ");
+            lcd.setCursor(0,1); //x, y
+            lcd.print(" Set: ");
             lcd.print(temperatureSetPoint,1);
             lcd.print((char)223);
             lcd.print("F");

@@ -47,8 +47,8 @@ uint32_t currentTime = 0;
 int8_t lastButtonStatus = 0; //thermostat buttons
 uint8_t lastButtonRead = 0;
 
-const uint8_t BUTTON_CHECK_INTERVAL = 850; //adj thermostat every ()ms while one of the buttons is held
-const uint32_t TEMPERATURE_READ_INTERVAL = 2500;
+const uint16_t BUTTON_CHECK_INTERVAL = 350; //adj thermostat every ()ms while one of the buttons is held
+const uint16_t TEMPERATURE_READ_INTERVAL = 2500;
 uint32_t pumpUpdateInterval = 60000;
 uint32_t checkPump = 3000; //checks the pump state 2 seconds after start
 
@@ -80,12 +80,12 @@ const uint8_t PWM[5] =
 uint8_t currentPumpState = 0;
 uint8_t nextPumpState = 0;
 
-float temperatureSetPoint = 69; /*in F*/
+float tempSetPoint = 69; /*in F*/
 float weightedTemp;
 float avgTrend;
-const int UPTREND = 1;                     // every 10 seconds trend is updated. if going towards the target temp, increase trend by this amount.
-const int DOWNTREND = 10;                   // after overshooting and going back to baseline, reduce trend by this amount so it quickly resets.
-const int AIR_TEMP_TREND_MINMAX = 360;     // 60min to reach max
+const uint8_t UPTREND = 1;                     // every 10 seconds trend is updated. if going towards the target temp, increase trend by this amount.
+const uint8_t DOWNTREND = 10;                   // after overshooting and going back to baseline, reduce trend by this amount so it quickly resets.
+const uint16_t AIR_TEMP_TREND_MINMAX = 360;     // 60min to reach max
 const float AIR_TEMP_TREND_FACTOR = 0.003; // MINMAX * FACTOR = temperature trigger adjustment
 const float EMA_MULT[3] = {
     //  2 / (1 + n)   =>  where (n * TEMPERATURE_READ_INTERVAL) = milliseconds defining EMA calculation
@@ -98,14 +98,16 @@ const float FLOOR_WARMUP_TEMPERATURE = 475; //0-1023, NOTE: insulation (cardboar
 const float FLOOR_EMA_MULT = 2. / (1 + 10); //10 readings EMA (20s)
 float floorEmaAvg;
 
-int tempDispCounter = 5;
-int tempDispCounter2 = 0;
-uint8_t errorCounter1 = 5;
-uint8_t errorCounter2 = 5;
+uint8_t tempDispCounter = 5;
+uint8_t tempDispCounter2 = 0;
 
 float l_minute = 0;
 float totalVolume = 0;
 volatile uint32_t waterCounter = 0;
+
+uint8_t lcdPage = 0;
+uint8_t MAX_LCD_PAGES = 4;
+uint8_t tStatDispCtr = 0;
 
 struct airSensor_t
 {
@@ -144,15 +146,23 @@ struct floorSensor_t
 uint8_t changePerHourMinuteCounter = 0;
 float last59MedEMAs[59];
 
+uint32_t cycleCounter = 0;
+
 //*********************************************************************************************************************** FUNCTIONS
-float ReadFloorTemperature(int pin, int a, int val = 0, int z = 0) {
-    for (z = 0; z < a; z++) {
+
+float ReadFloorTemperature(uint8_t pin, uint8_t a, uint16_t val = 0) {
+    for (uint8_t z = 0; z < a; z++) {
         val = val + analogRead(pin);
     }
     return val / a;
 }
 
+void countWater() {
+    waterCounter++;
+}
+
 void updateTEMP() {
+    cycleCounter++;
     for (uint8_t i = 0; i < AIR_SENSOR_COUNT; i++) {
         airSensor[i].tempF = airSensor[i].sensor->readTemperature(true);
         airSensor[i].humid = airSensor[i].sensor->readHumidity();
@@ -160,51 +170,31 @@ void updateTEMP() {
 
     if (isnan(airSensor[0].humid) || isnan(airSensor[0].tempF)) { //check for errors in two sensors
         if (isnan(airSensor[1].humid) || isnan(airSensor[1].tempF)) {
-            Serial.println(F("ERROR BOTH SENSORS "));
+            //Serial.println(F("ERROR BOTH SENSORS "));
         } else {
-            if (errorCounter1 == 30) {
-                Serial.print(F("DHT.main error! "));
-                errorCounter1 = 0;
-            }
+                //Serial.print(F("DHT.main error! "));
+
             airSensor[0].humid = airSensor[1].humid;
             airSensor[0].tempF = airSensor[1].tempF;
         }
-        errorCounter1++;
     } else {
         if (isnan(airSensor[1].humid) || isnan(airSensor[1].tempF)) {
-            if (errorCounter2 == 30) {
-                Serial.print(F("DHT.upstairs error! "));
-                errorCounter2 = 0;
-            }
+                //Serial.print(F("DHT.upstairs error! "));
+
             airSensor[1].humid = airSensor[0].humid;
             airSensor[1].tempF = airSensor[0].tempF;
-            errorCounter2++;
         }
     }
 
-    //check for strange readings (>20 from long avg)
-    if (airSensor[0].currentEMA[2] != 0) { // don't run the first time
-        if (airSensor[0].tempF > 20 + airSensor[0].currentEMA[2] || airSensor[0].tempF < -20 + airSensor[0].currentEMA[2]) {
-          //out of range, set to other sensor (hoping it is within range);
-          Serial.print(F(" DHT.main outlier! ")); Serial.print(airSensor[0].tempF); Serial.print(F(" vs EMA_Long ")); Serial.print(airSensor[0].currentEMA[2]);
-          airSensor[0].tempF = airSensor[1].tempF;
-        }
-        if (airSensor[1].tempF > 20 + airSensor[1].currentEMA[2] || airSensor[1].tempF < -20 + airSensor[1].currentEMA[2]) {
-          //out of range, set to other sensor (hoping it is within range);
-          Serial.print(F(" DHT.upstairs outlier! ")); Serial.print(airSensor[1].tempF); Serial.print(F(" vs EMA_Long ")); Serial.print(airSensor[1].currentEMA[2]);
-          airSensor[1].tempF = airSensor[0].tempF;
-        }
-    }
-    
-
-    for (uint8_t i = 0; i < AIR_SENSOR_COUNT; i++) {
+    for (uint8_t i = 0; i < AIR_SENSOR_COUNT; i++) {    //set new records, calculate EMAs
         if (airSensor[i].highest < airSensor[i].tempF) {
             airSensor[i].highest = airSensor[i].tempF;
         }
         if (airSensor[i].lowest > airSensor[i].tempF) {
             airSensor[i].lowest = airSensor[i].tempF;
         }
-        for (uint8_t z = 0; z < 3; z++) {
+            //calculate EMAs
+        for (uint8_t z = 0; z < 3; z++) {       
             if (airSensor[i].lastEMA[z] == 0) {
                 airSensor[i].lastEMA[z] = airSensor[i].tempF;
             }
@@ -238,8 +228,9 @@ void updateTEMP() {
     floorEmaAvg = (floorSensor[0].currentEMA + floorSensor[1].currentEMA) / FLOOR_SENSOR_COUNT; //avg two readings
 
     if (tempDispCounter >= 4) { //every 4 reads = 10 seconds calculate trend and print info
+        tempDispCounter = 0;
 
-        for (uint8_t i = 0; i < AIR_SENSOR_COUNT; i++) {
+        for (uint8_t i = 0; i < AIR_SENSOR_COUNT; i++) {    //compute trend
             if (airSensor[i].currentEMA[0] < airSensor[i].currentEMA[1]) {  // if (now) temp < (medium avg) temp; temp is falling:
                 if (airSensor[i].currentEMA[1] < weightedTemp) {  //if medium
                     if (airSensor[i].trendEMA <= -DOWNTREND) {
@@ -251,6 +242,7 @@ void updateTEMP() {
                     airSensor[i].trendEMA += -UPTREND; //slow going down
                 }
             }
+
             if (airSensor[i].currentEMA[0] > airSensor[i].currentEMA[1]) { //if rising
                 if (airSensor[i].currentEMA[1] > weightedTemp) {
                     if (airSensor[i].trendEMA >= DOWNTREND) {
@@ -270,9 +262,11 @@ void updateTEMP() {
                 airSensor[i].trendEMA = -AIR_TEMP_TREND_MINMAX;
             }
         }
+        
         avgTrend = (airSensor[0].trendEMA + airSensor[1].trendEMA) / 2.;
 
         if (tempDispCounter2 >= 6) {  // every minute:
+            tempDispCounter2 = 0;
             
             if (changePerHourMinuteCounter < 59) {
               changePerHourMinuteCounter++;
@@ -283,6 +277,31 @@ void updateTEMP() {
             }
             last59MedEMAs[58] = (airSensor[0].currentEMA[1] + airSensor[1].currentEMA[1]) / 2;
         }
+        
+        tempDispCounter2++;
+    }
+    tempDispCounter++;
+
+    //Set next pump state
+    if (weightedTemp > tempSetPoint || (avgTrend > 0 && weightedTemp > (tempSetPoint - AIR_TEMP_TREND_FACTOR * avgTrend))) { //  check if should be off
+        nextPumpState = 0;
+    } else { //  else should be on:
+
+        if (weightedTemp > tempSetPoint - 3 && currentPumpState <= 1) {  // if temp needs to move <3 degrees, turn on/start
+            nextPumpState = 1;
+        }else if (weightedTemp > tempSetPoint - 5 && currentPumpState <= 3) {  //if temp needs to move 3-5 degrees, go medium
+            nextPumpState = 3; //  medium
+        } else if (weightedTemp <= tempSetPoint - 5 && currentPumpState <= 4){                 // else, temp < set-5
+            nextPumpState = 4; //  high
+        }    
+    }
+
+    if (currentPumpState == 0 && nextPumpState != 0) {   // Force update if switching to on from off
+        checkPumpCycleState();
+    }
+    
+    if (tStatDispCtr >= 2) {
+        tStatDispCtr = 0;
 
         uint16_t tankReading = analogRead(WATER_LEVEL_PIN);
         String waterDisplay = "";
@@ -295,154 +314,163 @@ void updateTEMP() {
         } else { //~0
             waterDisplay = ">75%";
         }
+
+        if (lcdPage == 0 || lcdPage == 2) {
+            lcd.setCursor(0,0);
+            lcd.print(airSensor[0].currentEMA[0],1);
+            lcd.print(" ");         //added
+            lcd.print(airSensor[1].currentEMA[0],1);
+            lcd.print((char)223);
+            lcd.print("F  c#");    //adjusted
+            lcd.print(nextPumpState);  //cycle number, need to pull info in... restructure...
+            lcd.setCursor(0,1);
+            lcd.print("Set: ");
+            lcd.print(tempSetPoint,1);
+            lcd.print((char)223);
+            lcd.print("F ");
+
+            uint16_t mins = cycleCounter/24;
+            if (mins > 999) {
+                mins = 999;     //16.65hrs
+            } else if (mins < 10) {
+                lcd.print("  ");
+            } else if (mins < 100) {
+                lcd.print(" ");
+            }
+            lcd.print(mins);
+            lcd.print("m");
+
+        } else if (lcdPage == 1) { 
+            lcd.setCursor(0,0);
+            lcd.print("GH");
+            lcd.print((char)223);
+            lcd.print("F ");
+            lcd.print("XX.X");
+                //9 chars
+            lcd.print("   Wtr ");
+
+            lcd.setCursor(0,1);
+            lcd.print("HUM% XX.X"); //9 chars
+            lcd.print("   ");
+            lcd.print(waterDisplay);
+
+        } else if (lcdPage == 3) {
+            lcd.setCursor(0,0);
+            lcd.print("Ex");
+            lcd.print((char)223);
+            lcd.print("F ");
+            lcd.print("XX.X");
+                //9 chars
+            lcd.print("       ");
+
+            lcd.setCursor(0,1);
+            lcd.print("HUM% XX.X"); //9 chars
+            lcd.print("       ");
         
-        lcd.setCursor(0,0);
-        //lcd.print("Temp: ");
-        lcd.print(airSensor[0].currentEMA[0],1);
-        lcd.print(" ");         //added
-        lcd.print(airSensor[1].currentEMA[0],1);
-        lcd.print((char)223);
-        lcd.print("F  Wtr");    //adjusted
+        }
         lcd.setCursor(0,1);
-        lcd.print("Set: ");
-        lcd.print(temperatureSetPoint,1);
-        lcd.print((char)223);
-        lcd.print("F ");
-        lcd.print(waterDisplay);
-        
-        tempDispCounter2++;
-        tempDispCounter = 0;
+        lcd.print(lcdPage);     //temporary display of page # in bottom left
+
+        lcdPage++;
+        if (lcdPage >= 4) lcdPage = 0;
+
     }
-    tempDispCounter++;
 
-    //Set next pump state
-
-    //change:
-        //set once per on cycle; no change to speed until next cycle;
-    //if above temperature, turn off
-    //else
-    //  if off, turn to appropriate cycle speed
-        //else (do nothing)
-
-    if (weightedTemp > temperatureSetPoint || (avgTrend > 0 && weightedTemp > (temperatureSetPoint - AIR_TEMP_TREND_FACTOR * avgTrend))) { //  check if should be off
-        nextPumpState = 0;
-    } else { //  else should be on:
-
-        if (weightedTemp > temperatureSetPoint - 3 && currentPumpState <= 1) {  // if temp needs to move <3 degrees, turn on/start
-            nextPumpState = 1;
-        }else if (weightedTemp > temperatureSetPoint - 5 && currentPumpState <= 3) {  //if temp needs to move 3-5 degrees, go medium
-            nextPumpState = 3; //  medium
-        } else if (weightedTemp <= temperatureSetPoint - 5 && currentPumpState <= 4){                 // else, temp < set-5
-            nextPumpState = 4; //  high
-        }    
-    }
-    if (currentPumpState == 0 && nextPumpState != 0) {   // Force update if switching to on from off
-        checkPumpCycleState();
-    }
+    tStatDispCtr++;
 }
-
 
 
 void checkPumpCycleState() {
-    unsigned long lastCycleDuration = 0;
-    Serial.println();
 
-    if (nextPumpState == 1) {
-        if (currentPumpState == 1) {                                                //  continue from on to on
-            pumpUpdateInterval = MINIMUM_CYCLE_TIMES[5]; //add a minute to continue same phase
-            Serial.println(F("TESTING - On cycle continue phase"));
-        } else if (currentPumpState != 0) { //  on from start or warmup
-            currentPumpState = 1;
-            pumpUpdateInterval = MINIMUM_CYCLE_TIMES[currentPumpState];
-            Serial.println(F("TESTING - On cycle initialization (after Start)"));
-            analogWrite(PUMP_PIN, 199);
-        } else {        /*if (currentPumpState == (0)*/ //  start from off or warm up (currentPumpState == (0 || 3))
-            currentPumpState = 2;                                       //  set new current pump state to START
-            pumpUpdateInterval = MINIMUM_CYCLE_TIMES[currentPumpState]; //  add START interval
-            lastCycleDuration = currentTime - cycleStartTime;           //  start new cycle..
-            cycleStartTime = currentTime;
-            Serial.println(F("TESTING - Start cycle initialization"));
-            analogWrite(PUMP_PIN, 223);
-        }
-    } else if (nextPumpState == 3) { // warm up changeto medium
-        if (currentPumpState == 3) {                                                // continue same phase
-            pumpUpdateInterval = MINIMUM_CYCLE_TIMES[5]; // add a minute to continue same phase
-            Serial.println(F("TESTING - medium cycle continue phase"));
-        } else { // start as different phase
+    // if (nextPumpState == 1) {
+    //     if (currentPumpState == 1) {                                                //  continue from on to on
+    //         pumpUpdateInterval = MINIMUM_CYCLE_TIMES[5]; //add a minute to continue same phase
+    //     } else if (currentPumpState != 0) { //  on from start or warmup
+    //         currentPumpState = 1;
+    //         pumpUpdateInterval = MINIMUM_CYCLE_TIMES[currentPumpState];
+    //         analogWrite(PUMP_PIN, 199);
+    //     } else {        /*if (currentPumpState == (0)*/ //  start from off or warm up (currentPumpState == (0 || 3))
+    //         currentPumpState = 2;                                       //  set new current pump state to START
+    //         pumpUpdateInterval = MINIMUM_CYCLE_TIMES[currentPumpState]; //  add START interval
+    //         cycleStartTime = currentTime;
+    //         analogWrite(PUMP_PIN, 223);
+    //         cycleCounter = 0;
+    //     }
+
+    // } else if (nextPumpState == 3) { // warm up changeto medium
+    //     if (currentPumpState == 3) {                                                // continue same phase
+    //         pumpUpdateInterval = MINIMUM_CYCLE_TIMES[5]; // add a minute to continue same phase
+    //     } else { // start as different phase
+    //         currentPumpState = 3;
+    //         pumpUpdateInterval = MINIMUM_CYCLE_TIMES[currentPumpState];
+    //         cycleStartTime = currentTime;
+    //         analogWrite(PUMP_PIN, 223);
+    //         cycleCounter = 0;
+    //     }
+
+    // } else if (nextPumpState == 4) { // warm up
+    //     if (currentPumpState == 4) {                                                // continue same phase
+    //         pumpUpdateInterval = MINIMUM_CYCLE_TIMES[5]; // add a minute to continue same phase
+    //     } else { // start as different phase
+    //         currentPumpState = 4;
+    //         pumpUpdateInterval = MINIMUM_CYCLE_TIMES[currentPumpState];
+    //         cycleStartTime = currentTime;
+    //         analogWrite(PUMP_PIN, 255);
+    //         cycleCounter = 0;
+    //     }
+
+    // } else if (nextPumpState == 0) { // off
+    //     if (currentPumpState == 0) {                                                // continue same phase
+    //         pumpUpdateInterval = MINIMUM_CYCLE_TIMES[5]; // add a minute to continue same phase
+    //     } else { //start as different phase
+    //         currentPumpState = 0;
+    //         pumpUpdateInterval = MINIMUM_CYCLE_TIMES[currentPumpState];
+    //         cycleStartTime = currentTime;
+    //         analogWrite(PUMP_PIN, 0);
+    //         cycleCounter = 0;
+    //     }
+    // }
+
+    if (nextPumpState == currentPumpState) {
+        pumpUpdateInterval = MINIMUM_CYCLE_TIMES[5]; // add a minute to continue same phase
+    } else {
+        if (nextPumpState == 1) {
+            if (currentPumpState != 0) {    //  on from start or warmup
+                currentPumpState = 1;
+                pumpUpdateInterval = MINIMUM_CYCLE_TIMES[currentPumpState];
+                analogWrite(PUMP_PIN, 199);
+
+            } else {    //if (currentPumpState == (0)  start from off or warm up (currentPumpState == (0 || 3))
+                currentPumpState = 2;                                       //  set new current pump state to START
+                pumpUpdateInterval = MINIMUM_CYCLE_TIMES[currentPumpState]; //  add START interval
+                cycleStartTime = currentTime;
+                analogWrite(PUMP_PIN, 223);
+                cycleCounter = 0;
+
+            }
+        } else if (nextPumpState == 3) {    // start as different phase
             currentPumpState = 3;
             pumpUpdateInterval = MINIMUM_CYCLE_TIMES[currentPumpState];
-            lastCycleDuration = currentTime - cycleStartTime;
             cycleStartTime = currentTime;
-            Serial.println(F("TESTING - medium cycle initialization"));
             analogWrite(PUMP_PIN, 223);
-        }
-    } else if (nextPumpState == 4) { // warm up
-        if (currentPumpState == 4) {                                                // continue same phase
-            pumpUpdateInterval = MINIMUM_CYCLE_TIMES[5]; // add a minute to continue same phase
-            Serial.println(F("TESTING - warm up cycle continue phase"));
-        } else { // start as different phase
+            cycleCounter = 0;
+
+        } else if (nextPumpState == 4) {    // start as different phase
             currentPumpState = 4;
             pumpUpdateInterval = MINIMUM_CYCLE_TIMES[currentPumpState];
-            lastCycleDuration = currentTime - cycleStartTime;
             cycleStartTime = currentTime;
-            Serial.println(F("TESTING - warm up cycle initialization"));
             analogWrite(PUMP_PIN, 255);
-        }
-    } else if (nextPumpState == 0) { // off
-        if (currentPumpState == 0) {                                                // continue same phase
-            pumpUpdateInterval = MINIMUM_CYCLE_TIMES[5]; // add a minute to continue same phase
-            Serial.println(F("TESTING - Off cycle continue phase"));
-        } else { //start as different phase
+            cycleCounter = 0;
+
+        } else if (nextPumpState == 0) {    //start as different phase
             currentPumpState = 0;
             pumpUpdateInterval = MINIMUM_CYCLE_TIMES[currentPumpState];
-            lastCycleDuration = currentTime - cycleStartTime;
             cycleStartTime = currentTime;
-            Serial.println(F("TESTING - Off cycle initialization"));
             analogWrite(PUMP_PIN, 0);
+            cycleCounter = 0;
+
         }
     }
-
-    if (lastCycleDuration != 0) {   // if end of cycle:
-        Serial.print(F(" ms:"));
-        Serial.print(lastCycleDuration);
-        uint16_t hours = lastCycleDuration / 3600000;
-        lastCycleDuration -= (hours * 3600000);
-        uint16_t minutes = lastCycleDuration / 60000;
-        lastCycleDuration -= (minutes * 60000);
-        uint16_t seconds = lastCycleDuration / 1000;
-        lastCycleDuration -= (seconds * 1000);
-        if (seconds >= 60) {
-            minutes += 1;
-            seconds -= 60;
-        }
-        if (minutes >= 60) {
-            hours += 1;
-            minutes -= 60;
-        }
-        if (lastCycleDuration >= 500 && (minutes > 0 || hours > 0)) {
-            seconds += 1;
-        }
-        Serial.print(F("                          Total cycle time: "));
-        if (hours > 0) {
-            Serial.print(hours);
-            Serial.print(F("h"));
-        }
-        if (minutes > 0) {
-            Serial.print(minutes);
-            Serial.print(F("m"));
-        }
-        if (seconds > 0) {
-            Serial.print(seconds);
-            Serial.print(F("s"));
-        }
-        if (hours == 0 && minutes == 0) {
-            Serial.print(lastCycleDuration);
-        }
-    }
-}
-
-void countWater() {
-    waterCounter++;
 }
 
 void setup() { //************************************************************************************************ SETUP
@@ -459,6 +487,8 @@ void setup() { //***************************************************************
     lcd.init();                      // initialize the lcd
     lcd.clear();
     lcd.backlight();  //open the backlight
+    lcd.setCursor(0,0);
+    lcd.print("Radiant Heat");
     
     analogWrite(PUMP_PIN, 0);
     attachInterrupt(digitalPinToInterrupt(WATER_FLOW_PIN), countWater, FALLING);
@@ -520,7 +550,7 @@ void loop() { //****************************************************************
                     airSensor[k].highest = airSensor[k].tempF;
                 }
             }
-            temperatureSetPoint += (0.5 * buttonStatus);
+            tempSetPoint += (0.5 * buttonStatus);
             
             //lcd.clear();
             lcd.setCursor(0,0);
@@ -530,9 +560,11 @@ void loop() { //****************************************************************
             lcd.print("F");
             lcd.setCursor(0,1); //x, y
             lcd.print(" Set: ");
-            lcd.print(temperatureSetPoint,1);
+            lcd.print(tempSetPoint,1);
             lcd.print((char)223);
             lcd.print("F");
+
+            lcdPage = 0;
             
             checkPump = currentTime + 3000; // wait 3 seconds before accepting new tempoerature in case button will be pressed more than once
         }

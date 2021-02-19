@@ -10,21 +10,21 @@
 #include <DHT.h>
 
 #define DHT1PIN 7 //main
-#define DHT2PIN 8 //upstairs //(not currently implemented)
-#define DHT3PIN 12 //not yet used
+#define DHT2PIN 8 //upstairs 
+#define DHT3PIN 12 //greenhouse
 
 DHT dht[] = {
     {DHT1PIN, DHT22},
     {DHT2PIN, DHT22},
-    {DHT3PIN, DHT22}, //  outside, not yet installed
-    // greenhouse?
+    {DHT3PIN, DHT22}, // greenhouse
+    // outside?
 };
 
 LiquidCrystal_I2C lcd(0x27, 16, 2); // set the LCD address to 0x27 for a 16 chars and 2 line display  
 //SDA = A4 pin
 //SCL = A5 pin
 
-const uint8_t AIR_SENSOR_COUNT = 2;
+const uint8_t AIR_SENSOR_COUNT = 3;
 const uint8_t FLOOR_SENSOR_COUNT = 2;
 const bool VERBOSE = false;
 const String VERSION_NUMBER = "4.0.1";
@@ -112,6 +112,7 @@ uint8_t tStatDispCtr = 0;
 struct airSensor_t
 {
     DHT *sensor;
+
     float tempC;
     float tempF;
     float WEIGHT;
@@ -119,16 +120,40 @@ struct airSensor_t
 
     float highest;
     float lowest;
+
     float currentEMA[3]; // {short, medium, long} EMA
+
     float lastEMA[3];    // {short, medium, long}
+
     int16_t trendEMA;
-    
     bool working;
     String label;
 
 } airSensor[] = {
-    {&dht[0], 0, 0, 1, 0,     0, 999, {0, 0, 0}, {0, 0, 0}, 0,    true, "MAIN"},
-    {&dht[1], 0, 0, 2, 0,     0, 999, {0, 0, 0}, {0, 0, 0}, 0,    true, "UPSTAIRS"},
+    {
+        &dht[0], 
+        0, 0, 1, 0,     
+        0, 999, 
+        {0, 0, 0}, 
+        {0, 0, 0}, 
+        0, true, "MAIN"
+    },
+    {
+        &dht[1], 
+        0, 0, 2, 0,     
+        0, 999, 
+        {0, 0, 0}, 
+        {0, 0, 0}, 
+        0, true, "UPSTAIRS"
+    },
+    {
+        &dht[2], 
+        0, 0, 1, 0,     
+        0, 999, 
+        {0, 0, 0}, 
+        {0, 0, 0}, 
+        0, true, "GREEHNOUSE"
+    },
 };
 
 struct floorSensor_t
@@ -164,11 +189,11 @@ void countWater() {
 void updateTEMP() {
     cycleCounter++;
     for (uint8_t i = 0; i < AIR_SENSOR_COUNT; i++) {
-        airSensor[i].tempF = airSensor[i].sensor->readTemperature(true);
+        airSensor[i].tempF = airSensor[i].sensor->readTemperature(true);    //(true) means F, false/null means C
         airSensor[i].humid = airSensor[i].sensor->readHumidity();
     }
 
-    if (isnan(airSensor[0].humid) || isnan(airSensor[0].tempF)) { //check for errors in two sensors
+    if (isnan(airSensor[0].humid) || isnan(airSensor[0].tempF)) { //check for errors in sensors 0 and 1 (interior sensors)
         if (isnan(airSensor[1].humid) || isnan(airSensor[1].tempF)) {
             //Serial.println(F("ERROR BOTH SENSORS "));
         } else {
@@ -203,8 +228,11 @@ void updateTEMP() {
         }
     }
 
+    //weighted temp of sensor 0 and sensor 1 (aka downstairs/main and upstairs/loft)
     weightedTemp = (airSensor[0].WEIGHT * airSensor[0].currentEMA[0] + airSensor[1].WEIGHT * airSensor[1].currentEMA[0]) / (airSensor[0].WEIGHT + airSensor[1].WEIGHT);
 
+
+    //check floor sensors
     for (uint8_t i = 0; i < FLOOR_SENSOR_COUNT; i++) {
         if (floorSensor[i].lastEMA == 0)
             floorSensor[i].lastEMA = ReadFloorTemperature(floorSensor[i].PIN, 10);
@@ -227,6 +255,8 @@ void updateTEMP() {
     }
     floorEmaAvg = (floorSensor[0].currentEMA + floorSensor[1].currentEMA) / FLOOR_SENSOR_COUNT; //avg two readings
 
+
+    //display every 4 occurances (every 10 seconds, 2.5s per run)
     if (tempDispCounter >= 4) { //every 4 reads = 10 seconds calculate trend and print info
         tempDispCounter = 0;
 
@@ -263,6 +293,7 @@ void updateTEMP() {
             }
         }
         
+        //avgTrend is for interior two sensors only
         avgTrend = (airSensor[0].trendEMA + airSensor[1].trendEMA) / 2.;
 
         if (tempDispCounter2 >= 6) {  // every minute:
@@ -282,11 +313,11 @@ void updateTEMP() {
     }
     tempDispCounter++;
 
-    //Set next pump state
+    //Set next pump state based on weightedTemp and avgTrend, computed from sensors 0 and 1 (downstairs and upstairs) interior sensors
     if (weightedTemp > tempSetPoint || (avgTrend > 0 && weightedTemp > (tempSetPoint - AIR_TEMP_TREND_FACTOR * avgTrend))) { //  check if should be off
         nextPumpState = 0;
     } else { //  else should be on:
-
+        //These now keep the highest recent state until an off cycle is called. So if set to high, stays at high until off.     OLD: steps down to medium then to low as it gets closer to desired temperature.
         if (weightedTemp > tempSetPoint - 3 && currentPumpState <= 1) {  // if temp needs to move <3 degrees, turn on/start
             nextPumpState = 1;
         }else if (weightedTemp > tempSetPoint - 5 && currentPumpState <= 3) {  //if temp needs to move 3-5 degrees, go medium
@@ -300,7 +331,7 @@ void updateTEMP() {
         checkPumpCycleState();
     }
     
-    if (tStatDispCtr >= 2) {
+    if (tStatDispCtr >= 2) {    //every 2 runs aka every 5 seconds
         tStatDispCtr = 0;
 
         uint16_t tankReading = analogRead(WATER_LEVEL_PIN);
@@ -315,7 +346,7 @@ void updateTEMP() {
             waterDisplay = ">75%";
         }
 
-        if (lcdPage == 0 || lcdPage == 2) {
+        if (lcdPage == 0 || lcdPage == 2) { //main / interior display
             lcd.setCursor(0,0);
             lcd.print(airSensor[0].currentEMA[0],1);
             lcd.print(" ");         //added
@@ -340,21 +371,23 @@ void updateTEMP() {
             lcd.print(mins);
             lcd.print("m");
 
-        } else if (lcdPage == 1) { 
+        } else if (lcdPage == 1) {  //greenhouse / waterLevel display
             lcd.setCursor(0,0);
             lcd.print("GH");
             lcd.print((char)223);
             lcd.print("F ");
-            lcd.print("XX.X");
+            lcd.print(airSensor[2].currentEMA[0], 1);   //print sensor 2's short ema with 1 decimal
                 //9 chars
             lcd.print("   Wtr ");
 
             lcd.setCursor(0,1);
-            lcd.print("HUM% XX.X"); //9 chars
+            lcd.print("HUM% "); //5 chars
+            lcd.print(airSensor[2].humid, 1);   //print sensor 2's humidity
+             //9 chars
             lcd.print("   ");
             lcd.print(waterDisplay);
 
-        } else if (lcdPage == 3) {
+        } else if (lcdPage == 3) {     //exterior temperature display
             lcd.setCursor(0,0);
             lcd.print("Ex");
             lcd.print((char)223);
@@ -381,55 +414,6 @@ void updateTEMP() {
 
 
 void checkPumpCycleState() {
-
-    // if (nextPumpState == 1) {
-    //     if (currentPumpState == 1) {                                                //  continue from on to on
-    //         pumpUpdateInterval = MINIMUM_CYCLE_TIMES[5]; //add a minute to continue same phase
-    //     } else if (currentPumpState != 0) { //  on from start or warmup
-    //         currentPumpState = 1;
-    //         pumpUpdateInterval = MINIMUM_CYCLE_TIMES[currentPumpState];
-    //         analogWrite(PUMP_PIN, 199);
-    //     } else {        /*if (currentPumpState == (0)*/ //  start from off or warm up (currentPumpState == (0 || 3))
-    //         currentPumpState = 2;                                       //  set new current pump state to START
-    //         pumpUpdateInterval = MINIMUM_CYCLE_TIMES[currentPumpState]; //  add START interval
-    //         cycleStartTime = currentTime;
-    //         analogWrite(PUMP_PIN, 223);
-    //         cycleCounter = 0;
-    //     }
-
-    // } else if (nextPumpState == 3) { // warm up changeto medium
-    //     if (currentPumpState == 3) {                                                // continue same phase
-    //         pumpUpdateInterval = MINIMUM_CYCLE_TIMES[5]; // add a minute to continue same phase
-    //     } else { // start as different phase
-    //         currentPumpState = 3;
-    //         pumpUpdateInterval = MINIMUM_CYCLE_TIMES[currentPumpState];
-    //         cycleStartTime = currentTime;
-    //         analogWrite(PUMP_PIN, 223);
-    //         cycleCounter = 0;
-    //     }
-
-    // } else if (nextPumpState == 4) { // warm up
-    //     if (currentPumpState == 4) {                                                // continue same phase
-    //         pumpUpdateInterval = MINIMUM_CYCLE_TIMES[5]; // add a minute to continue same phase
-    //     } else { // start as different phase
-    //         currentPumpState = 4;
-    //         pumpUpdateInterval = MINIMUM_CYCLE_TIMES[currentPumpState];
-    //         cycleStartTime = currentTime;
-    //         analogWrite(PUMP_PIN, 255);
-    //         cycleCounter = 0;
-    //     }
-
-    // } else if (nextPumpState == 0) { // off
-    //     if (currentPumpState == 0) {                                                // continue same phase
-    //         pumpUpdateInterval = MINIMUM_CYCLE_TIMES[5]; // add a minute to continue same phase
-    //     } else { //start as different phase
-    //         currentPumpState = 0;
-    //         pumpUpdateInterval = MINIMUM_CYCLE_TIMES[currentPumpState];
-    //         cycleStartTime = currentTime;
-    //         analogWrite(PUMP_PIN, 0);
-    //         cycleCounter = 0;
-    //     }
-    // }
 
     if (nextPumpState == currentPumpState) {
         pumpUpdateInterval = MINIMUM_CYCLE_TIMES[5]; // add a minute to continue same phase

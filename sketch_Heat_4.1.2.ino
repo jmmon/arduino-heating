@@ -20,10 +20,66 @@ DHT dht[] = {
     // greenhouse?
 };
 
+const bool DEBUG = true;
+
 LiquidCrystal_I2C lcd(0x27, 16, 2); // set the LCD address to 0x27 for a 16 chars and 2 line display  
 //SDA = A4 pin
 //SCL = A5 pin
-const bool DEBUG = true;
+
+byte customCharInside[] = { // "inside"
+  B00000,
+  B00000,
+  B00000,
+  B10100,
+  B01111,
+  B11100,
+  B01000,
+  B01000
+};
+
+byte customCharOutside[] = { // "outside"
+  B01010,
+  B00110,
+  B01110,
+  B00000,
+  B00000,
+  B01111,
+  B01000,
+  B01000
+};
+
+byte customCharDegF[] = { // "degrees F"
+  B01000,
+  B10100,
+  B01000,
+  B00111,
+  B00100,
+  B00110,
+  B00100,
+  B00100
+};
+
+byte customCharDroplet[] = {
+  B00100,
+  B01110,
+  B01010,
+  B10111,
+  B10111,
+  B10111,
+  B11111,
+  B01110
+};
+
+byte customCharSmColon[] = {
+  B00000,
+  B00000,
+  B01000,
+  B00000,
+  B00000,
+  B01000,
+  B00000,
+  B00000
+};
 
 const uint8_t AIR_SENSOR_COUNT = 2;
 const uint8_t FLOOR_SENSOR_COUNT = 2;
@@ -66,31 +122,6 @@ struct cycle_t {
     { "     *HIGH*", 300000, 255 },     // high
     { "(continue) ", 60000, 0 },        // continue uses minTime
 };
-
-/* const uint32_t MINIMUM_CYCLE_TIMES[6] = {
-  1800000,        // Off cycle            30 m
-  600000,         // On cycle             10 m
-  3000,           // Motor start "cycle"  1 second
-  300000,         // medium               5 m
-  300000,         // Warm up cycle        5 m
-  60000           // Continue last cycle  1 m
-};
-
-const String MOTOR_STATUS_STRING[5] = {
-  "      *OFF*",
-  "*ON*       ",
-  "**STARTUP**",
-  "*MED*      ",
-  "**WARM UP**"
-};
-
-const uint8_t PWM[5] = {
-  0,              // Off cycle
-  199,            // On cycle // low
-  223,            // Motor Start
-  223,                        // medium
-  255             // Warm up  // high
-}; */
 
 uint8_t currentPumpState = 0;
 uint8_t nextPumpState = 0;
@@ -549,6 +580,15 @@ void setup()
     pinMode(WATER_LEVEL_PIN, INPUT);
     pinMode(WATER_FLOW_PIN, INPUT);
 
+    lcd.createChar(0, customCharDegF);
+
+    lcd.createChar(1, customCharInside);
+    lcd.createChar(2, customCharOutside);
+
+    lcd.createChar(3, customCharSmColon);
+
+    lcd.createChar(4, customCharDroplet);
+
     for (uint8_t k = 0; k < AIR_SENSOR_COUNT; k++) {
         dht[k].begin();
     }
@@ -639,32 +679,40 @@ void lcdPageSet() {
     lcd.setCursor(0,0);
     lcd.print("Temp: "); // 6
     lcd.print(airSensor[0].currentEMA[0],1); //* 10
-    lcd.print((char)223); //* 11
-    lcd.print("F    "); //* 16
+    lcd.write(0); // degrees F //* 11
+    lcd.print("     "); //* 16
 
     lcd.setCursor(0,1); //x, y
-    lcd.print(" Set: "); //* 6 
-    lcd.print(temperatureSetPoint,1); //* 10
-    lcd.print((char)223); //* 11
-    lcd.print("F    "); //* 16
+    lcd.print(" Set"); //* 4
+    lcd.write(3); // sm colon //* 5
+    lcd.print(temperatureSetPoint,1); //* 9
+    lcd.write(0); // degrees F //* 10
+    lcd.print("      "); //* 16
 }
 
 void lcdPage1() {
     uint16_t tankPercent = analogRead(WATER_LEVEL_PIN) / 1023 * 99;
     
     lcd.setCursor(0,0);
-    // inside icon
-    lcd.print(airSensor[0].currentEMA[0],1);
-    lcd.print(" ");         
-    lcd.print(airSensor[1].currentEMA[0],1);
-    lcd.print((char)223);
-    lcd.print("F  Wtr");    //adjusted
+    lcd.write(1); // inside icon // 1
+    lcd.print(airSensor[0].currentEMA[0],1);  // 5
+    lcd.print(" ");          // 6
+    lcd.print(airSensor[1].currentEMA[0],1); // 10
+    lcd.write(0); // degrees F // 11
+    lcd.print("     "); // 16
+
     lcd.setCursor(0,1);
-    lcd.print("Set: ");
-    lcd.print(temperatureSetPoint,1);
-    lcd.print((char)223);
-    lcd.print("F ");
-    lcd.print(tankPercent);
+    lcd.print("Set"); // 3
+    lcd.write(3); // 4
+    lcd.print(temperatureSetPoint,1); // 8
+    lcd.write(0); // degrees F // 11
+    lcd.print("  "); // 13
+    
+    lcd.write(4); // water droplet // 14
+    if (tankPercent < 10) {
+        lcd.print(" "); // 15
+    }
+    lcd.print(tankPercent); // 16
 }
 
 void lcdPage2() {

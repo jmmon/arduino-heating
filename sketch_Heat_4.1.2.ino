@@ -360,35 +360,7 @@ void updateTEMP()
         Serial.print(F("  "));
 
 
-        uint16_t tankReading = analogRead(WATER_LEVEL_PIN);
-        String waterDisplay = "";
-
-        if (tankReading > 896) { //~1023
-            waterDisplay = "<25";
-        }
-        else if (tankReading > 657) { //~750
-            waterDisplay = "<50";
-        }
-        else if (tankReading > 267) { //~330
-            waterDisplay = "<75";
-        } else { //~0
-            waterDisplay = ">75";
-        }
-        
-        lcd.setCursor(0,0);
-        //lcd.print("Temp: ");
-        lcd.print(airSensor[0].currentEMA[0],1);
-        lcd.print(" ");         //added
-        lcd.print(airSensor[1].currentEMA[0],1);
-        lcd.print((char)223);
-        lcd.print("F  Wtr");    //adjusted
-        lcd.setCursor(0,1);
-        lcd.print("Set: ");
-        lcd.print(temperatureSetPoint,1);
-        lcd.print((char)223);
-        lcd.print("F ");
-        lcd.print(waterDisplay);
-        lcd.print("%s");
+        lcdPage1();
         
         
         tempDispCounter2++;
@@ -398,29 +370,26 @@ void updateTEMP()
 
     //Set next pump state
 
-    if (weightedTemp > temperatureSetPoint || (avgTrend > 0 && weightedTemp > (temperatureSetPoint - AIR_TEMP_TREND_FACTOR * avgTrend))) //  check if should be off
-    {
+    if (weightedTemp > temperatureSetPoint || (avgTrend > 0 && weightedTemp > (temperatureSetPoint - AIR_TEMP_TREND_FACTOR * avgTrend))) { // check if should be off
+    
         nextPumpState = 0;
-    }
-    else //  else should be on:
-    {
-        if (weightedTemp > temperatureSetPoint - 3)   // if temp needs to move <3 degrees, turn on/start       OLD:  floorEmaAvg > FLOOR_WARMUP_TEMPERATURE && 
+    } else { //  else should be on:
+        if (weightedTemp > temperatureSetPoint - 3) {  // if temp needs to move <3 degrees, turn on/start
             nextPumpState = 1;
-        else if (weightedTemp > temperatureSetPoint - 5)  //if temp needs to move 3-5 degrees, go medium
-        {
+        } else if (weightedTemp > temperatureSetPoint - 5) {  //if temp needs to move 3-5 degrees, go medium
             nextPumpState = 3; //  medium
-        }
-        else                  // else, go full speed
+        } else {                 // else, go full speed
             nextPumpState = 4; //  high
+        }
     }
-    if (currentPumpState == 0 && nextPumpState != 0)    // Force update if switching to on from off (i.e. cut short the off cycle if turning on)
+    if (currentPumpState == 0 && nextPumpState != 0) {   // Force update if switching to on from off (i.e. cut short the off cycle if turning on)
         checkPumpCycleState();
+    }
 }
 
 
 
-void checkPumpCycleState()
-{
+void checkPumpCycleState() {
     unsigned long lastCycleDuration = 0;
     Serial.println();
 
@@ -478,37 +447,7 @@ void checkPumpCycleState()
             analogWrite(PUMP_PIN, CYCLE[currentPumpState].PWM);
         }
     }
-    //analogWrite(PUMP_PIN, 1);
-    //analogWrite(PUMP_PIN, CYCLE[currentPumpState].PWM); // write new PWM
-                                                  //    if (currentPumpState == nextPumpState) {
-                                                  //        pumpUpdateInterval = CYCLE[4].MIN_TIME;  // add a minute to continue same phase
-                                                  //    } else {
-                                                  //        switch(nextPumpState) {
-                                                  //            case(1):
-                                                  //              if (currentPumpState == 2) {
-                                                  //                currentPumpState = 1;
-                                                  //              } else {
-                                                  //                currentPumpState = 2;   //  set new current pump state to START
-                                                  //                lastCycleDuration = currentTime - cycleStartTime;   //  start new cycle..
-                                                  //                cycleStartTime = currentTime;
-                                                  //              }
-                                                  //            break;
-                                                  //
-                                                  //            case(2):
-                                                  //              currentPumpState = 0;
-                                                  //              lastCycleDuration = currentTime - cycleStartTime;
-                                                  //              cycleStartTime = currentTime;
-                                                  //            break;
-                                                  //
-                                                  //            case(3):
-                                                  //              currentPumpState = 3;
-                                                  //              lastCycleDuration = currentTime - cycleStartTime;
-                                                  //              cycleStartTime = currentTime;
-                                                  //            break;
-                                                  //        }
-                                                  //        pumpUpdateInterval = CYCLE[currentPumpState].MIN_TIME;
-                                                  //    }
-                                                  //    analogWrite(PUMP_PIN,CYCLE[currentPumpState].PWM); // write new PWM
+    
 
     if (lastCycleDuration != 0) {   // if end of cycle:
         uint16_t hours = lastCycleDuration / 3600000;
@@ -607,14 +546,18 @@ void setup()
     pinMode(FLOOR_TEMP_PIN[0], INPUT);
     pinMode(FLOOR_TEMP_PIN[1], INPUT);
     pinMode(THERMOSTAT_BUTTONS_PIN, INPUT);
+    pinMode(WATER_LEVEL_PIN, INPUT);
+    pinMode(WATER_FLOW_PIN, INPUT);
 
-    for (uint8_t k = 0; k < AIR_SENSOR_COUNT; k++)
+    for (uint8_t k = 0; k < AIR_SENSOR_COUNT; k++) {
         dht[k].begin();
+    }
         
     lcd.init();                      // initialize the lcd
     lcd.clear();
     lcd.backlight();  //open the backlight
     //lcd.createChar(0, customChar); // create a new custom character
+
     //TESTING DISPLAY
     lcd.setCursor(0,0);
     lcd.print("TESTING DISPLAY");
@@ -637,8 +580,7 @@ void setup()
     updateTEMP();
 } //************************************************************************************************ END SETUP
 
-void loop()
-{ //************************************************************************************************* LOOP
+void loop() { //************************************************************************************************* LOOP
     currentTime = millis();
     if (currentTime >= (lastPumpUpdate + pumpUpdateInterval)) { //pump update timer
         checkPumpCycleState();
@@ -685,55 +627,46 @@ void loop()
             }
             
             temperatureSetPoint += (0.5 * buttonStatus);
-            
-            //lcd.clear();
-            lcd.setCursor(0,0);
-            lcd.print("Temp: "); /* 6 */
-            lcd.print(airSensor[0].currentEMA[0],1); /* 4 */
-            lcd.print((char)223); /* 1 */
-            lcd.print("F    "); /* 5 */
-            lcd.setCursor(0,1); //x, y
-            lcd.print(" Set: "); /* 6 */
-            lcd.print(temperatureSetPoint,1); /* 4 */
-            lcd.print((char)223); /* 1 */
-            lcd.print("F    "); /* 5 */
+            lcdPageSet();
             
             checkPump = currentTime + 3000; // wait 3 seconds before accepting new tempoerature in case button will be pressed more than once
         }
     }
 
-//    switch(displayPage) {
-//      
-//    }
-
-//           lastButtonCheck += BUTTON_CHECK_INTERVAL;
-//       uint16_t buttonRead = analogRead(THERMOSTAT_BUTTONS_PIN);
-//       if (buttonRead > 63) // buffer above 0 for read glitches
-//       {
-//           Serial.println(buttonRead);
-//           if (buttonRead > 831)
-//           {
-//               buttonStatus = 1;
-//               for (uint8_t k = 0; k < 2; k++)  //reset record temps
-//                   airSensor[k].lowest = airSensor[k].tempF;
-//           }
-//           else
-//           {
-//               buttonStatus = -1;
-//               for (uint8_t k = 0; k < 2; k++)
-//                   airSensor[k].highest = airSensor[k].tempF;
-//           }
-//           if (lastButtonStatus == 0) // catching only when pressed from no press adjust temperature. One press per increase.
-//           {
-//               temperatureSetPoint += (1 * buttonStatus);
-//               checkPump = currentTime + 3000; // wait 3 seconds before accepting new tempoerature in case button will be pressed more than once
-//               
-//           }
-//       }
-//       else
-//       {
-//           buttonStatus = 0;
-//       }
-//       lastButtonStatus = buttonStatus;
-
 } //************************************************************************************************* END LOOP
+
+void lcdPageSet() {
+    lcd.setCursor(0,0);
+    lcd.print("Temp: "); // 6
+    lcd.print(airSensor[0].currentEMA[0],1); //* 10
+    lcd.print((char)223); //* 11
+    lcd.print("F    "); //* 16
+
+    lcd.setCursor(0,1); //x, y
+    lcd.print(" Set: "); //* 6 
+    lcd.print(temperatureSetPoint,1); //* 10
+    lcd.print((char)223); //* 11
+    lcd.print("F    "); //* 16
+}
+
+void lcdPage1() {
+    uint16_t tankPercent = analogRead(WATER_LEVEL_PIN) / 1023 * 99;
+    
+    lcd.setCursor(0,0);
+    // inside icon
+    lcd.print(airSensor[0].currentEMA[0],1);
+    lcd.print(" ");         
+    lcd.print(airSensor[1].currentEMA[0],1);
+    lcd.print((char)223);
+    lcd.print("F  Wtr");    //adjusted
+    lcd.setCursor(0,1);
+    lcd.print("Set: ");
+    lcd.print(temperatureSetPoint,1);
+    lcd.print((char)223);
+    lcd.print("F ");
+    lcd.print(tankPercent);
+}
+
+void lcdPage2() {
+
+}

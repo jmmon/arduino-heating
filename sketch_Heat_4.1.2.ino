@@ -20,16 +20,7 @@ DHT dht[] = { {DHT1PIN, DHT22}, {DHT2PIN, DHT22}, {DHT3PIN, DHT22}, //  outside,
 LiquidCrystal_I2C lcd(0x27, 16, 2); // set the LCD address to 0x27 for a 16 chars and 2 line display  
 //SDA = A4 pin
 //SCL = A5 pin
-//byte customChar[8] = {
-//  0b00110,
-//  0b01001,
-//  0b01001,
-//  0b00110,
-//  0b00000,
-//  0b00000,
-//  0b00000,
-//  0b00000
-//};
+
 
 byte customChar0[] = {
   B11111,
@@ -426,7 +417,8 @@ struct airSensor_t {
     bool working;
     String label;
 
-} airSensor[] = { 
+} 
+airSensor[] = { 
     {&dht[0], 0, 0, 1, 0,     0, 999, {0, 0, 0}, {0, 0, 0}, 0,    true, "MAIN"}, 
     {&dht[1], 0, 0, 2, 0,     0, 999, {0, 0, 0}, {0, 0, 0}, 0,    true, "UPSTAIRS"},
 };
@@ -436,7 +428,8 @@ struct floorSensor_t {
     float currentEMA;
     float lastEMA;
 
-} floorSensor[] = { 
+} 
+floorSensor[] = { 
     {FLOOR_TEMP_PIN[0], 0, 0}, 
     {FLOOR_TEMP_PIN[1], 0, 0},
 };
@@ -459,7 +452,7 @@ void updateTEMP() {
         airSensor[i].humid = airSensor[i].sensor->readHumidity();
     }
 
-    if (isnan(airSensor[0].humid) || isnan(airSensor[0].tempF)) { //check for errors in two sensors
+    if (isnan(airSensor[0].humid) || isnan(airSensor[0].tempF)) { // check for errors in two sensors
         if (isnan(airSensor[1].humid) || isnan(airSensor[1].tempF)) {
             Serial.println(F("ERROR BOTH SENSORS "));
         } else {
@@ -483,23 +476,23 @@ void updateTEMP() {
         }
     }
 
-    //check for strange readings (>20 from long avg)
-    if (airSensor[0].currentEMA[2] != 0) // don't run the first time {
+    // check for strange readings (>20 from long avg)
+    if (airSensor[0].currentEMA[2] != 0) { // don't run the first time 
         if (airSensor[0].tempF > 20 + airSensor[0].currentEMA[2] || airSensor[0].tempF < -20 + airSensor[0].currentEMA[2]) {
-          //out of range, set to other sensor (hoping it is within range);
-          Serial.print(F(" DHT.main outlier! ")); 
-          Serial.print(airSensor[0].tempF); 
-          Serial.print(F(" vs EMA_Long ")); 
-          Serial.print(airSensor[0].currentEMA[2]);
-          airSensor[0].tempF = airSensor[1].tempF;
+            // out of range, set to other sensor (hoping it is within range);
+            Serial.print(F(" DHT.main outlier! ")); 
+            Serial.print(airSensor[0].tempF); 
+            Serial.print(F(" vs EMA_Long ")); 
+            Serial.print(airSensor[0].currentEMA[2]);
+            airSensor[0].tempF = airSensor[1].tempF;
         }
         if (airSensor[1].tempF > 20 + airSensor[1].currentEMA[2] || airSensor[1].tempF < -20 + airSensor[1].currentEMA[2]) {
-          //out of range, set to other sensor (hoping it is within range);
-          Serial.print(F(" DHT.upstairs outlier! ")); 
-          Serial.print(airSensor[1].tempF); 
-          Serial.print(F(" vs EMA_Long ")); 
-          Serial.print(airSensor[1].currentEMA[2]);
-          airSensor[1].tempF = airSensor[0].tempF;
+            // out of range, set to other sensor (hoping it is within range);
+            Serial.print(F(" DHT.upstairs outlier! ")); 
+            Serial.print(airSensor[1].tempF); 
+            Serial.print(F(" vs EMA_Long ")); 
+            Serial.print(airSensor[1].currentEMA[2]);
+            airSensor[1].tempF = airSensor[0].tempF;
         }
     }
     
@@ -521,7 +514,7 @@ void updateTEMP() {
     }
 
     weightedTemp = (airSensor[0].WEIGHT * airSensor[0].currentEMA[0] + airSensor[1].WEIGHT * airSensor[1].currentEMA[0]) / (airSensor[0].WEIGHT + airSensor[1].WEIGHT);
-
+    
     for (uint8_t i = 0; i < FLOOR_SENSOR_COUNT; i++) {
         if (floorSensor[i].lastEMA == 0) {
             floorSensor[i].lastEMA = ReadFloorTemperature(floorSensor[i].PIN, 10);
@@ -531,6 +524,7 @@ void updateTEMP() {
     }
 
     int difference = int(abs(floorSensor[0].currentEMA - floorSensor[1].currentEMA)); // error check
+
     if (difference > 80) {
         if (VERBOSE) {
             Serial.print(F("Floor Read Error. Difference: "));
@@ -542,15 +536,14 @@ void updateTEMP() {
             floorSensor[0].currentEMA = floorSensor[1].currentEMA;
         }
     }
-    floorEmaAvg = (floorSensor[0].currentEMA + floorSensor[1].currentEMA) / FLOOR_SENSOR_COUNT; //avg two readings
+    floorEmaAvg = (floorSensor[0].currentEMA + floorSensor[1].currentEMA) / FLOOR_SENSOR_COUNT; // avg two readings
 
-    if (tempDispCounter >= 4) { //every 4 reads = 10 seconds calculate trend and print info
-
+    if (tempDispCounter >= 4) { // every 4 reads = 10 seconds calculate trend and print info
         for (uint8_t i = 0; i < AIR_SENSOR_COUNT; i++) {
             if (airSensor[i].currentEMA[0] < airSensor[i].currentEMA[1]) { // if (now) temp < (medium avg) temp; temp is falling: 
-                if (airSensor[i].currentEMA[1] < weightedTemp)  //if medium {
-                    if (airSensor[i].trendEMA <= -DOWNTREND){
-                        airSensor[i].trendEMA += DOWNTREND; //fast going back to 0
+                if (airSensor[i].currentEMA[1] < weightedTemp) { // if medium 
+                    if (airSensor[i].trendEMA <= -DOWNTREND) {
+                        airSensor[i].trendEMA += DOWNTREND; // fast going back to 0
                     } else {
                         airSensor[i].trendEMA = 0;
                     }
@@ -564,10 +557,10 @@ void updateTEMP() {
                 }
             }
 
-            if (airSensor[i].currentEMA[0] > airSensor[i].currentEMA[1]) { //if rising
+            if (airSensor[i].currentEMA[0] > airSensor[i].currentEMA[1]) { // if rising
                 if (airSensor[i].currentEMA[1] > weightedTemp) {
                     if (airSensor[i].trendEMA >= DOWNTREND) {
-                        airSensor[i].trendEMA += -DOWNTREND; //fast going back to 0
+                        airSensor[i].trendEMA += -DOWNTREND; // fast going back to 0
                     } else {
                         airSensor[i].trendEMA = 0;
                     }
@@ -617,11 +610,11 @@ void updateTEMP() {
             //check tank levels
             uint16_t tankReading = analogRead(WATER_LEVEL_PIN);
             Serial.print(F("Level: "));
-            if (tankReading > 999) { //~1023
+            if (tankReading > 999) { // ~1023
                 Serial.print(F("< 25%"));
-            } else if (tankReading > 685) { //~750
+            } else if (tankReading > 685) { // ~750
                 Serial.print(F("25~50%"));
-            } else if (tankReading > 32) { //~330
+            } else if (tankReading > 32) { // ~330
                 Serial.print(F("50~75%"));
             } else { //~0
                 Serial.print(F("> 75%"));
@@ -655,13 +648,12 @@ void updateTEMP() {
 
     //Set next pump state
 
-    if (weightedTemp > temperatureSetPoint || (avgTrend > 0 && weightedTemp > (temperatureSetPoint - AIR_TEMP_TREND_FACTOR * avgTrend))) { //  check if should be off
+    if (weightedTemp > temperatureSetPoint || (avgTrend > 0 && weightedTemp > (temperatureSetPoint - AIR_TEMP_TREND_FACTOR * avgTrend))) { // check if should be off
         nextPumpState = 0;
-    } else { //  else should be on:
+    } else { // else should be on:
         if (weightedTemp > temperatureSetPoint - 3) {   // if temp needs to move <3 degrees, turn on/start       OLD:  floorEmaAvg > FLOOR_WARMUP_TEMPERATURE && 
             nextPumpState = 1;
         } else if (weightedTemp > temperatureSetPoint - 5) { //if temp needs to move 3-5 degrees, go medium
-        
             nextPumpState = 3; //  medium
         } else {                 // else, go full speed
             nextPumpState = 4; //  high
@@ -673,53 +665,15 @@ void updateTEMP() {
 }
 
 
-void lcdTempAdjPage() {
-    lcd.setCursor(0,0);
-    lcd.print("Temp: "); // 6
-    lcd.write(2); // sm colon  // 7
-    lcd.print(airSensor[0].currentEMA[0],1); // 11
-    lcd.write(1); // Replaces "*F" // 12
-    lcd.print("    "); // 16
-
-    lcd.setCursor(1,0);
-    lcd.print("-> Set");  // 6
-    lcd.write(4); // Replaces ": " // 7
-    lcd.print(temperatureSetPoint,1); // 11
-    lcd.write(1); // Replaces "*F" // 12
-    lcd.print("    "); // 16
-}
-
-void lcdPage1() {
-    uint16_t tankPercent = analogRead(WATER_LEVEL_PIN)/1023 * 99;
-
-    lcd.setCursor(0,0);
-    lcd.write(2); // inside icon // 1
-    lcd.print(airSensor[0].currentEMA[0],1); // 5
-    lcd.print(" "); // 6
-    lcd.print(airSensor[1].currentEMA[0],1); // 10
-    lcd.write(1); // degrees F // 11
-    lcd.print("     "); // 16
-
-    lcd.setCursor(0,1);
-    lcd.print("Set"); // 3
-    lcd.write(4); // sm colon // 4
-    lcd.print(temperatureSetPoint,1); // 8
-    lcd.write(1); // degrees F // 9
-    lcd.print("    "); // 13
-    // lcd.setCursor(13,1);
-    lcd.write(5); // water droplet // 14
-    lcd.print(tankPercent); // 0 - 99 // 16
-}
-
-void checkPumpCycleState(){
+void checkPumpCycleState() {
     unsigned long lastCycleDuration = 0;
     Serial.println();
 
     if (nextPumpState == 1) {
-        if (currentPumpState == 1) {                                                //  continue from on to on
-            pumpUpdateInterval = MINIMUM_CYCLE_TIMES[5]; //add a minute to continue same phase
+        if (currentPumpState == 1) {                                                // continue from on to on
+            pumpUpdateInterval = MINIMUM_CYCLE_TIMES[5]; // add a minute to continue same phase
             Serial.println(F("TESTING - On cycle continue phase"));
-        } else if (currentPumpState != 0) { //  on from start or warmup
+        } else if (currentPumpState != 0) {         //  on from start or warmup
             currentPumpState = 1;
             pumpUpdateInterval = MINIMUM_CYCLE_TIMES[currentPumpState];
             Serial.println(F("TESTING - On cycle initialization (after Start)"));
@@ -760,7 +714,7 @@ void checkPumpCycleState(){
         if (currentPumpState == 0) { // continue same phase
             pumpUpdateInterval = MINIMUM_CYCLE_TIMES[5]; // add a minute to continue same phase
             Serial.println(F("TESTING - Off cycle continue phase"));
-        } else { //start as different phase
+        } else { // start as different phase
             currentPumpState = 0;
             pumpUpdateInterval = MINIMUM_CYCLE_TIMES[currentPumpState];
             lastCycleDuration = currentTime - cycleStartTime;
@@ -788,9 +742,12 @@ void checkPumpCycleState(){
             hours += 1;
             minutes -= 60;
         }
-        if (lastCycleDuration >= 500 && (minutes > 0 || hours > 0))
+        if (lastCycleDuration >= 500 && (minutes > 0 || hours > 0)) {
             seconds += 1;
+        }
+
         Serial.print(F("                          Total cycle time: "));
+
         if (hours > 0) {
             Serial.print(hours);
             Serial.print(F("h"));
@@ -867,7 +824,7 @@ void setup() { //***************************************************************
     lcd.init();                      // initialize the lcd
     lcd.clear();
     lcd.backlight();  //open the backlight
-    //lcd.createChar(0, customChar); // create a new custom character
+    
     //TESTING DISPLAY
     lcd.setCursor(0,0);
     lcd.print("TESTING DISPLAY");
@@ -894,14 +851,12 @@ void setup() { //***************************************************************
 //    lcd.createChar(16, customChar16);
 //    lcd.createChar(17, customChar17);
 //    lcd.createChar(6, customChar18);
+
     lcd.createChar(1, customCharDegF);
-    
     lcd.createChar(2, customCharInside);
     lcd.createChar(3, customCharOutside);
     lcd.createChar(4, customCharSmColon);
     lcd.createChar(5, customCharDroplet);
-    
-
     
     analogWrite(PUMP_PIN, 0);
     attachInterrupt(digitalPinToInterrupt(WATER_FLOW_PIN), countWater, FALLING);
@@ -920,23 +875,23 @@ void setup() { //***************************************************************
 
 void loop() { //************************************************************************************************* LOOP
     currentTime = millis();
-    if (currentTime >= (lastPumpUpdate + pumpUpdateInterval)) { //pump update timer
+    if (currentTime >= (lastPumpUpdate + pumpUpdateInterval)) { // pump update timer
         checkPumpCycleState();
         lastPumpUpdate += pumpUpdateInterval;
     }
-    if (checkPump != 0 && currentTime >= checkPump) { //special case pump check i.e. initialization, after thermostat changes
+    if (checkPump != 0 && currentTime >= checkPump) { // special case pump check i.e. initialization, after thermostat changes
         checkPumpCycleState();
         checkPump = 0;
-        //switch display back to temperature?
+        // switch display back to temperature?
     }
 
-    if (currentTime >= (lastTemperatureRead + TEMPERATURE_READ_INTERVAL)) { //Read temperature
+    if (currentTime >= (lastTemperatureRead + TEMPERATURE_READ_INTERVAL)) { // Read temperature
         if (waterCounter != 0) {
             float thisDuration = (currentTime - lastTemperatureRead) / 1000;
-            //this cycle's duration in seconds
+            // this cycle's duration in seconds
             // Pulse frequency (Hz) = 7.5Q, Q is flow rate in L/min.    (Pulse frequency x 60 min) / 7.5Q = flowrate in L/hour
-            l_minute = (waterCounter / 7.5) / thisDuration; // divide by 2.5 because this is on a 2.5s timer  //returns vol per minute extrapolated from 2.5s
-            totalVolume += (l_minute * thisDuration / 60);  //adds vol from the last 2.5s to totalVol
+            l_minute = (waterCounter / 7.5) / thisDuration; // divide by 2.5 because this is on a 2.5s timer  // returns vol per minute extrapolated from 2.5s
+            totalVolume += (l_minute * thisDuration / 60);  // adds vol from the last 2.5s to totalVol
             waterCounter = 0;
         }
 
@@ -952,7 +907,7 @@ void loop() { //****************************************************************
             Serial.println(buttonRead);
             if (buttonRead > 831) {
                 buttonStatus = 1;
-                for (uint8_t k = 0; k < 2; k++) {  //reset record temps
+                for (uint8_t k = 0; k < 2; k++) {  // reset record temps
                    airSensor[k].lowest = airSensor[k].tempF;
                 }
             } else {
@@ -963,44 +918,53 @@ void loop() { //****************************************************************
             }
             
             temperatureSetPoint += (0.5 * buttonStatus);
-            lcdTempAdjPage();
+            lcdPageSet();
             
             checkPump = currentTime + 3000; // wait 3 seconds before accepting new tempoerature in case button will be pressed more than once
         }
     }
-
-//    switch(displayPage) {
-//      
-//    }
-
-//           lastButtonCheck += BUTTON_CHECK_INTERVAL;
-//       uint16_t buttonRead = analogRead(THERMOSTAT_BUTTONS_PIN);
-//       if (buttonRead > 63) // buffer above 0 for read glitches
-//       {
-//           Serial.println(buttonRead);
-//           if (buttonRead > 831)
-//           {
-//               buttonStatus = 1;
-//               for (uint8_t k = 0; k < 2; k++)  //reset record temps
-//                   airSensor[k].lowest = airSensor[k].tempF;
-//           }
-//           else
-//           {
-//               buttonStatus = -1;
-//               for (uint8_t k = 0; k < 2; k++)
-//                   airSensor[k].highest = airSensor[k].tempF;
-//           }
-//           if (lastButtonStatus == 0) // catching only when pressed from no press adjust temperature. One press per increase.
-//           {
-//               temperatureSetPoint += (1 * buttonStatus);
-//               checkPump = currentTime + 3000; // wait 3 seconds before accepting new tempoerature in case button will be pressed more than once
-//               
-//           }
-//       }
-//       else
-//       {
-//           buttonStatus = 0;
-//       }
-//       lastButtonStatus = buttonStatus;
-
 } //************************************************************************************************* END LOOP
+
+
+
+void lcdPageSet() {
+    lcd.setCursor(0,0);
+    lcd.print("Temp: "); // 6
+    lcd.write(2); // sm colon  // 7
+    lcd.print(airSensor[0].currentEMA[0],1); // 11
+    lcd.write(1); // Replaces "*F" // 12
+    lcd.print("    "); // 16
+
+    lcd.setCursor(0,1);
+    lcd.print("   ");  // 6
+/*     lcd.write(4); // Replaces ": " // 7 */
+    lcd.print("> ");
+    lcd.print(temperatureSetPoint,1); // 11
+    lcd.write(1); // Replaces "*F" // 12
+    lcd.print(" <");
+    lcd.print("    "); // 16
+}
+
+void lcdPage1() {
+    uint16_t tankPercent = analogRead(WATER_LEVEL_PIN) / 1023 * 99;
+
+    lcd.setCursor(0,0);
+    lcd.write(2); // inside icon // 1
+    lcd.print(airSensor[0].currentEMA[0],1); // 5
+    lcd.print(" "); // 6
+    lcd.print(airSensor[1].currentEMA[0],1); // 10
+    lcd.write(1); // degrees F // 11
+    lcd.print("     "); // 16
+
+    lcd.setCursor(0,1);
+/*     lcd.print("Set"); // 3
+    lcd.write(4); // sm colon // 4 */
+    lcd.print("> ");
+    lcd.print(temperatureSetPoint,1); // 8
+    lcd.write(1); // degrees F // 9
+    lcd.print(" <");
+    lcd.print("    "); // 13
+    // lcd.setCursor(13,1);
+    lcd.write(5); // water droplet // 14
+    lcd.print(tankPercent); // 0 - 99 // 16
+}

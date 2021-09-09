@@ -22,206 +22,6 @@ LiquidCrystal_I2C lcd(0x27, 16, 2); // set the LCD address to 0x27 for a 16 char
 //SCL = A5 pin
 
 
-byte customChar0[] = {
-  B11111,
-  B10001,
-  B10001,
-  B10001,
-  B10001,
-  B10001,
-  B10001,
-  B11111
-};
-
-byte customChar1[] = {
-  B11111,
-  B10001,
-  B10001,
-  B10001,
-  B10001,
-  B10001,
-  B10011,
-  B11111
-};
-byte customChar2[] = {
-  B11111,
-  B10001,
-  B10001,
-  B10001,
-  B10001,
-  B10001,
-  B10111,
-  B11111
-};
-byte customChar3[] = {
-  B11111,
-  B10001,
-  B10001,
-  B10001,
-  B10001,
-  B10001,
-  B11111,
-  B11111
-};
-
-
-byte customChar4[] = {
-  B11111,
-  B10001,
-  B10001,
-  B10001,
-  B10001,
-  B10011,
-  B11111,
-  B11111
-};
-byte customChar5[] = {
-  B11111,
-  B10001,
-  B10001,
-  B10001,
-  B10001,
-  B10111,
-  B11111,
-  B11111
-};
-byte customChar6[] = {
-  B11111,
-  B10001,
-  B10001,
-  B10001,
-  B10001,
-  B11111,
-  B11111,
-  B11111
-};
-
-byte customChar7[] = {
-  B11111,
-  B10001,
-  B10001,
-  B10001,
-  B10011,
-  B11111,
-  B11111,
-  B11111
-};
-byte customChar8[] = {
-  B11111,
-  B10001,
-  B10001,
-  B10001,
-  B10111,
-  B11111,
-  B11111,
-  B11111
-};
-byte customChar9[] = {
-  B11111,
-  B10001,
-  B10001,
-  B10001,
-  B11111,
-  B11111,
-  B11111,
-  B11111
-};
-
-
-byte customChar10[] = {
-  B11111,
-  B10001,
-  B10001,
-  B10011,
-  B11111,
-  B11111,
-  B11111,
-  B11111
-};
-byte customChar11[] = {
-  B11111,
-  B10001,
-  B10001,
-  B10111,
-  B11111,
-  B11111,
-  B11111,
-  B11111
-};
-byte customChar12[] = {
-  B11111,
-  B10001,
-  B10001,
-  B11111,
-  B11111,
-  B11111,
-  B11111,
-  B11111
-};
-
-
-byte customChar13[] = {
-  B11111,
-  B10001,
-  B10011,
-  B11111,
-  B11111,
-  B11111,
-  B11111,
-  B11111
-};
-byte customChar14[] = {
-  B11111,
-  B10001,
-  B10111,
-  B11111,
-  B11111,
-  B11111,
-  B11111,
-  B11111
-};
-byte customChar15[] = {
-  B11111,
-  B10001,
-  B11111,
-  B11111,
-  B11111,
-  B11111,
-  B11111,
-  B11111
-};
-
-byte customChar16[] = {
-  B11111,
-  B10011,
-  B11111,
-  B11111,
-  B11111,
-  B11111,
-  B11111,
-  B11111
-};
-byte customChar17[] = {
-  B11111,
-  B10111,
-  B11111,
-  B11111,
-  B11111,
-  B11111,
-  B11111,
-  B11111
-};
-byte customChar18[] = {
-  B11111,
-  B11111,
-  B11111,
-  B11111,
-  B11111,
-  B11111,
-  B11111,
-  B11111
-};
-
 byte customCharInside[] = { // "inside"
   B00000,
   B00000,
@@ -254,28 +54,6 @@ byte customCharDegF[] = { // "degrees F"
   B00100,
   B00100
 };
-byte customCharDegSet1[] = {
-  B01000,
-  B10100,
-  B01000,
-  B11100,
-  B10001,
-  B11101,
-  B00101,
-  B11101
-};
-
-byte customCharDegSet2[] = {
-  B00000,
-  B00000,
-  B00000,
-  B10010,
-  B01111,
-  B11010,
-  B00010,
-  B11010
-};
-
 
 byte customCharDroplet[] = {
   B00100,
@@ -288,28 +66,6 @@ byte customCharDroplet[] = {
   B01110
 };
 
-byte customCharWtrLvl1[] = {
-  B10001,
-  B10001,
-  B10101,
-  B01010,
-  B00000,
-  B00010,
-  B00010,
-  B00011
-};
-
-byte customCharWtrLvl2[] = {
-  B01000,
-  B11100,
-  B01011,
-  B01010,
-  B00000,
-  B00010,
-  B10110,
-  B01011
-};
-
 byte customCharSmColon[] = {
   B00000,
   B00000,
@@ -320,6 +76,54 @@ byte customCharSmColon[] = {
   B00000,
   B00000
 };
+
+
+
+//
+//byte customCharDegSet1[] = {
+//  B01000,
+//  B10100,
+//  B01000,
+//  B11100,
+//  B10001,
+//  B11101,
+//  B00101,
+//  B11101
+//};
+//
+//byte customCharDegSet2[] = {
+//  B00000,
+//  B00000,
+//  B00000,
+//  B10010,
+//  B01111,
+//  B11010,
+//  B00010,
+//  B11010
+//};
+//
+//byte customCharWtrLvl1[] = {
+//  B10001,
+//  B10001,
+//  B10101,
+//  B01010,
+//  B00000,
+//  B00010,
+//  B00010,
+//  B00011
+//};
+//
+//byte customCharWtrLvl2[] = {
+//  B01000,
+//  B11100,
+//  B01011,
+//  B01010,
+//  B00000,
+//  B00010,
+//  B10110,
+//  B01011
+//};
+
 
 const uint8_t AIR_SENSOR_COUNT = 2;
 const uint8_t FLOOR_SENSOR_COUNT = 2;

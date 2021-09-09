@@ -1,6 +1,5 @@
 {
-    "configurations": [
-        {
+    "configurations": [ {
             "name": "Win32",
             "includePath": [
                 "C:\\Program Files (x86)\\Arduino\\tools\\**",

@@ -7,8 +7,9 @@
 
 void updateTEMP() {
     for (uint8_t i = 0; i < AIR_SENSOR_COUNT; i++) {
-        airSensor[i].tempF = airSensor[i].sensor->readTemperature(true);
-        airSensor[i].humid = airSensor[i].sensor->readHumidity();
+        airSensor[i].readTemp();
+        // airSensor[i].tempF = airSensor[i].sensor->readTemperature(true);
+        // airSensor[i].humid = airSensor[i].sensor->readHumidity();
     }
 
     if (isnan(airSensor[0].humid) || isnan(airSensor[0].tempF)) { // check for errors in two sensors
@@ -58,33 +59,30 @@ void updateTEMP() {
     }
     
 
-    for (uint8_t i = 0; i < AIR_SENSOR_COUNT; i++) { // update records
-        if (airSensor[i].highest < airSensor[i].tempF) {
-            airSensor[i].highest = airSensor[i].tempF;
-        }
-        if (airSensor[i].lowest > airSensor[i].tempF) {
-            airSensor[i].lowest = airSensor[i].tempF;
-        }
+    for (uint8_t i = 0; i < AIR_SENSOR_COUNT; i++) { // update highs/lows records
+        airSensor[i].update();
+        // if (airSensor[i].highest < airSensor[i].tempF) {
+        //     airSensor[i].highest = airSensor[i].tempF;
+        // }
+        // if (airSensor[i].lowest > airSensor[i].tempF) {
+        //     airSensor[i].lowest = airSensor[i].tempF;
+        // }
 
-        for (uint8_t z = 0; z < 3; z++) { // update EMA
-            if (airSensor[i].lastEMA[z] == 0) {
-                airSensor[i].lastEMA[z] = airSensor[i].tempF;
-            }
+        // for (uint8_t z = 0; z < 3; z++) { // update EMA
+        //     if (airSensor[i].lastEMA[z] == 0) {
+        //         airSensor[i].lastEMA[z] = airSensor[i].tempF;
+        //     }
 
-            airSensor[i].currentEMA[z] = airSensor[i].tempF * EMA_MULT[z] + airSensor[i].lastEMA[z] * (1 - EMA_MULT[z]);
-            airSensor[i].lastEMA[z] = airSensor[i].currentEMA[z];
-        }
+        //     airSensor[i].currentEMA[z] = airSensor[i].tempF * EMA_MULT[z] + airSensor[i].lastEMA[z] * (1 - EMA_MULT[z]);
+        //     airSensor[i].lastEMA[z] = airSensor[i].currentEMA[z];
+        // }
     }
 
     weightedTemp = (airSensor[0].WEIGHT * airSensor[0].currentEMA[0] + airSensor[1].WEIGHT * airSensor[1].currentEMA[0]) / (airSensor[0].WEIGHT + airSensor[1].WEIGHT);
     temperature = weightedTemp;
 
     for (uint8_t i = 0; i < FLOOR_SENSOR_COUNT; i++) { // update floor emas
-        if (floorSensor[i].lastEMA == 0) {
-            floorSensor[i].lastEMA = floorSensor[i].readTemp();
-        }
-        floorSensor[i].currentEMA = (floorSensor[i].readTemp() * FLOOR_EMA_MULT + floorSensor[i].lastEMA * (1 - FLOOR_EMA_MULT));
-        floorSensor[i].lastEMA = floorSensor[i].currentEMA;
+        floorSensor[i].update();
     }
 
     int difference = int(abs(floorSensor[0].currentEMA - floorSensor[1].currentEMA)); // error check

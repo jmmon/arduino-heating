@@ -96,8 +96,8 @@ void lcdPrintTankPercent() {
     } else if (tankRead >= 1015) {
         lcd.print("FF");
     } else {
-        uint16_t tankPercent = (tankRead - 350) / (1023 - 350) * 100;
-        lcd.print((tankPercent < 10) ? " " + tankPercent : "" + tankPercent); // 0 - 99 // 15-16
+        uint8_t tankPercent = (tankRead - 350) / 673 * 100;
+        lcd.print((tankPercent < 10) ? (" " + tankPercent) : ("" + tankPercent)); // 0 - 99 // 15-16
     }
 }
 

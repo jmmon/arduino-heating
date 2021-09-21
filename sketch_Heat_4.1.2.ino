@@ -187,15 +187,17 @@ struct airSensor_t {
     String label;
 
 } 
-airSensor[] = { 
+airSensorT[] = { 
     {&dht[0], 0, 0, 1, 0,     0, 999, {0, 0, 0}, {0, 0, 0}, 0,    true, "MAIN"}, 
     {&dht[1], 0, 0, 2, 0,     0, 999, {0, 0, 0}, {0, 0, 0}, 0,    true, "UPSTAIRS"},
 };
 
 class AirSensor_C {
     public:
-        AirSensor_C(DHT *s) {
+        AirSensor_C(DHT *s, String l, float w) {
             sensor = s;
+            label = l;
+            WEIGHT = w;
         }
 
         DHT *sensor;
@@ -208,22 +210,45 @@ class AirSensor_C {
         float lowest = 1000;
         float currentEMA[3]; // {short, medium, long} EMA
         float lastEMA[3];    // {short, medium, long}
-        int16_t trendEMA;
+        int16_t trendEMA = 0;
         
-        bool working;
+        bool working = true;
         String label;
 
-        update() {
+        readTemp() {
+            //read temp/humid
             tempC = sensor->readTemperature();
             tempF = sensor->readTemperature(true);
             humid = sensor->readHumidity();
-        }
+        };
+
+        update() {
+            //update highest / lowest
+            if (highest < tempF) {
+                highest = tempF;
+            }
+            if (lowest > tempF) {
+                lowest = tempF;
+            }
+
+            //update EMAs (short, medium, long)
+            for (uint8_t ema = 0; ema < 3; ema++) { // update EMA
+                if (lastEMA[ema] == 0) {
+                    lastEMA[ema] = tempF;
+                }
+
+                currentEMA[ema] = tempF * EMA_MULT[ema] + lastEMA[ema] * (1 - EMA_MULT[ema]);
+                lastEMA[ema] = currentEMA[ema];
+            }
+        };
 
 
 }
-airSensorC[] = {
-    AirSensor_C(&dht[0])
+airSensor[] = {
+    AirSensor_C(&dht[0], "MAIN", 1),
+    AirSensor_C(&dht[1], "UPSTAIRS", 2),
 };
+
 
 
 class FloorSensor_C {
@@ -243,6 +268,16 @@ class FloorSensor_C {
             return val / a;
         };
 
+        update() {
+            if (lastEMA == 0) {
+                lastEMA = readTemp();
+            }
+            currentEMA = (readTemp() * FLOOR_EMA_MULT + lastEMA * (1 - FLOOR_EMA_MULT));
+            lastEMA = currentEMA;
+        };
+
+        
+
 } 
 floorSensor[] = { 
     FloorSensor_C(FLOOR_TEMP_PIN[0]), 
@@ -256,9 +291,9 @@ floorSensor[] = {
 //pid settings and gains
 #define OUTPUT_MIN 0
 #define OUTPUT_MAX 255
-#define KP .12
-#define KI .0003
-#define KD 0
+#define KP .12      // proportional (more error/difference = more PWM)
+#define KI .0003    // integral (integrate past errors; error over time)
+#define KD 0        // derivative ("anticipatory control"; future estimate of trend of the error)
 
 double temperature, 
     setPoint = tempSetPoint, 

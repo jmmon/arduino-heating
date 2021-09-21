@@ -1,0 +1,68 @@
+/**   Okay, so what this does is it checks the temperature every 2 seconds. 
+ *      check if heat is needed:
+   *      if yes, check if floor is cold:   //note, shouldBeInState is always != 2
+   *        if yes, set shouldBeInState = 3; // warm up mode
+   *        else set shouldBeInState = 1; // normal operation
+   *      else set shouldBeInState = 0; // off
+ * 
+ *    now also, every timer seconds check if the pump state needs to be changed.
+ *    
+ *    function : every timer time or when TemperatureCheck calls a check
+ *      if (isInState == shouldBeInState) { //  continue phases
+ *        //then it's a continuation so just add 30 sec to the timer
+ *        //set timer to continuation_time
+ *      } else {
+ *        switch(shouldBeInState) { //    new phases
+ *          case(0):  //turning off
+ *            //set timer to min_off
+ *            isInState = 0;
+ *            break;
+ *          case(1): //turning on,check if it has been in 2_startUp
+ *            if (isInState == 2) { //  this is when the pump has gone thru the startup phase
+ *                //  so add on min_start - startupPhaseTime to the timer and
+ *                isInState = 1;  //  set to on state
+ *            } else {
+ *                //if last state was not startup then it needs to startup
+ *                isInState = 2;
+ *                //  add on startupPhaseTime  to timer
+ *            }
+ *            break;
+ *          case(3):  //  should be on in the warm up phase
+ *            //set timer to min_WarmUp
+ *            isInState = 3;
+ *            break;
+ *        }
+ *      }
+ * 
+ *      buttons: detect button presses and trigger extra pump checks
+ */
+
+
+
+
+
+So, add a buffer for when floor is warm and air suddenly drops. Trying to negate "windows open + floor on = too hot."
+
+Or, implement proper formula (requires testing) to regulate time and/or speed. . .
+
+    The 3 parameter formula.
+
+    It could regulate time, or it could regulate time and extend into motor speed; (and motor speed of course based on floor temp)
+
+    So:  0-60 + slow-med-fast? or flexible pwm
+
+    OR, just regulate PWM.
+        //0(198), 199-255
+        if (n < 199) {
+            pwm = 0;
+        } else if (n > 255) {
+            pwm = 255;
+        } else {
+            pwm = n;
+        }
+        
+    Have value restricted from 0-255? Or, have 0 == off, and go positive for on and negative for overflow. Easier if range matches pwm.
+
+    One timer to measeure and track temp and request on/off
+
+    Second timer to run motor with built in minimum cycle times. Turns on (to whatever PWM) when minimum cycle is over and when temp timer allows.

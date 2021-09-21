@@ -43,6 +43,7 @@ void updateTEMP() {
             Serial.print(airSensor[0].tempF); 
             Serial.print(F(" vs EMA_Long ")); 
             Serial.print(airSensor[0].currentEMA[2]);
+
             airSensor[0].tempF = airSensor[1].tempF;
         }
         if (airSensor[1].tempF > 20 + airSensor[1].currentEMA[2] || airSensor[1].tempF < -20 + airSensor[1].currentEMA[2]) {
@@ -51,30 +52,34 @@ void updateTEMP() {
             Serial.print(airSensor[1].tempF); 
             Serial.print(F(" vs EMA_Long ")); 
             Serial.print(airSensor[1].currentEMA[2]);
+
             airSensor[1].tempF = airSensor[0].tempF;
         }
     }
     
 
-    for (uint8_t i = 0; i < AIR_SENSOR_COUNT; i++) {
+    for (uint8_t i = 0; i < AIR_SENSOR_COUNT; i++) { // update records
         if (airSensor[i].highest < airSensor[i].tempF) {
             airSensor[i].highest = airSensor[i].tempF;
         }
         if (airSensor[i].lowest > airSensor[i].tempF) {
             airSensor[i].lowest = airSensor[i].tempF;
         }
-        for (uint8_t z = 0; z < 3; z++) {
+
+        for (uint8_t z = 0; z < 3; z++) { // update EMA
             if (airSensor[i].lastEMA[z] == 0) {
                 airSensor[i].lastEMA[z] = airSensor[i].tempF;
             }
+
             airSensor[i].currentEMA[z] = airSensor[i].tempF * EMA_MULT[z] + airSensor[i].lastEMA[z] * (1 - EMA_MULT[z]);
             airSensor[i].lastEMA[z] = airSensor[i].currentEMA[z];
         }
     }
 
     weightedTemp = (airSensor[0].WEIGHT * airSensor[0].currentEMA[0] + airSensor[1].WEIGHT * airSensor[1].currentEMA[0]) / (airSensor[0].WEIGHT + airSensor[1].WEIGHT);
-    
-    for (uint8_t i = 0; i < FLOOR_SENSOR_COUNT; i++) {
+    temperature = weightedTemp;
+
+    for (uint8_t i = 0; i < FLOOR_SENSOR_COUNT; i++) { // update floor emas
         if (floorSensor[i].lastEMA == 0) {
             floorSensor[i].lastEMA = floorSensor[i].readTemp();
         }
@@ -84,7 +89,7 @@ void updateTEMP() {
 
     int difference = int(abs(floorSensor[0].currentEMA - floorSensor[1].currentEMA)); // error check
 
-    if (difference > 80) {
+    if (difference > 80) { // floor thermistor difference check
         if (VERBOSE) {
             Serial.print(F("Floor Read Error. Difference: "));
             Serial.println(difference);
@@ -210,14 +215,14 @@ void updateTEMP() {
     }
     tempDispCounter++;
 
-    //Set next pump state
 
-    if (weightedTemp > temperatureSetPoint || (avgTrend > 0 && weightedTemp > (temperatureSetPoint - AIR_TEMP_TREND_FACTOR * avgTrend))) { // check if should be off
+    //Set next pump state
+    if (weightedTemp > tempSetPoint || (avgTrend > 0 && weightedTemp > (tempSetPoint - AIR_TEMP_TREND_FACTOR * avgTrend))) { // check if should be off
         nextPumpState = 0;
     } else { // else should be on:
-        if (weightedTemp > temperatureSetPoint - 3) {   // if temp needs to move <3 degrees, turn on/start       OLD:  floorEmaAvg > FLOOR_WARMUP_TEMPERATURE && 
+        if (weightedTemp > tempSetPoint - 3) {   // if temp needs to move <3 degrees, turn on/start       OLD:  floorEmaAvg > FLOOR_WARMUP_TEMPERATURE && 
             nextPumpState = 1;
-        } else if (weightedTemp > temperatureSetPoint - 5) { //if temp needs to move 3-5 degrees, go medium
+        } else if (weightedTemp > tempSetPoint - 5) { //if temp needs to move 3-5 degrees, go medium
             nextPumpState = 3; //  medium
         } else {                 // else, go full speed
             nextPumpState = 4; //  high
@@ -226,6 +231,17 @@ void updateTEMP() {
     if (currentPumpState == 0 && nextPumpState != 0) {   // Force update if switching to on from off (i.e. cut short the off cycle if turning on)
         checkPumpCycleState();
     }
+    // ************************************************ old
+    
+
+    if (outputVal < 199) {
+        analogWrite(PUMP_PIN, 0);
+    } else if (outputVal > 255) {
+        analogWrite(PUMP_PIN, 255);
+    } else {
+        analogWrite(PUMP_PIN, outputVal);
+    }
+
 }
 
 
@@ -332,7 +348,7 @@ void checkPumpCycleState() {
 
         Serial.println();
         Serial.print(F(" Set: "));
-        Serial.print(temperatureSetPoint, 1);
+        Serial.print(tempSetPoint, 1);
         Serial.print(F("°F"));
         Serial.print(F("   Floor: "));
         Serial.print(floorSensor[0].currentEMA);

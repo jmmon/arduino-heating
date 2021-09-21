@@ -8,6 +8,7 @@
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
 #include <DHT.h>
+#include <AutoPID.h>
 
 #define DHT1PIN 7 //main
 #define DHT2PIN 8 //upstairs //(not currently implemented)
@@ -102,10 +103,17 @@ uint32_t currentTime = 0;
 int8_t lastButtonStatus = 0; //thermostat buttons
 uint8_t lastButtonRead = 0;
 
-const uint8_t BUTTON_CHECK_INTERVAL = 850; //adj thermostat every ()ms while one of the buttons is held
-const uint32_t TEMPERATURE_READ_INTERVAL = 2500;
+const uint16_t BUTTON_CHECK_INTERVAL = 850; //adj thermostat every ()ms while one of the buttons is held
+const uint16_t TEMPERATURE_READ_INTERVAL = 2500;
 uint32_t pumpUpdateInterval = 60000;
 uint32_t checkPump = 3000; //checks the pump state 2 seconds after start
+
+
+// LCD update interval
+const uint16_t LCD_UPDATE_INTERVAL = 5000; //5 seconds
+uint32_t lastLcdUpdate = 0;
+uint8_t nextLcdPage = 0;
+uint8_t LCD_PAGE_MAX = 1;
 
 
 struct cycle_t {
@@ -126,7 +134,7 @@ struct cycle_t {
 uint8_t currentPumpState = 0;
 uint8_t nextPumpState = 0;
 
-float temperatureSetPoint = 63; /*in F*/
+float tempSetPoint = 63; /*in F*/
 float weightedTemp;
 float avgTrend;
 const int UPTREND = 1;                     // every 10 seconds trend is updated. if going towards the target temp, increase trend by this amount.
@@ -180,16 +188,16 @@ airSensor[] = {
     {&dht[1], 0, 0, 2, 0,     0, 999, {0, 0, 0}, {0, 0, 0}, 0,    true, "UPSTAIRS"},
 };
 
-struct floorSensor_t {
-    uint8_t PIN;
-    float currentEMA;
-    float lastEMA;
+// struct floorSensor_t {
+//     uint8_t PIN;
+//     float currentEMA;
+//     float lastEMA;
 
-} 
-floorSensorS[] = { 
-    {FLOOR_TEMP_PIN[0], 0, 0}, 
-    {FLOOR_TEMP_PIN[1], 0, 0},
-};
+// } 
+// floorSensorS[] = { 
+//     {FLOOR_TEMP_PIN[0], 0, 0}, 
+//     {FLOOR_TEMP_PIN[1], 0, 0},
+// };
 
 
 class floorSensor_c {
@@ -214,3 +222,22 @@ floorSensor[] = {
     floorSensor_c(FLOOR_TEMP_PIN[0]), 
     floorSensor_c(FLOOR_TEMP_PIN[1])
 };
+
+
+
+// AutoPID
+
+//pid settings and gains
+#define OUTPUT_MIN 0
+#define OUTPUT_MAX 255
+#define KP .12
+#define KI .0003
+#define KD 0
+
+double temperature, 
+    setPoint = tempSetPoint, 
+    outputVal;
+
+
+
+AutoPID myPID(&temperature, &setPoint, &outputVal, OUTPUT_MIN, OUTPUT_MAX, KP, KI, KD);

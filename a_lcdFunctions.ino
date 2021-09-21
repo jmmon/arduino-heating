@@ -69,7 +69,7 @@ void lcdPrintTankPercent() {
     lcd.write(5); // water droplet // 14
     if (tankRead <= 350) {
         lcd.print("EE");
-    } else if (tankPercent >= 1015) {
+    } else if (tankRead >= 1015) {
         lcd.print("FF");
     } else {
         uint16_t tankPercent = (tankRead - 350) / (1023 - 350) * 100;

@@ -11,10 +11,14 @@
 #include <AutoPID.h>
 
 #define DHT1PIN 7 //main
-#define DHT2PIN 8 //upstairs //(not currently implemented)
+#define DHT2PIN 8 //upstairs
+
 #define DHT3PIN 12 //not yet used
 
-DHT dht[] = { {DHT1PIN, DHT22}, {DHT2PIN, DHT22}, {DHT3PIN, DHT22}, //  outside, not yet installed
+DHT dht[] = { 
+    {DHT1PIN, DHT22}, 
+    {DHT2PIN, DHT22}, 
+    {DHT3PIN, DHT22}, //  outside, not yet installed
     // greenhouse?
 };
 
@@ -57,7 +61,7 @@ byte customCharDegF[] = { // "degrees F"
   B00100
 };
 
-byte customCharDroplet[] = {
+byte customCharDroplet[] = { //water droplet
   B00100,
   B01110,
   B01010,
@@ -68,7 +72,7 @@ byte customCharDroplet[] = {
   B01110
 };
 
-byte customCharSmColon[] = {
+byte customCharSmColon[] = { // small colon + space
   B00000,
   B00000,
   B01000,
@@ -103,7 +107,7 @@ uint32_t currentTime = 0;
 int8_t lastButtonStatus = 0; //thermostat buttons
 uint8_t lastButtonRead = 0;
 
-const uint16_t BUTTON_CHECK_INTERVAL = 850; //adj thermostat every ()ms while one of the buttons is held
+const uint16_t BUTTON_CHECK_INTERVAL = 250; //adj thermostat every ()ms while one of the buttons is held
 const uint16_t TEMPERATURE_READ_INTERVAL = 2500;
 uint32_t pumpUpdateInterval = 60000;
 uint32_t checkPump = 3000; //checks the pump state 2 seconds after start
@@ -188,21 +192,43 @@ airSensor[] = {
     {&dht[1], 0, 0, 2, 0,     0, 999, {0, 0, 0}, {0, 0, 0}, 0,    true, "UPSTAIRS"},
 };
 
-// struct floorSensor_t {
-//     uint8_t PIN;
-//     float currentEMA;
-//     float lastEMA;
-
-// } 
-// floorSensorS[] = { 
-//     {FLOOR_TEMP_PIN[0], 0, 0}, 
-//     {FLOOR_TEMP_PIN[1], 0, 0},
-// };
-
-
-class floorSensor_c {
+class AirSensor_C {
     public:
-        floorSensor_c(int pin) { // constructor
+        AirSensor_C(DHT *s) {
+            sensor = s;
+        }
+
+        DHT *sensor;
+        float tempC = 0;
+        float tempF = 0;
+        float WEIGHT = 1;
+        float humid = 0;
+
+        float highest = -1000;
+        float lowest = 1000;
+        float currentEMA[3]; // {short, medium, long} EMA
+        float lastEMA[3];    // {short, medium, long}
+        int16_t trendEMA;
+        
+        bool working;
+        String label;
+
+        update() {
+            tempC = sensor->readTemperature();
+            tempF = sensor->readTemperature(true);
+            humid = sensor->readHumidity();
+        }
+
+
+}
+airSensorC[] = {
+    AirSensor_C(&dht[0])
+};
+
+
+class FloorSensor_C {
+    public:
+        FloorSensor_C(int pin) { // constructor
             PIN = pin;
         };
         uint8_t PIN;
@@ -219,8 +245,8 @@ class floorSensor_c {
 
 } 
 floorSensor[] = { 
-    floorSensor_c(FLOOR_TEMP_PIN[0]), 
-    floorSensor_c(FLOOR_TEMP_PIN[1])
+    FloorSensor_C(FLOOR_TEMP_PIN[0]), 
+    FloorSensor_C(FLOOR_TEMP_PIN[1])
 };
 
 

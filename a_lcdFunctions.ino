@@ -149,7 +149,7 @@ void lcdPrintTankPercent() {
 }
 
 
-void lcdPrintTankPercent() {
+void lcdPrintTankRead() {
     uint16_t tankRead = analogRead(WATER_LEVEL_PIN);
     lcd.write(5); // water droplet // 14
 

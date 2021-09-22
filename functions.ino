@@ -103,28 +103,28 @@ void updateTEMP() {
     // ************************************************ old
 
     //Set next pump state
-    // if (weightedTemp > tempSetPoint || (avgTrend > 0 && weightedTemp > (tempSetPoint - AIR_TEMP_TREND_FACTOR * avgTrend))) { // check if should be off
-    //     nextPumpState = 0;
-    // } else { // else should be on:
-    //     if (weightedTemp > tempSetPoint - 3) {   // if temp needs to move <3 degrees, turn on/start       OLD:  floorEmaAvg > FLOOR_WARMUP_TEMPERATURE && 
-    //         nextPumpState = 1;
-    //     } else if (weightedTemp > tempSetPoint - 5) { //if temp needs to move 3-5 degrees, go medium
-    //         nextPumpState = 3; //  medium
-    //     } else {                 // else, go full speed
-    //         nextPumpState = 4; //  high
-    //     }
-    // }
-    // if (currentPumpState == 0 && nextPumpState != 0) {   // Force update if switching to on from off (i.e. cut short the off cycle if turning on)
-    //     checkPumpCycleState();
-    // }
+    if (weightedTemp > tempSetPoint || (avgTrend > 0 && weightedTemp > (tempSetPoint - AIR_TEMP_TREND_FACTOR * avgTrend))) { // check if should be off
+        nextPumpState = 0;
+    } else { // else should be on:
+        if (weightedTemp > tempSetPoint - 3) {   // if temp needs to move <3 degrees, turn on/start       OLD:  floorEmaAvg > FLOOR_WARMUP_TEMPERATURE && 
+            nextPumpState = 1;
+        } else if (weightedTemp > tempSetPoint - 5) { //if temp needs to move 3-5 degrees, go medium
+            nextPumpState = 3; //  medium
+        } else {                 // else, go full speed
+            nextPumpState = 4; //  high
+        }
+    }
+    if (currentPumpState == 0 && nextPumpState != 0) {   // Force update if switching to on from off (i.e. cut short the off cycle if turning on)
+        checkPumpCycleState();
+    }
     // ************************************************ old
     
 
-    if (outputVal <= 0 ) {
-        analogWrite(PUMP_PIN, 0);
-    } else {
-        analogWrite(PUMP_PIN, (outputVal + 198)); //1 + 198 = 199
-    }
+    // if (outputVal <= 0 ) {
+    //     analogWrite(PUMP_PIN, 0);
+    // } else {
+    //     analogWrite(PUMP_PIN, (outputVal + 198)); //1 + 198 = 199
+    // }
 
 }
 
@@ -133,91 +133,37 @@ void checkPumpCycleState() {
     uint32_t lastCycleDuration = 0;
     Serial.println();
 
+
     if (nextPumpState == 1) {
-        if (currentPumpState == 1) {                                                // continue from on to on
+        if (currentPumpState == 1) { // continue to on from on
             pumpUpdateInterval = CYCLE[5].MIN_TIME; // add a minute to continue same phase
             Serial.println(F("TESTING - On cycle continue phase"));
-        } else if (currentPumpState != 0) {         //  on from start or warmup
-            currentPumpState = 1;
-            pumpUpdateInterval = CYCLE[currentPumpState].MIN_TIME;
-            Serial.println(F("TESTING - On cycle initialization (after Start)"));
-            analogWrite(PUMP_PIN, 199);
-        } else {                             // if (currentPumpState == (0)          start from off or warm up (currentPumpState == (0 || 3))
-            currentPumpState = 2;                                       //  set new current pump state to START
+        } else {    // to on from other
+            currentPumpState = (currentPumpState != 0) ? 1 : 2;
             pumpUpdateInterval = CYCLE[currentPumpState].MIN_TIME; //  add START interval
-            lastCycleDuration = currentTime - cycleStartTime;           //  start new cycle..
-            cycleStartTime = currentTime;
-            Serial.println(F("TESTING - Start cycle initialization"));
-            analogWrite(PUMP_PIN, 223);
+            Serial.println(CYCLE[currentPumpState].NAME);
+            analogWrite(PUMP_PIN, CYCLE[currentPumpState].PWM);
+
+            if (currentPumpState == 0) { // from off, start new cycle..
+                lastCycleDuration = currentTime - cycleStartTime;
+                cycleStartTime = currentTime;
+            }
         }
-    } else if (nextPumpState == 3) { // warm up changeto medium
-        if (currentPumpState == 3) {                                                // continue same phase
-            pumpUpdateInterval = CYCLE[5].MIN_TIME; // add a minute to continue same phase
-            Serial.println(F("TESTING - medium cycle continue phase"));
-        } else { // start as different phase
-            currentPumpState = 3;
+    } else {
+        //all other nextPumpStates
+        if (nextPumpState == currentPumpState) { // add a minute to continue same phase
+            pumpUpdateInterval = CYCLE[5].MIN_TIME;
+            Serial.print(F("TESTING - ")); Serial.print(CYCLE[nextPumpState].NAME); Serial.println(F(" cycle continue phase"));
+
+        } else { // start fresh phase
+            currentPumpState = nextPumpState;
             pumpUpdateInterval = CYCLE[currentPumpState].MIN_TIME;
             lastCycleDuration = currentTime - cycleStartTime;
             cycleStartTime = currentTime;
-            Serial.println(F("TESTING - medium cycle initialization"));
-            analogWrite(PUMP_PIN, 223);
-        }
-    } else if (nextPumpState == 4) { // warm up
-        if (currentPumpState == 4) {                                                // continue same phase
-            pumpUpdateInterval = CYCLE[5].MIN_TIME; // add a minute to continue same phase
-            Serial.println(F("TESTING - warm up cycle continue phase"));
-        } else { // start as different phase
-            currentPumpState = 4;
-            pumpUpdateInterval = CYCLE[currentPumpState].MIN_TIME;
-            lastCycleDuration = currentTime - cycleStartTime;
-            cycleStartTime = currentTime;
-            Serial.println(F("TESTING - warm up cycle initialization"));
-            analogWrite(PUMP_PIN, 255);
-        }
-    } else if (nextPumpState == 0) { // off
-        if (currentPumpState == 0) { // continue same phase
-            pumpUpdateInterval = CYCLE[5].MIN_TIME; // add a minute to continue same phase
-            Serial.println(F("TESTING - Off cycle continue phase"));
-        } else { // start as different phase
-            currentPumpState = 0;
-            pumpUpdateInterval = CYCLE[currentPumpState].MIN_TIME;
-            lastCycleDuration = currentTime - cycleStartTime;
-            cycleStartTime = currentTime;
-            Serial.println(F("TESTING - Off cycle initialization"));
-            analogWrite(PUMP_PIN, 0);
+            Serial.println(CYCLE[currentPumpState].NAME);
+            analogWrite(PUMP_PIN, CYCLE[currentPumpState].PWM);
         }
     }
-
-
-    // if (nextPumpState == 1) {
-    //     if (currentPumpState == 1) {                                                // continue from on to on
-    //         pumpUpdateInterval = CYCLE[5].MIN_TIME; // add a minute to continue same phase
-    //         Serial.println(F("TESTING - On cycle continue phase"));
-    //     } else if (currentPumpState != 0) {         //  on from start or warmup
-    //         currentPumpState = 1;
-    //         pumpUpdateInterval = CYCLE[currentPumpState].MIN_TIME;
-    //         Serial.println(F("TESTING - On cycle initialization (after Start)"));
-    //         analogWrite(PUMP_PIN, 199);
-    //     } else {                             // if (currentPumpState == (0)          start from off or warm up (currentPumpState == (0 || 3))
-    //         currentPumpState = 2;                                       //  set new current pump state to START
-    //         pumpUpdateInterval = CYCLE[currentPumpState].MIN_TIME; //  add START interval
-    //         lastCycleDuration = currentTime - cycleStartTime;           //  start new cycle..
-    //         cycleStartTime = currentTime;
-    //         Serial.println(F("TESTING - Start cycle initialization"));
-    //         analogWrite(PUMP_PIN, 223);
-    //     }
-    // } else {
-    //     //all other nextPumpStates
-    //     if (nextPumpState == currentPumpState) {
-    //         pumpUpdateInterval = CYCLE[5].MIN_TIME; // add a minute to continue same phase
-    //         Serial.print(F("TESTING - ")); Serial.print(CYCLE[nextPumpState].NAME); Serial.println(F(" cycle continue phase"));
-    //     } else {
-
-    //     }
-    //     switch(nextPumpState) {
-
-    //     }
-    // }
 
 
     debugHighsLowsFloor(lastCycleDuration);
@@ -282,14 +228,5 @@ void updateTempSetPoint() {
             
             checkPump = currentTime + 3000; // wait 3 seconds before accepting new tempoerature in case button will be pressed more than once
         }
-    }
-}
-void updateLcd() {
-    if (currentTime >= (lastLcdUpdate + LCD_UPDATE_INTERVAL)) { // update LCD
-        lastLcdUpdate += LCD_UPDATE_INTERVAL;
-
-        lcdPage = (lcdPage == LCD_PAGE_MAX) ? 0: (lcdPage + 1); // cycle page
-
-        lcdSwitchPage(); // display page
     }
 }

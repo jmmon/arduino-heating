@@ -19,27 +19,28 @@ void lcdInitialize() {
 }
 
 
+void lcdSwitchPage() {
+    switch(lcdPage) {   // display proper page
+        case(0):
+                lcdPage1();
+            break;
 
-
-void lcdPageSet() { // set temperature page
-    lcd.setCursor(0,0);
-    lcd.print("Temp"); // 6
-    lcd.write(4); // sm colon  // 7
-    lcd.print(airSensor[0].currentEMA[0],1); // 11
-    lcd.write(1); // Replaces "*F" // 12
-    lcd.print("    "); // 16
-
-    lcd.setCursor(0,1);
-    lcd.print("   ");  // 6
-/*     lcd.write(4); // Replaces ": " // 7 */
-    lcd.write(126); // pointing right
-    lcd.print(" "); // 8
-    lcd.print(tempSetPoint,1); // 12
-    lcd.write(1); // degrees F // 13
-    lcd.print(" "); // 14
-    lcd.write(127); //pointing left // 15
-    lcd.print("    "); // 16
+        case(1):
+                lcdPage3();
+            break;
+    }
 }
+
+void lcdUpdate() {
+    if (currentTime >= (lastLcdUpdate + LCD_UPDATE_INTERVAL)) { // update LCD
+        lastLcdUpdate += LCD_UPDATE_INTERVAL;
+
+        lcdPage = (lcdPage == LCD_PAGE_MAX) ? 0: (lcdPage + 1); // cycle page
+
+        lcdSwitchPage(); // display page
+    }
+}
+
 
 void lcdPage1() { // main (indoor) temperature / water page
 
@@ -51,90 +52,11 @@ void lcdPage1() { // main (indoor) temperature / water page
     lcd.write(1); // degrees F // 11
 
     
-//  {65~90 == A~Z}, {122~97 == z~a}
-    
-//    lcd.write(65);
-//    
-//    lcd.write(64);
-//    
-//    lcd.write(63);
-//    
-//    lcd.write(61); //
-//    
-//    lcd.write(62); //
-    lcd.print("     "); // 16
+    // lcd.write() {65~90 == A~Z}, {122~97 == z~a}
 
-
-
-    lcd.setCursor(0,1);
-/*     lcd.print("Set"); // 3
-    lcd.write(4); // sm colon // 4 */
-    // lcd.write(126); // pointing right
-    // lcd.print(" "); // 2
-    lcd.print(tempSetPoint,1); // 6
-    lcd.write(1); // degrees F // 7
-    lcd.print(" ");
-    // lcd.write(127); //pointing left // 9
-
-    lcd.print("    "); // 13
-    // lcd.print(" "); // 13
-    lcdPrintTankPercent();
-
-
-
-    // lcd.print("  "); // 11
-    // lcd.write(5); // water droplet // 12
-    // lcd.print((tankRead < 10) ? "   " : (tankRead < 100) ? "  " : (tankRead < 1000) ? " " : "");
-    // lcd.print(tankRead); // 0 - 1023 // 16
-}
-
-// void lcdPrintTankPercent() {
-//     uint16_t tankRead = analogRead(WATER_LEVEL_PIN);
-//     lcd.write(5); // water droplet // 14
-//     if (tankRead <= 350) {
-//         lcd.print("EE");
-//     } else if (tankRead >= 1015) {
-//         lcd.print("FF");
-//     } else {
-//         uint8_t tankPercent = (tankRead - 350) / 673 * 100;
-//         lcd.print((tankPercent < 10) ? (" " + tankPercent) : ("" + tankPercent)); // 0 - 99 // 15-16
-//     }
-// }
-
-void lcdPrintTankPercent() {
-    uint16_t tankRead = analogRead(WATER_LEVEL_PIN);
-    lcd.write(5); // water droplet // 14
-    // if (tankRead <= 350) {
-    //     lcd.print("EE");
-    // } else if (tankRead >= 1015) {
-    //     lcd.print("FF");
-    // } else {
-    //     uint16_t tankPercent = (tankRead - 350) / (1023 - 350) * 100;
-    //     // lcd.print((tankPercent < 10) ? " " + tankPercent : tankPercent); // 0 - 99 // 15-16
-    //     lcd.print((tankPercent < 10) ? " " : ""); // 0 - 99 // 15-16
-    //     lcd.print(tankPercent); // 0 - 99 // 15-16
-    // }
-    lcd.print(tankRead);
-}
-
-
-void lcdPage2() { // heating alternate page
-    // 5 and 7 spots to work with if I keep the first main stuff
-    // display duration in this mode, floor reading? (probably not necessary)
-
-    // uint16_t tankPercent = ((analogRead(WATER_LEVEL_PIN) - 350) / (1023 - 350)) * 100;
-
-    lcd.setCursor(0,0);
-    lcd.write(2); // inside icon // 1
-    lcd.print(airSensor[0].currentEMA[0],1); // 5
-    lcd.print("/"); // 6
-    lcd.print(airSensor[1].currentEMA[0],1); // 10
-    lcd.write(1); // degrees F // 11
     lcd.print("     "); // 16
 
     lcd.setCursor(0,1);
-    /*     lcd.print("Set"); // 3
-    lcd.write(4); // sm colon // 4 */
     lcd.write(126); // pointing right
     lcd.print(" "); // 2
     lcd.print(tempSetPoint,1); // 6
@@ -142,13 +64,22 @@ void lcdPage2() { // heating alternate page
     lcd.print(" ");
     lcd.write(127); //pointing left // 9
 
-    lcd.print("    "); // 13
-    lcdPrintTankPercent(); // 14-16
+    // lcd.print("    "); // 13
+    // lcdPrintTankPercent();
 
-    //  lcd.print("  "); // 11
-    //  lcd.write(5); // water droplet // 12
-    //  lcd.print((tankRead < 10) ? "   " : (tankRead < 100) ? "  " : (tankRead < 1000) ? " " : "");
-    //  lcd.print(tankRead); // 0 - 1023 // 16
+    
+    lcd.print("  "); // 11
+    lcdPrintTankRead();
+}
+
+
+void lcdPage2() { // heating cycle page
+    //display cycle info, time/duration
+    lcd.setCursor(0,0);
+    
+
+    lcd.setCursor(0,1);
+    
 }
 
 
@@ -178,14 +109,53 @@ void lcdPage3() { // PID + PWM display for testing / adjustment
 }
 
 
-void lcdSwitchPage() {
-    switch(lcdPage) {   // display proper page
-        case(0):
-                lcdPage1();
-            break;
 
-        case(1):
-                lcdPage3();
-            break;
+void lcdPageSet() { // set temperature page
+    lcd.setCursor(0,0);
+    lcd.print("Temp"); // 6
+    lcd.write(4); // sm colon  // 7
+    lcd.print(airSensor[0].currentEMA[0],1); // 11
+    lcd.write(1); // Replaces "*F" // 12
+    lcd.print("    "); // 16
+
+    lcd.setCursor(0,1);
+    lcd.print("   ");  // 6
+/*     lcd.write(4); // Replaces ": " // 7 */
+    lcd.write(126); // pointing right
+    lcd.print(" "); // 8
+    lcd.print(tempSetPoint,1); // 12
+    lcd.write(1); // degrees F // 13
+    lcd.print(" "); // 14
+    lcd.write(127); //pointing left // 15
+    lcd.print("    "); // 16
+}
+
+
+void lcdPrintTankPercent() {
+    uint16_t tankRead = analogRead(WATER_LEVEL_PIN);
+    lcd.write(5); // water droplet // 14
+    if (tankRead <= 350) {
+        lcd.print("EE");
+    } else if (tankRead >= 1015) {
+        lcd.print("FF");
+    } else {
+        uint16_t LOW_BOUND = 350;
+        float tankPercent = (tankRead - LOW_BOUND) / (1023 - LOW_BOUND) * 100;
+        // lcd.print((tankPercent < 10) ? " " + tankPercent : tankPercent); // 0 - 99 // 15-16
+        lcd.print((tankPercent < 10) ? " " : ""); // 0 - 99 // 15-16
+        lcd.print(tankPercent); // 0 - 99 // 15-16
     }
+    // lcd.print(tankRead);
+}
+
+
+void lcdPrintTankPercent() {
+    uint16_t tankRead = analogRead(WATER_LEVEL_PIN);
+    lcd.write(5); // water droplet // 14
+
+    lcd.print((tankRead < 10) ? "   " 
+        : (tankRead < 100) ? "  "
+        : (tankRead < 1000) ? " "
+        : ""); // 0 - 1023 // 13-16
+    lcd.print(tankRead); // 0 - 1023 // 13-16
 }

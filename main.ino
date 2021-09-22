@@ -44,5 +44,5 @@ void loop() {
 
     readTemp();
 
-    updateLcd();
+    lcdUpdate();
 }

@@ -339,4 +339,4 @@ class Pump_C {
         uint32_t updateInterval;
         uint32_t lastUpdate;
 
-}
+};

@@ -138,7 +138,7 @@ struct cycle_t {
 uint8_t currentPumpState = 0;
 uint8_t nextPumpState = 0;
 
-float tempSetPoint = 63; /*in F*/
+float tempSetPoint = 65; /*in F*/
 float weightedTemp;
 float avgTrend;
 const int UPTREND = 1;                     // every 10 seconds trend is updated. if going towards the target temp, increase trend by this amount.
@@ -289,8 +289,9 @@ floorSensor[] = {
 // AutoPID
 
 //pid settings and gains
-#define OUTPUT_MIN 0
-#define OUTPUT_MAX 255
+#define OUTPUT_MIN -57
+#define OUTPUT_MAX 57
+
 #define KP .12      // proportional (more error/difference = more PWM)
 #define KI .0003    // integral (integrate past errors; error over time)
 #define KD 0        // derivative ("anticipatory control"; future estimate of trend of the error)

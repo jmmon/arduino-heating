@@ -234,12 +234,10 @@ void updateTEMP() {
     // ************************************************ old
     
 
-    if (outputVal < 199) {
+    if (outputVal <= 0 ) {
         analogWrite(PUMP_PIN, 0);
-    } else if (outputVal > 255) {
-        analogWrite(PUMP_PIN, 255);
     } else {
-        analogWrite(PUMP_PIN, outputVal);
+        analogWrite(PUMP_PIN, (outputVal + 198)); //1 + 198 = 199
     }
 
 }

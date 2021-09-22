@@ -88,17 +88,33 @@ void lcdPage1() { // main (indoor) temperature / water page
     // lcd.print(tankRead); // 0 - 1023 // 16
 }
 
+// void lcdPrintTankPercent() {
+//     uint16_t tankRead = analogRead(WATER_LEVEL_PIN);
+//     lcd.write(5); // water droplet // 14
+//     if (tankRead <= 350) {
+//         lcd.print("EE");
+//     } else if (tankRead >= 1015) {
+//         lcd.print("FF");
+//     } else {
+//         uint8_t tankPercent = (tankRead - 350) / 673 * 100;
+//         lcd.print((tankPercent < 10) ? (" " + tankPercent) : ("" + tankPercent)); // 0 - 99 // 15-16
+//     }
+// }
+
 void lcdPrintTankPercent() {
     uint16_t tankRead = analogRead(WATER_LEVEL_PIN);
     lcd.write(5); // water droplet // 14
-    if (tankRead <= 350) {
-        lcd.print("EE");
-    } else if (tankRead >= 1015) {
-        lcd.print("FF");
-    } else {
-        uint8_t tankPercent = (tankRead - 350) / 673 * 100;
-        lcd.print((tankPercent < 10) ? (" " + tankPercent) : ("" + tankPercent)); // 0 - 99 // 15-16
-    }
+    // if (tankRead <= 350) {
+    //     lcd.print("EE");
+    // } else if (tankRead >= 1015) {
+    //     lcd.print("FF");
+    // } else {
+    //     uint16_t tankPercent = (tankRead - 350) / (1023 - 350) * 100;
+    //     // lcd.print((tankPercent < 10) ? " " + tankPercent : tankPercent); // 0 - 99 // 15-16
+    //     lcd.print((tankPercent < 10) ? " " : ""); // 0 - 99 // 15-16
+    //     lcd.print(tankPercent); // 0 - 99 // 15-16
+    // }
+    lcd.print(tankRead);
 }
 
 
@@ -156,7 +172,7 @@ void lcdPage3() { // PID + PWM display for testing / adjustment
     lcd.write(4);
     lcd.print(KD);
 
-    lcd.print(" pwm"); // 
+    lcd.print(" PWM"); // 
     lcd.write(4);
     lcd.print(outputVal); //0-255
 }

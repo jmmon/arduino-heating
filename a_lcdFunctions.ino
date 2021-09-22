@@ -178,4 +178,14 @@ void lcdPage3() { // PID + PWM display for testing / adjustment
 }
 
 
+void lcdSwitchPage() {
+    switch(lcdPage) {   // display proper page
+        case(0):
+                lcdPage1();
+            break;
 
+        case(1):
+                lcdPage3();
+            break;
+    }
+}

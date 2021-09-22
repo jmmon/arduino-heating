@@ -116,8 +116,10 @@ uint32_t checkPump = 3000; //checks the pump state 2 seconds after start
 // LCD update interval
 const uint16_t LCD_UPDATE_INTERVAL = 5000; //5 seconds
 uint32_t lastLcdUpdate = 0;
-uint8_t nextLcdPage = 0;
 uint8_t LCD_PAGE_MAX = 1;
+// uint8_t lcdPage = 0;
+uint8_t lcdPage = LCD_PAGE_MAX;
+
 
 
 struct cycle_t {
@@ -170,27 +172,24 @@ float last59MedEMAs[59];
 
 
 
-struct airSensor_t {
-    DHT *sensor;
-    float tempC;
-    float tempF;
-    float WEIGHT;
-    float humid;
+// AutoPID
 
-    float highest;
-    float lowest;
-    float currentEMA[3]; // {short, medium, long} EMA
-    float lastEMA[3];    // {short, medium, long}
-    int16_t trendEMA;
-    
-    bool working;
-    String label;
+//pid settings and gains
+#define OUTPUT_MIN -57
+#define OUTPUT_MAX 57
 
-} 
-airSensorT[] = { 
-    {&dht[0], 0, 0, 1, 0,     0, 999, {0, 0, 0}, {0, 0, 0}, 0,    true, "MAIN"}, 
-    {&dht[1], 0, 0, 2, 0,     0, 999, {0, 0, 0}, {0, 0, 0}, 0,    true, "UPSTAIRS"},
-};
+#define KP .12      // proportional (more error/difference = more PWM)
+#define KI .0003    // integral (integrate past errors; error over time)
+#define KD 0        // derivative ("anticipatory control"; future estimate of trend of the error)
+
+double temperature, 
+    setPoint = tempSetPoint, 
+    outputVal;
+
+
+
+AutoPID myPID(&temperature, &setPoint, &outputVal, OUTPUT_MIN, OUTPUT_MAX, KP, KI, KD);
+
 
 class AirSensor_C {
     public:
@@ -242,6 +241,49 @@ class AirSensor_C {
             }
         };
 
+        updateEmaTrend() {
+            if (currentEMA[0] < currentEMA[1]) { // if (now) temp < (medium avg) temp; temp is falling: 
+                if (currentEMA[1] < weightedTemp) { // if medium 
+                    if (trendEMA <= -DOWNTREND) {
+                        trendEMA += DOWNTREND; // fast going back to 0
+                    } else {
+                        trendEMA = 0;
+                    }
+                } else {
+                    //                if (currentEMA[1] - currentEMA[0] < 0.5) {  //if difference is small, this means temp is falling fast, so we'll up the trend quicker so pump turns on sooner.
+                    //                    trendEMA += -UPTREND * 2;    //slow going down
+                    //                } else {
+                    //                    trendEMA += -UPTREND;    //slow going down     //if difference is large, this means temp is falling slowly, so we don't need the pump to come on as soon.
+                    //                }
+                    trendEMA += -UPTREND; //slow going down
+                }
+            }
+
+            if (currentEMA[0] > currentEMA[1]) { // if rising
+                if (currentEMA[1] > weightedTemp) {
+                    if (trendEMA >= DOWNTREND) {
+                        trendEMA += -DOWNTREND; // fast going back to 0
+                    } else {
+                        trendEMA = 0;
+                    }
+                } else {
+                    //                if (currentEMA[0] - currentEMA[1] < 0.5) {  //if difference is small, this means temp is rising fast, so we'll up the trend quicker so pump shuts off sooner.
+                    //                    trendEMA += UPTREND * 2;    //slow going up
+                    //                } else {
+                    //                    trendEMA += UPTREND;    //slow going up      //if difference is large, this means temp is rising slow, so we don't want the pump to shut off as soon.
+                    //                }
+                    trendEMA += UPTREND; //slow going up
+                }
+            }
+
+            if (trendEMA > AIR_TEMP_TREND_MINMAX) {
+                trendEMA = AIR_TEMP_TREND_MINMAX;
+            }
+            if (trendEMA < -AIR_TEMP_TREND_MINMAX) {
+                trendEMA = -AIR_TEMP_TREND_MINMAX;
+            }
+        };
+
 
 }
 airSensor[] = {
@@ -283,23 +325,3 @@ floorSensor[] = {
     FloorSensor_C(FLOOR_TEMP_PIN[0]), 
     FloorSensor_C(FLOOR_TEMP_PIN[1])
 };
-
-
-
-// AutoPID
-
-//pid settings and gains
-#define OUTPUT_MIN -57
-#define OUTPUT_MAX 57
-
-#define KP .12      // proportional (more error/difference = more PWM)
-#define KI .0003    // integral (integrate past errors; error over time)
-#define KD 0        // derivative ("anticipatory control"; future estimate of trend of the error)
-
-double temperature, 
-    setPoint = tempSetPoint, 
-    outputVal;
-
-
-
-AutoPID myPID(&temperature, &setPoint, &outputVal, OUTPUT_MIN, OUTPUT_MAX, KP, KI, KD);

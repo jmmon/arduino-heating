@@ -66,3 +66,35 @@ Or, implement proper formula (requires testing) to regulate time and/or speed. .
     One timer to measeure and track temp and request on/off
 
     Second timer to run motor with built in minimum cycle times. Turns on (to whatever PWM) when minimum cycle is over and when temp timer allows.
+
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+So. I do not want the PID output to directly regulate PWM of the motor. This causes continuous fluctuation in PWM (loudness). It would be better to have PID control my time cycle. 
+
+    Each hour I'm on for n seconds.
+
+But I also need a way for the code to integrate the higher speeds for maximum BTU output.
+
+One way is to allow the PID to continue past 60 minutes mark per hour. When it goes past that mark, there could be (a few tiers, or, a fluid PWM adjustment) up to, say, 90 "minutes per hour", where any minutes past 60 are converted and added as PWM for the circulation motor.
+
+    0-60 minutes == 0-60 minutes per hour at PWM = 199 PWM
+    
+    90 minutes   ==   60 minutes per hour at PWM = 255 PWM
+
+Still want to integrate minimum cycle times:
+
+    5m minimum "on" cycle time would mean:
+
+        0-2.5m rounds down to 0, 2.5-5m rounds up to 5, or similar. Maybe err on side of less heat.
+
+
+
+So: timer for reading sensors every 2~2.5 seconds
+
+I think the other timer for the pump will be flowing, not set 60 minute blocks. So if the pump starts and initially is supposed to be on for 30 minutes but then the house heats faster than expected, the time should be reduced automatically.
+
+
+PID output should set up around 0. Negative for off, positive for motor on. 

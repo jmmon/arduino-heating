@@ -87,7 +87,7 @@ byte customCharSmColon[] = { // small colon + space
 const uint8_t AIR_SENSOR_COUNT = 2;
 const uint8_t FLOOR_SENSOR_COUNT = 2;
 const bool VERBOSE = false;
-const String VERSION_NUMBER = "4.0.1";
+const String VERSION_NUMBER = "4.1.2";
 
 const uint8_t PUMP_PIN = 5;
 const uint8_t FLOOR_TEMP_PIN[2] = {A0, A1};
@@ -110,7 +110,7 @@ uint8_t lastButtonRead = 0;
 const uint16_t BUTTON_CHECK_INTERVAL = 250; //adj thermostat every ()ms while one of the buttons is held
 const uint16_t TEMPERATURE_READ_INTERVAL = 2500;
 uint32_t pumpUpdateInterval = 60000;
-uint32_t checkPump = 3000; //checks the pump state 2 seconds after start
+uint32_t checkPump = 3000; //checks the pump state 3 seconds after start
 
 
 // LCD update interval
@@ -178,9 +178,9 @@ float last59MedEMAs[59];
 #define OUTPUT_MIN -57
 #define OUTPUT_MAX 57
 
-#define KP .12      // proportional (more error/difference = more PWM)
-#define KI .0003    // integral (integrate past errors; error over time)
-#define KD 0        // derivative ("anticipatory control"; future estimate of trend of the error)
+#define KP .012      // proportional (more error/difference = more PWM)
+#define KI .3    // integral (integrate past errors; error over time)
+#define KD 3        // derivative ("anticipatory control"; future estimate of trend of the error)
 
 double temperature, 
     setPoint = tempSetPoint, 
@@ -295,7 +295,7 @@ airSensor[] = {
 
 class FloorSensor_C {
     public:
-        FloorSensor_C(int pin) { // constructor
+        FloorSensor_C(uint8_t pin) { // constructor
             PIN = pin;
         };
         uint8_t PIN;
@@ -325,3 +325,18 @@ floorSensor[] = {
     FloorSensor_C(FLOOR_TEMP_PIN[0]), 
     FloorSensor_C(FLOOR_TEMP_PIN[1])
 };
+
+
+class Pump_C {
+    public:
+        Pump_C (uint8_t pin) {
+            PIN = pin;
+        }
+        uint8_t PIN;
+        uint8_t pwm = 0;
+        uint8_t lastState = 0;
+        uint8_t state = 0;
+        uint32_t updateInterval;
+        uint32_t lastUpdate;
+
+}

@@ -51,7 +51,7 @@ void debugAirTemp() {
 }
 
 
-void debugHighsLowsFloor() {
+void debugHighsLowsFloor(uint32_t lastCycleDuration) {
     if (DEBUG) {
         if (lastCycleDuration != 0) {  // if end of cycle: 
             Serial.print(F(" ms:"));

@@ -130,7 +130,7 @@ void updateTEMP() {
 
 
 void checkPumpCycleState() {
-    unsigned long lastCycleDuration = 0;
+    uint32_t lastCycleDuration = 0;
     Serial.println();
 
     if (nextPumpState == 1) {
@@ -188,7 +188,39 @@ void checkPumpCycleState() {
         }
     }
 
-    debugHighsLowsFloor();
+
+    // if (nextPumpState == 1) {
+    //     if (currentPumpState == 1) {                                                // continue from on to on
+    //         pumpUpdateInterval = CYCLE[5].MIN_TIME; // add a minute to continue same phase
+    //         Serial.println(F("TESTING - On cycle continue phase"));
+    //     } else if (currentPumpState != 0) {         //  on from start or warmup
+    //         currentPumpState = 1;
+    //         pumpUpdateInterval = CYCLE[currentPumpState].MIN_TIME;
+    //         Serial.println(F("TESTING - On cycle initialization (after Start)"));
+    //         analogWrite(PUMP_PIN, 199);
+    //     } else {                             // if (currentPumpState == (0)          start from off or warm up (currentPumpState == (0 || 3))
+    //         currentPumpState = 2;                                       //  set new current pump state to START
+    //         pumpUpdateInterval = CYCLE[currentPumpState].MIN_TIME; //  add START interval
+    //         lastCycleDuration = currentTime - cycleStartTime;           //  start new cycle..
+    //         cycleStartTime = currentTime;
+    //         Serial.println(F("TESTING - Start cycle initialization"));
+    //         analogWrite(PUMP_PIN, 223);
+    //     }
+    // } else {
+    //     //all other nextPumpStates
+    //     if (nextPumpState == currentPumpState) {
+    //         pumpUpdateInterval = CYCLE[5].MIN_TIME; // add a minute to continue same phase
+    //         Serial.print(F("TESTING - ")); Serial.print(CYCLE[nextPumpState].NAME); Serial.println(F(" cycle continue phase"));
+    //     } else {
+
+    //     }
+    //     switch(nextPumpState) {
+
+    //     }
+    // }
+
+
+    debugHighsLowsFloor(lastCycleDuration);
 }
 
 void countWater() {

@@ -106,29 +106,34 @@ void updateTEMP() {
 
     tempDispCounter2++;
 
-    // ************************************************ old
 
-    //Set next pump state
-    if (weightedTemp > tempSetPoint || (avgTrend > 0 && weightedTemp > (tempSetPoint - AIR_TEMP_TREND_FACTOR * avgTrend))) { // check if should be off
-        nextPumpState = 0;
-    } else { // else should be on:
-        if (weightedTemp > tempSetPoint - 3) {   // if temp needs to move <3 degrees, turn on/start       OLD:  floorEmaAvg > FLOOR_WARMUP_TEMPERATURE && 
-            nextPumpState = 1;
-        } else if (weightedTemp > tempSetPoint - 5) { //if temp needs to move 3-5 degrees, go medium
-            nextPumpState = 3; //  medium
-        } else {                 // else, go full speed
-            nextPumpState = 4; //  high
-        }
-    }
-    if (currentPumpState == 0 && nextPumpState != 0) {   // Force update if switching to on from off (i.e. cut short the off cycle if turning on)
-        updatePumpState();
-    }
-    // ************************************************ old
-    
+
+
+
+    // // ************************************************ old
+
+    // //Set next pump state
+    // if (weightedTemp > tempSetPoint || (avgTrend > 0 && weightedTemp > (tempSetPoint - AIR_TEMP_TREND_FACTOR * avgTrend))) { // check if should be off
+    //     nextPumpState = 0;
+    // } else { // else should be on:
+    //     if (weightedTemp > tempSetPoint - 3) {   // if temp needs to move <3 degrees, turn on/start       OLD:  floorEmaAvg > FLOOR_WARMUP_TEMPERATURE && 
+    //         nextPumpState = 1;
+    //     } else if (weightedTemp > tempSetPoint - 5) { //if temp needs to move 3-5 degrees, go medium
+    //         nextPumpState = 3; //  medium
+    //     } else {                 // else, go full speed
+    //         nextPumpState = 4; //  high
+    //     }
+    // }
+    // if (currentPumpState == 0 && nextPumpState != 0) {   // Force update if switching to on from off (i.e. cut short the off cycle if turning on)
+    //     updatePumpState();
+    // }
+    // // ************************************************ old
+
+
 
     // new
 
-    // do nothing, only need to update PID, which is done elsewhere already.
+    // do nothing, only need to update weightedTemp for PID
 
 }
 

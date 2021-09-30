@@ -238,9 +238,7 @@ class Pump_C {
             }
 
         }
-} pump = {
-    Pump_C(PUMP_PIN)
-};
+} pump = Pump_C(PUMP_PIN);
 
 
 
@@ -264,4 +262,4 @@ class Thermostat_C {
         Thermostat_C() {
 
         }
-}
+} thermostat = Thermostat_C();

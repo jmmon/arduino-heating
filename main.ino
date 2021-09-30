@@ -41,16 +41,16 @@ void loop() {
 
     myPID.run(); // every second
 
-    if (currentTime >= (lastPumpUpdate + pumpUpdateInterval)) { // pump update timer
-        updatePumpState();
-        lastPumpUpdate += pumpUpdateInterval;
-    }
+    // if (currentTime >= (lastPumpUpdate + pumpUpdateInterval)) { // pump update timer
+    //     updatePumpState();
+    //     lastPumpUpdate += pumpUpdateInterval;
+    // }
 
-    if (delayPump != 0 && currentTime >= delayPump) { // special case pump check i.e. initialization, after thermostat changes
-        updatePumpState();
-        delayPump = 0;
-        // switch display back to temperature?
-    }
+    // if (delayPump != 0 && currentTime >= delayPump) { // special case pump check i.e. initialization, after thermostat changes
+    //     updatePumpState();
+    //     delayPump = 0;
+    //     // switch display back to temperature?
+    // }
     
 
 

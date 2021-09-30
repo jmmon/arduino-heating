@@ -26,29 +26,48 @@ void lcdSwitchPage() {
             break;
 
         case(1):
+                lcdPage4();
+            break;
+        case(2):
+                lcdPage1();
+            break;
+
+        case(3):
+                lcdPage2();
+            break;
+        case(4):
+                lcdPage1();
+            break;
+        case(5):
                 lcdPage3();
             break;
     }
 }
 
 void lcdUpdate() {
-    if (currentTime >= (lastLcdUpdate + LCD_UPDATE_INTERVAL)) { // update LCD
-        lastLcdUpdate += LCD_UPDATE_INTERVAL;
+    lcdCounter++;
+    if (lcdCounter >= LCD_INTERVAL_SECONDS) { // update LCD
+        lcdCounter = 0;
 
-        lcdPage = (lcdPage == LCD_PAGE_MAX) ? 0: (lcdPage + 1); // cycle page
+        lcdPage = (lcdPage == LCD_PAGE_MAX) ? 
+            0: 
+            (lcdPage + 1); // cycle page
 
         lcdSwitchPage(); // display page
     }
 }
 
 
+
+// pages
 void lcdPage1() { // main (indoor) temperature / water page
 
+    lcd.clear();
     lcd.setCursor(0,0);
     lcd.write(2); // inside icon // 1
-    lcd.print(airSensor[0].currentEMA[0],1); // 5
+    lcd.print(air[0].currentEMA[0],1); // 5
     lcd.print("/"); // 6
-    lcd.print(airSensor[1].currentEMA[0],1); // 10
+    lcd.print(air[1].currentEMA[0],1); // 10
     lcd.write(1); // degrees F // 11
 
     
@@ -75,11 +94,77 @@ void lcdPage1() { // main (indoor) temperature / water page
 
 void lcdPage2() { // heating cycle page
     //display cycle info, time/duration
-    lcd.setCursor(0,0);
-    
+    lcd.clear();
+    lcd.setCursor(0,0); // line 1
+    lcd.print(CYCLE[currentPumpState].NAME); //11 chars
 
-    lcd.setCursor(0,1);
+    lcd.print(F(" ")); //12
+    lcd.print(F("PWM")); // 15
+    lcd.write(4); // 16
+
+
+
+    lcd.setCursor(0,1); // line 2
+    //cycle time
+    uint32_t t = cycleDuration;
+    uint16_t hours = t / 3600000;
+    t -= (hours * 3600000);
+    uint16_t minutes = t / 60000;
+    t -= (minutes * 60000);
+    uint16_t seconds = t / 1000;
+    t -= (seconds * 1000);
+    if (seconds >= 60) {
+        minutes += 1;
+        seconds -= 60;
+    }
+    if (minutes >= 60) {
+        hours += 1;
+        minutes -= 60;
+    }
+    if (t >= 500 && (minutes > 0 || hours > 0)) {
+        seconds += 1;
+    }
+
+    lcd.print(F("t"));
+    lcd.write(4); //2 chars
+
+    if (hours > 0) {
+        if (hours < 10) {
+            lcd.print(F("0"));
+        }
+        lcd.print(hours);
+        lcd.print(F(":")); // max 8 chars
+    }
+
+    if (minutes > 0 || hours > 0) { 
+        if (minutes < 10) {
+            lcd.print(F("0"));
+        }
+        lcd.print(minutes);
+        lcd.print(F(":")); // max 5 chars
+    }
+
+    if (minutes > 0 || hours > 0 || seconds > 0) { 
+        if (seconds < 10) {
+            lcd.print(F("0"));
+        }   
+        lcd.print(seconds); //max 8 chars
+    }
     
+    if (hours == 0 && minutes == 0) {
+        if (seconds == 0) {
+            lcd.print(F("0"));
+        }
+        lcd.print(F(","));
+        lcd.print(t); // min 5 chars
+    }
+// so 7 - 10, leaves 6
+
+
+    lcd.print(F("   ")); //3
+    
+    lcd.print((CYCLE[currentPumpState].PWM < 10)?"  ":""); //pwm is either >198 or 0
+    lcd.print(CYCLE[currentPumpState].PWM); // 3 chars
 }
 
 
@@ -87,34 +172,34 @@ void lcdPage3() { // PID + PWM display for testing / adjustment
     lcd.clear();
 
     lcd.setCursor(0,0); //top
-    lcd.print("P"); //
+    lcd.print("p"); //
     lcd.write(4);
-    lcd.print(KP);
+    lcd.print(KP, 3);
 
-    lcd.print(" I"); // 
+    lcd.print(" i"); // 
     lcd.write(4);
-    lcd.print(KI);
+    lcd.print(KI, 3);
 
 
     
 
     lcd.setCursor(0,1); //bot
-    lcd.print(" D");
+    lcd.print(" d");
     lcd.write(4);
     lcd.print(KD);
 
-    lcd.print(" PWM"); // 
-    lcd.write(4);
+    lcd.print("  => "); // 
     lcd.print(outputVal); //0-255
 }
 
 
 
 void lcdPageSet() { // set temperature page
+    lcd.clear();    
     lcd.setCursor(0,0);
     lcd.print("Temp"); // 6
     lcd.write(4); // sm colon  // 7
-    lcd.print(airSensor[0].currentEMA[0],1); // 11
+    lcd.print(air[0].currentEMA[0],1); // 11
     lcd.write(1); // Replaces "*F" // 12
     lcd.print("    "); // 16
 
@@ -131,6 +216,36 @@ void lcdPageSet() { // set temperature page
 }
 
 
+
+
+void lcdPage4() { // page for greenhouse and exterior sensors
+    lcd.clear();    
+    lcd.setCursor(0,0);
+    lcd.print(F("GH"));
+    lcd.write(4);
+    lcd.print(air[2].currentEMA[0], 1); // 7
+    lcd.write(1);
+    lcd.print(F(" ")); // 9
+    lcd.print(air[2].humid, 1); // 13
+    lcd.print(F("%  ")); // 16
+
+
+    
+    lcd.setCursor(0,1);
+    lcd.print(F(" "));
+    lcd.write(3);
+    lcd.print(F(" "));
+    lcd.print(air[3].currentEMA[0], 1); // 7
+    lcd.write(1);
+    lcd.print(F(" ")); // 9
+    lcd.print(air[3].humid, 1); // 13
+    lcd.print(F("%  ")); // 16
+
+}
+
+
+
+// helpers
 void lcdPrintTankPercent() {
     uint16_t tankRead = analogRead(WATER_LEVEL_PIN);
     lcd.write(5); // water droplet // 14

@@ -2,20 +2,20 @@ void debugEmaWater() {
     if (DEBUG) {
         Serial.println();
         Serial.print(F(" °F "));
-        Serial.print(F("  EMA_Long.")); Serial.print(airSensor[0].currentEMA[2]);
-        if (airSensor[0].currentEMA[2] != airSensor[1].currentEMA[2]) {
+        Serial.print(F("  EMA_Long.")); Serial.print(air[0].currentEMA[2]);
+        if (air[0].currentEMA[2] != air[1].currentEMA[2]) {
             Serial.print(F("/"));
-            Serial.print(airSensor[1].currentEMA[2]);
+            Serial.print(air[1].currentEMA[2]);
         }
-        Serial.print(F("  _Med.")); Serial.print(airSensor[0].currentEMA[1]);
-        if (airSensor[0].currentEMA[1] != airSensor[1].currentEMA[1]) {
+        Serial.print(F("  _Med.")); Serial.print(air[0].currentEMA[1]);
+        if (air[0].currentEMA[1] != air[1].currentEMA[1]) {
             Serial.print(F("/"));
-            Serial.print(airSensor[1].currentEMA[1]);
+            Serial.print(air[1].currentEMA[1]);
         }
-        Serial.print(F("  Trend: ")); Serial.print(airSensor[0].trendEMA);
-        if (airSensor[0].trendEMA != airSensor[1].trendEMA) {
+        Serial.print(F("  Trend: ")); Serial.print(air[0].trendEMA);
+        if (air[0].trendEMA != air[1].trendEMA) {
             Serial.print(F(" | "));
-            Serial.print(airSensor[1].trendEMA);
+            Serial.print(air[1].trendEMA);
         }
 
         Serial.print(F(" Water(Flow: "));
@@ -39,29 +39,31 @@ void debugEmaWater() {
     }
 }
 
-void debugAirTemp() {
+void debugAirEmas() {
     if (DEBUG) {
-        Serial.print(airSensor[0].currentEMA[0]);
-        if (airSensor[0].currentEMA[0] != airSensor[1].currentEMA[0]) {
+        Serial.print(air[0].currentEMA[0]);
+        if (air[0].currentEMA[0] != air[1].currentEMA[0]) {
             Serial.print(F("/"));
-            Serial.print(airSensor[1].currentEMA[0]);
+            Serial.print(air[1].currentEMA[0]);
         }
         Serial.print(F("  "));
     }
 }
 
 
-void debugHighsLowsFloor(uint32_t lastCycleDuration) {
+void debugHighsLowsFloor() {
     if (DEBUG) {
         if (lastCycleDuration != 0) {  // if end of cycle: 
             Serial.print(F(" ms:"));
-            Serial.print(lastCycleDuration);
-            uint16_t hours = lastCycleDuration / 3600000;
-            lastCycleDuration -= (hours * 3600000);
-            uint16_t minutes = lastCycleDuration / 60000;
-            lastCycleDuration -= (minutes * 60000);
-            uint16_t seconds = lastCycleDuration / 1000;
-            lastCycleDuration -= (seconds * 1000);
+
+            uint32_t t = lastCycleDuration;
+            Serial.print(t);
+            uint16_t hours = t / 3600000;
+            t -= (hours * 3600000);
+            uint16_t minutes = t / 60000;
+            t -= (minutes * 60000);
+            uint16_t seconds = t / 1000;
+            t -= (seconds * 1000);
             if (seconds >= 60) {
                 minutes += 1;
                 seconds -= 60;
@@ -70,7 +72,7 @@ void debugHighsLowsFloor(uint32_t lastCycleDuration) {
                 hours += 1;
                 minutes -= 60;
             }
-            if (lastCycleDuration >= 500 && (minutes > 0 || hours > 0)) {
+            if (t >= 500 && (minutes > 0 || hours > 0)) {
                 seconds += 1;
             }
 
@@ -89,7 +91,7 @@ void debugHighsLowsFloor(uint32_t lastCycleDuration) {
                 Serial.print(F("s"));
             }
             if (hours == 0 && minutes == 0) {
-                Serial.print(lastCycleDuration);
+                Serial.print(t);
             }
             //Serial.println();
         }
@@ -112,21 +114,21 @@ void debugHighsLowsFloor(uint32_t lastCycleDuration) {
         Serial.print(F("                                       *Pump"));
         Serial.print(CYCLE[currentPumpState].NAME);
         Serial.print(F("(HIGHS "));
-        Serial.print(airSensor[0].highest);
-        if (airSensor[0].highest != airSensor[1].highest) {
+        Serial.print(air[0].highest);
+        if (air[0].highest != air[1].highest) {
             Serial.print(F("/"));
-            Serial.print(airSensor[1].highest);
+            Serial.print(air[1].highest);
         }
         Serial.print(F(" LOWS "));
-        Serial.print(airSensor[0].lowest);
-        if (airSensor[0].lowest != airSensor[1].lowest) {
+        Serial.print(air[0].lowest);
+        if (air[0].lowest != air[1].lowest) {
             Serial.print(F("/"));
-            Serial.print(airSensor[1].lowest);
+            Serial.print(air[1].lowest);
         }
         Serial.print(F(")"));
         if (changePerHourMinuteCounter == 60) {
             Serial.print(F("Temp Change per Hr (Medium EMA): "));
-            float avgNow = (airSensor[0].currentEMA[1] + airSensor[1].currentEMA[1]) / 2;
+            float avgNow = (air[0].currentEMA[1] + air[1].currentEMA[1]) / 2;
             float diff = last59MedEMAs[0] - avgNow;
             Serial.print(diff);
         }

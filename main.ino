@@ -1,9 +1,11 @@
 void setup() {
     Serial.begin(9600);
+    pinMode(THERMOSTAT_BUTTONS_PIN, INPUT);
+
     pinMode(PUMP_PIN, OUTPUT);
     pinMode(FLOOR_TEMP_PIN[0], INPUT);
     pinMode(FLOOR_TEMP_PIN[1], INPUT);
-    pinMode(THERMOSTAT_BUTTONS_PIN, INPUT);
+    
 
     for (uint8_t k = 0; k < AIR_SENSOR_COUNT; k++) {
         dht[k].begin();
@@ -35,14 +37,48 @@ void setup() {
 
 
 void loop() {
-    myPID.run();
     currentTime = millis();
 
-    // updatePumpState();
+    myPID.run(); // every second
 
-    updateTempSetPoint();
+    if (currentTime >= (lastPumpUpdate + pumpUpdateInterval)) { // pump update timer
+        updatePumpState();
+        lastPumpUpdate += pumpUpdateInterval;
+    }
 
-    readTemp();
+    if (delayPump != 0 && currentTime >= delayPump) { // special case pump check i.e. initialization, after thermostat changes
+        updatePumpState();
+        delayPump = 0;
+        // switch display back to temperature?
+    }
+    
 
-    lcdUpdate();
+
+    if (currentTime >= (lastButtonCheck + BUTTON_CHECK_INTERVAL)) { // update tempSetPoint 
+        lastButtonCheck += BUTTON_CHECK_INTERVAL;
+        updateSetPoint();
+    }
+
+
+
+    if (currentTime >= (lastTemperatureRead + TEMPERATURE_READ_INTERVAL)) { // Read temperature
+
+
+        cycleDuration = currentTime - cycleStartTime; // for LCD
+        updateTEMP();
+        lastTemperatureRead += TEMPERATURE_READ_INTERVAL;
+    }
+
+
+
+    
+
+    if (currentTime >= lastSecond + secondInterval) { // every second
+        lastSecond += secondInterval;
+        calcWater();
+        pump.update();
+
+        lcdUpdate();
+
+    }
 }

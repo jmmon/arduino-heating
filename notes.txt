@@ -98,3 +98,35 @@ I think the other timer for the pump will be flowing, not set 60 minute blocks. 
 
 
 PID output should set up around 0. Negative for off, positive for motor on. 
+
+
+
+
+
+TODO: 
+play more with PID;
+
+
+integrate other temp sensors - not quite working
+
+
+
+
+notess: 
+need to detect when switches from 0 to 1 PID output, this is the trigger to turn on the motor cycle
+
+the motor loop waits for this signal, then it turns the motor on for 3 minutes (or minimum time), adjusting the PWM higher if necessary based on PID output.
+
+At the end of the minimum time, if the PID output is still > 0, the motor stays on at whatever PWM-PID.
+
+Once the PID switches from >0 to <=0, this is the trigger to switch to the off cycle.
+
+The motor loop then keeps the motor off for a minimum time, and until the signal to turn back on.
+
+
+        Pump class: ?
+
+        setPwm signals out whatever PWM to the appropriate pin
+
+
+motor loop: loops every second, updating the PWM of the motor based on its own timer restrictions, the startup phase special case, and the PID output

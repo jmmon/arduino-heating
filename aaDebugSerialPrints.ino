@@ -12,11 +12,6 @@ void debugEmaWater() {
             Serial.print(F("/"));
             Serial.print(air[1].currentEMA[1]);
         }
-        Serial.print(F("  Trend: ")); Serial.print(air[0].trendEMA);
-        if (air[0].trendEMA != air[1].trendEMA) {
-            Serial.print(F(" | "));
-            Serial.print(air[1].trendEMA);
-        }
 
         Serial.print(F(" Water(Flow: "));
         Serial.print(l_minute);
@@ -24,7 +19,7 @@ void debugEmaWater() {
         Serial.print(totalVolume);
         Serial.print(F(" liters, "));
         //check tank levels
-        uint16_t tankReading = analogRead(WATER_LEVEL_PIN);
+        uint16_t tankReading = analogRead(WATER_FLOAT_PIN);
         Serial.print(F("Level: "));
         if (tankReading > 999) { // ~1023
             Serial.print(F("< 25%"));
@@ -40,65 +35,70 @@ void debugEmaWater() {
 }
 
 void debugAirEmas() {
-    if (DEBUG) {
-        Serial.print(air[0].currentEMA[0]);
-        if (air[0].currentEMA[0] != air[1].currentEMA[0]) {
-            Serial.print(F("/"));
-            Serial.print(air[1].currentEMA[0]);
+    if (tempDispCounter >= 4) { // every 4 reads = 10 seconds, calculate trend and print info
+        tempDispCounter = 0;
+
+        if (DEBUG) {
+            Serial.print(air[0].currentEMA[0]);
+            if (air[0].currentEMA[0] != air[1].currentEMA[0]) {
+                Serial.print(F("/"));
+                Serial.print(air[1].currentEMA[0]);
+            }
+            Serial.print(F("  "));
         }
-        Serial.print(F("  "));
     }
+    tempDispCounter++;
 }
 
 
 void debugHighsLowsFloor() {
     if (DEBUG) {
-        if (lastCycleDuration != 0) {  // if end of cycle: 
-            Serial.print(F(" ms:"));
+        // if (lastCycleDuration != 0) {  // if end of cycle: 
+        //     Serial.print(F(" ms:"));
 
-            uint32_t t = lastCycleDuration;
-            Serial.print(t);
-            uint16_t hours = t / 3600000;
-            t -= (hours * 3600000);
-            uint16_t minutes = t / 60000;
-            t -= (minutes * 60000);
-            uint16_t seconds = t / 1000;
-            t -= (seconds * 1000);
-            if (seconds >= 60) {
-                minutes += 1;
-                seconds -= 60;
-            }
-            if (minutes >= 60) {
-                hours += 1;
-                minutes -= 60;
-            }
-            if (t >= 500 && (minutes > 0 || hours > 0)) {
-                seconds += 1;
-            }
+        //     uint32_t t = lastCycleDuration;
+        //     Serial.print(t);
+        //     uint16_t hours = t / 3600000;
+        //     t -= (hours * 3600000);
+        //     uint16_t minutes = t / 60000;
+        //     t -= (minutes * 60000);
+        //     uint16_t seconds = t / 1000;
+        //     t -= (seconds * 1000);
+        //     if (seconds >= 60) {
+        //         minutes += 1;
+        //         seconds -= 60;
+        //     }
+        //     if (minutes >= 60) {
+        //         hours += 1;
+        //         minutes -= 60;
+        //     }
+        //     if (t >= 500 && (minutes > 0 || hours > 0)) {
+        //         seconds += 1;
+        //     }
 
-            Serial.print(F("                          Total cycle time: "));
+        //     Serial.print(F("                          Total cycle time: "));
 
-            if (hours > 0) {
-                Serial.print(hours);
-                Serial.print(F("h"));
-            }
-            if (minutes > 0) {
-                Serial.print(minutes);
-                Serial.print(F("m"));
-            }
-            if (seconds > 0) {
-                Serial.print(seconds);
-                Serial.print(F("s"));
-            }
-            if (hours == 0 && minutes == 0) {
-                Serial.print(t);
-            }
-            //Serial.println();
-        }
+        //     if (hours > 0) {
+        //         Serial.print(hours);
+        //         Serial.print(F("h"));
+        //     }
+        //     if (minutes > 0) {
+        //         Serial.print(minutes);
+        //         Serial.print(F("m"));
+        //     }
+        //     if (seconds > 0) {
+        //         Serial.print(seconds);
+        //         Serial.print(F("s"));
+        //     }
+        //     if (hours == 0 && minutes == 0) {
+        //         Serial.print(t);
+        //     }
+        //     //Serial.println();
+        // }
 
         Serial.println();
         Serial.print(F(" Set: "));
-        Serial.print(tempSetPoint, 1);
+        Serial.print(Setpoint, 1);
         Serial.print(F("°F"));
         Serial.print(F("   Floor: "));
         Serial.print(floorSensor[0].currentEMA);
@@ -106,13 +106,8 @@ void debugHighsLowsFloor() {
             Serial.print(F(" / "));
             Serial.print(floorSensor[1].currentEMA);
         }
-        Serial.print(F("   PWM "));
-        if (CYCLE[currentPumpState].PWM == 0) {
-            Serial.print(F("  "));
-        }
-        Serial.print(CYCLE[currentPumpState].PWM);
         Serial.print(F("                                       *Pump"));
-        Serial.print(CYCLE[currentPumpState].NAME);
+        Serial.print(pump.getStatus());
         Serial.print(F("(HIGHS "));
         Serial.print(air[0].highest);
         if (air[0].highest != air[1].highest) {
@@ -133,5 +128,17 @@ void debugHighsLowsFloor() {
             Serial.print(diff);
         }
         Serial.println();
+    }
+}
+
+
+
+
+void DEBUG_setup() {
+    if (DEBUG) {
+        Serial.println();
+        Serial.print(F("Version "));
+        Serial.println(VERSION_NUMBER);
+        Serial.println(F("DHTxx test!"));
     }
 }

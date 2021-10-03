@@ -7,22 +7,24 @@ void updateTEMP() {
         if (isnan(air[1].humid) || isnan(air[1].tempF)) {
             Serial.println(F("ERROR BOTH SENSORS "));
         } else {
+            air[0].humid = air[1].humid;
+            air[0].tempF = air[1].tempF;
+            
             if (errorCounter1 == 30) {
                 Serial.print(F("DHT.main error! "));
                 errorCounter1 = 0;
             }
-            air[0].humid = air[1].humid;
-            air[0].tempF = air[1].tempF;
+            errorCounter1++;
         }
-        errorCounter1++;
     } else {
         if (isnan(air[1].humid) || isnan(air[1].tempF)) {
+            air[1].humid = air[0].humid;
+            air[1].tempF = air[0].tempF;
+            
             if (errorCounter2 == 30) {
                 Serial.print(F("DHT.upstairs error! "));
                 errorCounter2 = 0;
             }
-            air[1].humid = air[0].humid;
-            air[1].tempF = air[0].tempF;
             errorCounter2++;
         }
     }
@@ -48,47 +50,14 @@ void updateTEMP() {
             air[1].tempF = air[0].tempF;
         }
     }
-    
 
     for (uint8_t i = 0; i < AIR_SENSOR_COUNT; i++) { // update highs/lows records (for all air sensors)
         air[i].update();
     }
 
-    weightedTemp = (air[0].WEIGHT * air[0].currentEMA[0] + air[1].WEIGHT * air[1].currentEMA[0]) / (air[0].WEIGHT + air[1].WEIGHT);
-    temperature = weightedTemp;
+    Input = (air[0].WEIGHT * air[0].currentEMA[0] + air[1].WEIGHT * air[1].currentEMA[0]) / (air[0].WEIGHT + air[1].WEIGHT);
 
-    for (uint8_t i = 0; i < FLOOR_SENSOR_COUNT; i++) { // update floor emas
-        floorSensor[i].update();
-    }
-
-    int difference = int(abs(floorSensor[0].currentEMA - floorSensor[1].currentEMA)); // floor sensors error check
-
-    if (difference > 80) { // floor thermistor difference check
-        if (DEBUG) {
-            Serial.print(F("Floor Read Error. Difference: "));
-            Serial.println(difference);
-        }
-        if (floorSensor[0].currentEMA > floorSensor[1].currentEMA) {
-            floorSensor[1].currentEMA = floorSensor[0].currentEMA;
-        } else {
-            floorSensor[0].currentEMA = floorSensor[1].currentEMA;
-        }
-    }
-    floorEmaAvg = (floorSensor[0].currentEMA + floorSensor[1].currentEMA) / FLOOR_SENSOR_COUNT; // avg two readings
-    
-    for (uint8_t i = 0; i < AIR_SENSOR_COUNT; i++) {
-        air[i].updateEmaTrend();
-    }
-    avgTrend = (air[0].trendEMA + air[1].trendEMA) / 2.;
-
-
-
-    if (tempDispCounter >= 4) { // every 4 reads = 10 seconds, calculate trend and print info
-        debugAirEmas();
-
-        tempDispCounter = 0;
-    }
-    tempDispCounter++;
+    debugAirEmas();
 
     if (tempDispCounter2 >= 24) {  // every minute: 
         debugEmaWater();
@@ -110,79 +79,28 @@ void updateTEMP() {
 
 
 
-    // // ************************************************ old
 
-    // //Set next pump state
-    // if (weightedTemp > tempSetPoint || (avgTrend > 0 && weightedTemp > (tempSetPoint - AIR_TEMP_TREND_FACTOR * avgTrend))) { // check if should be off
-    //     nextPumpState = 0;
-    // } else { // else should be on:
-    //     if (weightedTemp > tempSetPoint - 3) {   // if temp needs to move <3 degrees, turn on/start       OLD:  floorEmaAvg > FLOOR_WARMUP_TEMPERATURE && 
-    //         nextPumpState = 1;
-    //     } else if (weightedTemp > tempSetPoint - 5) { //if temp needs to move 3-5 degrees, go medium
-    //         nextPumpState = 3; //  medium
-    //     } else {                 // else, go full speed
-    //         nextPumpState = 4; //  high
-    //     }
-    // }
-    // if (currentPumpState == 0 && nextPumpState != 0) {   // Force update if switching to on from off (i.e. cut short the off cycle if turning on)
-    //     updatePumpState();
-    // }
-    // // ************************************************ old
+    for (uint8_t i = 0; i < FLOOR_SENSOR_COUNT; i++) { // update floor emas
+        floorSensor[i].update();
+    }
 
+    int difference = int(abs(floorSensor[0].currentEMA - floorSensor[1].currentEMA)); // floor sensors error check
 
-
-    // new
-
-    // do nothing, only need to update weightedTemp for PID
-
-}
-
-
-
-void updatePumpState() {
-    Serial.println();
-
-    pumpUpdateInterval = CYCLE[5].MIN_TIME; // add a minute to continue same phase, overwritten if necessary later
-    if (nextPumpState == 1) {
-        if (currentPumpState == 1) { // continue to on from on
-            if (DEBUG) {
-                Serial.print(CYCLE[5].NAME);
-            }
-
-        } else {    // to on from other
-            currentPumpState = (currentPumpState != 0) ? 1 : 2;
-            pumpUpdateInterval = CYCLE[currentPumpState].MIN_TIME; //  add START interval
-
-            if (currentPumpState == 0) { // from off, start new cycle..
-                lastCycleDuration = currentTime - cycleStartTime;
-                cycleStartTime = currentTime;
-            }
+    if (difference > 80) { // floor thermistor difference check
+        if (DEBUG) {
+            Serial.print(F("Floor Read Error. Difference: "));
+            Serial.println(difference);
         }
-    } else { // all other nextPumpStates
-        if (nextPumpState == currentPumpState) {
-            if (DEBUG) {
-                Serial.print(CYCLE[5].NAME);
-            }
 
-        } else { // start fresh phase
-            currentPumpState = nextPumpState;
-            pumpUpdateInterval = CYCLE[currentPumpState].MIN_TIME;
-            lastCycleDuration = currentTime - cycleStartTime;
-            cycleStartTime = currentTime;
+        if (floorSensor[0].currentEMA > floorSensor[1].currentEMA) {
+            floorSensor[1].currentEMA = floorSensor[0].currentEMA;
+        } else {
+            floorSensor[0].currentEMA = floorSensor[1].currentEMA;
         }
     }
-    analogWrite(PUMP_PIN, CYCLE[currentPumpState].PWM);
-    if (DEBUG) {
-        Serial.println(CYCLE[currentPumpState].NAME);
-    }
-
-    debugHighsLowsFloor();
-
-    if (lastCycleDuration != 0) {  // if end of cycle, reset these
-        lastCycleDuration = 0;
-        cycleDuration = 0;
-    }
+    floorEmaAvg = (floorSensor[0].currentEMA + floorSensor[1].currentEMA) / FLOOR_SENSOR_COUNT; // avg two readings
 }
+
 
 void countWater() {
     waterCounter++;
@@ -193,6 +111,7 @@ void updateSetPoint() {
     int8_t buttonStatus = 0;
     uint16_t buttonRead = analogRead(THERMOSTAT_BUTTONS_PIN);
     if (buttonRead > 63) {
+        set = true;
         Serial.println(buttonRead);
         if (buttonRead > 831) {
             buttonStatus = 1;
@@ -206,18 +125,17 @@ void updateSetPoint() {
             }
         }
         
-        tempSetPoint += (0.5 * buttonStatus);
-        setPoint = tempSetPoint;
+        Setpoint += (0.5 * buttonStatus);
         lcdPageSet();
         
-        delayPump = currentTime + 3000; // wait 3 seconds before accepting new tempoerature in case button will be pressed more than once
+        pump.checkAfter(); // default 3 seconds
     }
 }
 
 
 void calcWater() {
     if (waterCounter != 0) {
-        float thisDuration = (currentTime - lastTemperatureRead) / 1000;
+        float thisDuration = (currentTime - (last250ms + 750)) / 1000;
         // this cycle's duration in seconds
         // Pulse frequency (Hz) = 7.5Q, Q is flow rate in L/min.    (Pulse frequency x 60 min) / 7.5Q = flowrate in L/hour
         l_minute = (waterCounter / 7.5) / thisDuration; // divide by 2.5 because this is on a 2.5s timer  // returns vol per minute extrapolated from 2.5s
@@ -225,3 +143,52 @@ void calcWater() {
         waterCounter = 0;
     }
 }
+
+
+// float avg(int inputVal) {
+//   static int arrDat[16];
+//   static int pos;
+//   static long sum;
+//   pos++;
+//   if (pos >= 16) pos = 0;
+//   sum = sum - arrDat[pos] + inputVal;
+//   arrDat[pos] = inputVal;
+//   return (float)sum / 16.0;
+// }
+
+
+
+// void pidAutoUpdate() {
+//     if (_myPID.autoTune) // Avoid dereferencing nullptr after _myPID.clearAutoTune()
+//     {
+//       switch (_myPID.autoTune->autoTuneLoop()) {
+//         case _myPID.autoTune->AUTOTUNE:
+//           Input = Input;
+//           analogWrite(5, Output);
+//           break;
+  
+//         case _myPID.autoTune->TUNINGS:
+//           _myPID.autoTune->setAutoTuneConstants(&Kp, &Ki, &Kd); // set new tunings
+//           _myPID.SetMode(QuickPID::AUTOMATIC); // setup PID
+//           _myPID.SetSampleTimeUs(sampleTimeUs);
+//           _myPID.SetTunings(Kp, Ki, Kd, POn, DOn); // apply new tunings to PID
+//           Setpoint = 500;
+//           break;
+  
+//         case _myPID.autoTune->CLR:
+//           if (!pidLoop) {
+//             _myPID.clearAutoTune(); // releases memory used by AutoTune object
+//             pidLoop = true;
+//           }
+//           break;
+//       }
+//     }
+// }
+
+
+// void pidLoopUpdate() {
+//     if (pidLoop) {
+//         _myPID.Compute();
+//         analogWrite(5, Output);
+//     }
+// }

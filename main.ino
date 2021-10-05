@@ -14,6 +14,7 @@ void setup() {
     last250ms = millis();
 
     updateTEMP();
+    emaReadTank();
 
 
     // if temperature is more than 4 degrees below or above Setpoint, OUTPUT will be set to min or max respectively
@@ -59,12 +60,12 @@ void loop() {
     if (currentTime >= (last250ms + 250)) { // update Setpoint 
         last250ms += 250;
         updateSetPoint();
+        //thermostat.updateSetpoint();
         
 
         if (ms1000ctr >= 4) {
             ms1000ctr = 0;
-
-            calcWater();
+            calcFlow();
             pump.update();
             lcdUpdate();
         }
@@ -74,6 +75,7 @@ void loop() {
         if (ms2500ctr >= 10) {
             ms2500ctr = 0;
 
+            emaReadTank();
             updateTEMP();
         }
         ms2500ctr++;

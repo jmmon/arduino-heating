@@ -45,10 +45,13 @@ uint8_t ms2500ctr = 0;
 const uint8_t LCD_INTERVAL_SECONDS = 4;
 int8_t lcdCounter = 0;
 
-int8_t lastButtonStatus = 0; //thermostat buttons
+int16_t lastButtonStatus = 0; //thermostat buttons
 uint16_t lastTankRead = 0;
 
-const uint8_t LCD_PAGE_MAX = 5;
+uint16_t emaTankReading = 0;
+uint16_t lastEmaTankReading = 0;
+
+const uint8_t LCD_PAGE_MAX = 6;
 uint8_t lcdPage = LCD_PAGE_MAX;
 
 const float EMA_MULT[3] = {
@@ -103,9 +106,9 @@ bool set = false;
  * 
  */
 
-#define Kp 4
-#define Ki 0.005
-#define Kd 1
+#define Kp 2
+#define Ki 0.02
+#define Kd 0
 
 double Input, 
     Setpoint = 64,

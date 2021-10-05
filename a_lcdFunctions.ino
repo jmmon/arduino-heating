@@ -71,28 +71,27 @@ void lcdInitialize() {
 }
 
 
-void lcdUpdate() {
+void lcdUpdate() { // every second
     lcdCounter--;
-    if (lcdCounter <= 0) { // update LCD
+    if (lcdCounter <= 0) {
         lcdCounter = LCD_INTERVAL_SECONDS;
-        
+ 
+        // switch page every 4 seconds
         lcdPage ++;
         if (lcdPage >= LCD_PAGE_MAX) { // page 4 == page 0
             lcdPage = 0;
         }
-        if (!set) {
-            lcd.clear();
-        }
-
     }
-    if (!set) {
-        lcdSwitchPage(); // display page
+    
+    if (!set) {  // if not locking to the set page
+        if (lcdCounter == LCD_INTERVAL_SECONDS) lcd.clear(); //every 4 sec
+
+        lcdSetPage(); // every sec
     }
 }
 
 
-void lcdSwitchPage() {
-    lcd.clear();
+void lcdSetPage() {
     switch(lcdPage) {   // display proper page
         case(0):
                 lcdPageTemperature();
@@ -110,24 +109,44 @@ void lcdSwitchPage() {
         case(4):
                 lcdPageAccumTime();
             break;
+        case(5):
+                lcdPageAccumTarget();
+            break;
     }
 }
 
 
 
 // helpers
+// uint16_t emaTankRead() {
+//     uint16_t tankRead = 0;
+//     const uint8_t EMA_SECONDS = 15;
+
+//     if (lastTankRead == 0) { // initialization
+//         lastTankRead = analogRead(WATER_FLOAT_PIN);
+//         for (uint8_t i = 0; i < EMA_SECONDS ; i++) {  
+//             tankRead = (analogRead(WATER_FLOAT_PIN) * (2. / (1 + EMA_SECONDS )) + lastTankRead * (1 - (2. / (1 + EMA_SECONDS ))));
+//             lastTankRead = tankRead;
+//         }
+//     }
+
+//     tankRead = (analogRead(WATER_FLOAT_PIN) * (2. / (1 + EMA_SECONDS )) + lastTankRead * (1 - (2. / (1 + EMA_SECONDS ))));
+//     lastTankRead = tankRead;
+    
+//     return tankRead;
+// }
+
 String lcdTankPercent() {
-    if (lastTankRead == 0) lastTankRead = analogRead(WATER_FLOAT_PIN);
-    uint16_t tankRead = (analogRead(WATER_FLOAT_PIN) * (2. / (1 + 30)) + lastTankRead * (1 - (2. / (1 + 30))));
-    lastTankRead = tankRead;
+    // uint16_t tankRead = emaTankRead();
+    
     uint16_t LOW_BOUND = 350;
     uint16_t HIGH_BOUND = 800;
 
     String output = "EE";
-    if (tankRead >= HIGH_BOUND) {
+    if (emaTankReading >= HIGH_BOUND) {
         output = "FF";
-    } else if (tankRead > LOW_BOUND) {
-        float tankPercent = (tankRead - LOW_BOUND) / (HIGH_BOUND - LOW_BOUND) * 100;
+    } else if (emaTankReading > LOW_BOUND) {
+        uint8_t tankPercent = (float) 100 * (emaTankReading - LOW_BOUND) / (HIGH_BOUND - LOW_BOUND);
         
         output = (tankPercent < 10) ? " " : "";
         output += String(tankPercent);
@@ -135,17 +154,14 @@ String lcdTankPercent() {
     return output;
 }
 
-
 String lcdTankRead() {
-    if (lastTankRead == 0) lastTankRead = analogRead(WATER_FLOAT_PIN);
-    uint16_t tankRead = (analogRead(WATER_FLOAT_PIN) * (2. / (1 + 30)) + lastTankRead * (1 - (2. / (1 + 30))));
-    lastTankRead = tankRead;
+    // uint16_t tankRead = emaTankRead();
     
-    String output = ((tankRead < 10) ? "   " 
-        : (tankRead < 100) ? "  "
-        : (tankRead < 1000) ? " "
+    String output = ((emaTankReading < 10) ? "   " 
+        : (emaTankReading < 100) ? "  "
+        : (emaTankReading < 1000) ? " "
         : ""); // 0 - 1023 // 13-16
-    output += tankRead; // 0 - 1023 // 13-16
+    output += emaTankReading; // 0 - 1023 // 13-16
     return output;
 }
 
@@ -167,17 +183,17 @@ String calcTime(uint32_t t) {
         minutes -= 60;
     }
 
-    String output;
+    String output = "";
     if (hours < 10) {
-        output += '0';
+        output += "0";
     }
-    output += (String(hours) + ':');
+    output += (String(hours) + ":");
     if (minutes < 10) {
-        output += '0';
+        output += "0";
     }
-    output += (String(minutes) + ':');
+    output += (String(minutes) + ":");
     if (seconds < 10) {
-        output += '0';
+        output += "0";
     }
     output += String(seconds);
 
@@ -206,12 +222,15 @@ void lcdPageTemperature() { // main (indoor) Input / water page
 
     lcd.setCursor(0,1);
     lcd.write(126); // pointing right
-    lcd.print(" "); // 2
+    lcd.print(""); // 2
     lcd.print(Setpoint,1); // 6
     lcd.write(1); // degrees F // 7
-    lcd.print(" ");
-    lcd.write(127); //pointing left // 9
-    lcd.print("    "); // 13
+    lcd.print("");
+    lcd.write(127); //pointing left // 9 // 7
+    lcd.write(4);
+    lcd.print(Output, 2);
+    //lcd.print("    "); // 13
+    lcd.setCursor(13,1);
     lcd.write(5); // water droplet // 14
     lcd.print(lcdTankPercent());
     // lcd.print("  "); // 11
@@ -314,6 +333,22 @@ void lcdPageGh() { // page for greenhouse and exterior sensors
     lcd.print(air[2].humid, 1); // 13
     lcd.print(F("%  ")); // 16
 }
+
+
+void lcdPageAccumTarget() { // accumAbove/below
+    lcd.setCursor(0,0); // top
+    lcd.print("  Above"); // 7
+    lcd.write(4); // 8
+    lcd.print(calcTime(pump.getAccumAbove())); // 16
+
+
+    lcd.setCursor(0,1); //bot
+    lcd.print("  Below"); // 7
+    lcd.write(4); // 8
+    lcd.print(calcTime(pump.getAccumBelow())); // 16
+}
+
+
 
 
 

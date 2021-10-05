@@ -133,7 +133,7 @@ void updateSetPoint() {
 }
 
 
-void calcWater() {
+void calcFlow() {
     if (waterCounter != 0) {
         float thisDuration = (currentTime - (last250ms + 750)) / 1000;
         // this cycle's duration in seconds
@@ -192,3 +192,28 @@ void calcWater() {
 //         analogWrite(5, Output);
 //     }
 // }
+
+
+
+
+
+
+
+
+
+
+void emaReadTank() { // every second or whatever
+    const uint8_t EMA_UNITS = 8;
+
+    if (lastEmaTankReading == 0) { // initialization
+        lastEmaTankReading = analogRead(WATER_FLOAT_PIN);
+        for (uint8_t i = 0; i < (EMA_UNITS-1) ; i++) {  
+            emaTankReading = (analogRead(WATER_FLOAT_PIN) * (2. / (1 + EMA_UNITS )) + lastEmaTankReading * (1 - (2. / (1 + EMA_UNITS ))));
+            lastEmaTankReading = emaTankReading;
+        }
+    }
+
+    emaTankReading = (analogRead(WATER_FLOAT_PIN) * (2. / (1 + EMA_UNITS )) + lastEmaTankReading * (1 - (2. / (1 + EMA_UNITS ))));
+    lastEmaTankReading = emaTankReading;
+
+}

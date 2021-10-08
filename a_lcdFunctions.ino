@@ -174,24 +174,27 @@ String calcTime(uint32_t t) {
     t -= (minutes * 60);
     uint16_t seconds = t;
 
-    if (seconds >= 60) {
+    while (seconds >= 60) {
         minutes += 1;
         seconds -= 60;
     }
-    if (minutes >= 60) {
+    while (minutes >= 60) {
         hours += 1;
         minutes -= 60;
     }
 
     String output = "";
+
     if (hours < 10) {
         output += "0";
     }
     output += (String(hours) + ":");
+
     if (minutes < 10) {
         output += "0";
     }
     output += (String(minutes) + ":");
+
     if (seconds < 10) {
         output += "0";
     }

@@ -112,7 +112,6 @@ class Pump_C {
                 accumBelow++;
             }
 
-
             if (timeRemaining > 0) { // if restrained by timer
                 timeRemaining --;
                 switch(state) {
@@ -124,9 +123,9 @@ class Pump_C {
                         }
                         break;
 
-                    case(1): // if on
-                        pwm = ((Output > 127) ? 
-                            (ON_PHASE_BASE_PWM + ((Output - 127) / 2)) : 
+                    case(1): // if on with timer, at least base PWM.
+                        pwm = ((Output > MIDDLE) ? 
+                            (ON_PHASE_BASE_PWM + ((Output - MIDDLE) / 2)) : 
                             ON_PHASE_BASE_PWM);
                         break;
 
@@ -146,7 +145,7 @@ class Pump_C {
             } else { // if not restrained by timeRemaining
                 switch(state) {
                     case(0): // while off, not restrained by timeRemaining
-                        if (Output > 127) {
+                        if (Output > MIDDLE) {
                             start();
                         } else {
                             pwm = 0;
@@ -154,8 +153,8 @@ class Pump_C {
                         break;
 
                     case(1): // while on
-                        if (Output > 127) {
-                            pwm = (ON_PHASE_BASE_PWM + ((Output - 127) / 2));
+                        if (Output > MIDDLE) {
+                            pwm = (ON_PHASE_BASE_PWM + ((Output - MIDDLE) / 2));
                         } else {    //if Output drops below 0 turn it off
                             stop();
                         }

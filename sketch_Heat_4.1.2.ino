@@ -86,8 +86,9 @@ bool set = false;
 // AutoPID
 
 //pid settings and gains
-#define outputMin 0
-#define outputMax 255
+#define outputMin -128
+#define outputMax 127
+#define MIDDLE 0 // greater than this == on
 
 /**
  * if output changes slowly compared to temp/input, start with higher gain(KP)[2-8] and lower resets(KI)[0.05-0.5]
@@ -106,7 +107,7 @@ bool set = false;
  * 
  */
 
-#define Kp 2
+#define Kp 4
 #define Ki 0.02
 #define Kd 0
 

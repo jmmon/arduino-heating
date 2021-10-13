@@ -130,3 +130,30 @@ The motor loop then keeps the motor off for a minimum time, and until the signal
 
 
 motor loop: loops every second, updating the PWM of the motor based on its own timer restrictions, the startup phase special case, and the PID output
+
+
+
+
+
+
+
+
+
+Not sure PID is best. Could use PID for basic timing, and then use floor sensor to detect when high flow is necessary (to jump start the heating).
+
+    What happens if Output == outputMax ? means requires most heat. Do we go max speed?
+
+
+
+water lvl stabilization:
+    As lvl drops, keep lowest number. If it raises above lowest number >= n, keep highest number.
+
+    Or, boolean to track if it's being used or being filled (going down or up). If going down, always keep lowest number. If going up, always keep highest number. And to trigger the switching of the boolean, have rules something like:
+        if (cur > (EMA + n)) filling = true;
+        if (cur < EMA) filling = false;
+
+
+
+Add in caring abt flr tmp done
+
+if on, don't need to "start" motor done

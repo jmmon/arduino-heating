@@ -1,4 +1,5 @@
 void updateTEMP() {
+    // air temp stuff
     for (uint8_t i = 0; i < AIR_SENSOR_COUNT; i++) {
         air[i].readTemp();
     }
@@ -55,7 +56,7 @@ void updateTEMP() {
         air[i].update();
     }
 
-    Input = (air[0].WEIGHT * air[0].currentEMA[0] + air[1].WEIGHT * air[1].currentEMA[0]) / (air[0].WEIGHT + air[1].WEIGHT);
+    Input = double(air[0].WEIGHT * air[0].currentEMA[0] + air[1].WEIGHT * air[1].currentEMA[0]) / (air[0].WEIGHT + air[1].WEIGHT);
 
     debugAirEmas();
 
@@ -80,6 +81,7 @@ void updateTEMP() {
 
 
 
+    // floor temp stuff
     for (uint8_t i = 0; i < FLOOR_SENSOR_COUNT; i++) { // update floor emas
         floorSensor[i].update();
     }
@@ -99,6 +101,7 @@ void updateTEMP() {
         }
     }
     floorEmaAvg = (floorSensor[0].currentEMA + floorSensor[1].currentEMA) / FLOOR_SENSOR_COUNT; // avg two readings
+    coldFloor = (floorEmaAvg < FLOOR_WARMUP_TEMPERATURE);
 }
 
 
@@ -111,9 +114,9 @@ void updateSetPoint() {
     int8_t buttonStatus = 0;
     uint16_t buttonRead = analogRead(THERMOSTAT_BUTTONS_PIN);
     if (buttonRead > 63) {
-        set = true;
+        holdSetPage = true;
         Serial.println(buttonRead);
-        if (buttonRead > 831) {
+        if (buttonRead > 850) {
             buttonStatus = 1;
             for (uint8_t k = 0; k < 2; k++) {  // reset record temps
                 air[k].lowest = air[k].tempF;
@@ -125,8 +128,9 @@ void updateSetPoint() {
             }
         }
         
-        Setpoint += (0.5 * buttonStatus);
-        lcdPageSet();
+        Setpoint += double(0.5 * buttonStatus);
+        lcd.clear();
+        lcdPageSet(buttonRead);
         
         pump.checkAfter(); // default 3 seconds
     }
@@ -215,5 +219,4 @@ void emaReadTank() { // every second or whatever
 
     emaTankReading = (analogRead(WATER_FLOAT_PIN) * (2. / (1 + EMA_UNITS )) + lastEmaTankReading * (1 - (2. / (1 + EMA_UNITS ))));
     lastEmaTankReading = emaTankReading;
-
 }

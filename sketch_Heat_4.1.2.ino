@@ -61,9 +61,12 @@ const float EMA_MULT[3] = {
     2. / (1 + 1800),  //1800 * 2.5s = 4500s EMA = 75m
 };
 
-const float FLOOR_WARMUP_TEMPERATURE = 475; //0-1023, NOTE: insulation (cardboard, rugs) will require higher value
+
+float FLOOR_WARMUP_TEMPERATURE = 475; //0-1023, NOTE: insulation (cardboard, rugs) will require higher value
 const float FLOOR_EMA_MULT = 2. / (1 + 10); //10 readings EMA (20s)
 float floorEmaAvg;
+
+bool coldFloor = false;
 
 int tempDispCounter = 5;
 int tempDispCounter2 = 0;
@@ -78,7 +81,7 @@ uint8_t changePerHourMinuteCounter = 0;
 float last59MedEMAs[59];
 
 
-bool set = false;
+bool holdSetPage = false;
 
 
 
@@ -107,9 +110,9 @@ bool set = false;
  * 
  */
 
-#define Kp 4
-#define Ki 0.02
-#define Kd 0
+#define Kp 8
+#define Ki 0//.005
+#define Kd 0//.002
 
 double Input, 
     Setpoint = 64,

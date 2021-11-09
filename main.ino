@@ -1,7 +1,7 @@
 void setup() {
     Serial.begin(9600);
     pinMode(THERMOSTAT_BUTTONS_PIN, INPUT);
-    pump.stop();
+    pump.stop(true);
     
     for (uint8_t k = 0; k < AIR_SENSOR_COUNT; k++) {
         dht[k].begin();
@@ -14,7 +14,7 @@ void setup() {
     last250ms = millis();
 
     updateTEMP();
-    emaReadTank();
+    waterTank.init();
 
 
     // if temperature is more than 4 degrees below or above Setpoint, OUTPUT will be set to min or max respectively
@@ -62,12 +62,13 @@ void loop() {
         updateSetPoint();
         //thermostat.updateSetpoint();
         
+        lcdUpdate();
+        
 
         if (ms1000ctr >= 4) {
             ms1000ctr = 0;
             calcFlow();
             pump.update();
-            lcdUpdate();
         }
         ms1000ctr++;
         
@@ -75,7 +76,8 @@ void loop() {
         if (ms2500ctr >= 10) {
             ms2500ctr = 0;
 
-            emaReadTank();
+            //emaReadTank();
+            waterTank.update();
             updateTEMP();
         }
         ms2500ctr++;

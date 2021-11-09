@@ -157,3 +157,7 @@ water lvl stabilization:
 Add in caring abt flr tmp done
 
 if on, don't need to "start" motor done
+
+
+
+Seemed to not run start phase when I turned up the temp earlier. (From (off, preheated, above setpoint) to (on, missing startup))

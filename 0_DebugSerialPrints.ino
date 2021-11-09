@@ -101,10 +101,10 @@ void debugHighsLowsFloor() {
         Serial.print(Setpoint, 1);
         Serial.print(F("°F"));
         Serial.print(F("   Floor: "));
-        Serial.print(floorSensor[0].currentEMA);
-        if (floorSensor[0].currentEMA != floorSensor[1].currentEMA) {
+        Serial.print(floorSensor[0].ema);
+        if (floorSensor[0].ema != floorSensor[1].ema) {
             Serial.print(F(" / "));
-            Serial.print(floorSensor[1].currentEMA);
+            Serial.print(floorSensor[1].ema);
         }
         Serial.print(F("                                       *Pump"));
         Serial.print(pump.getStatus());

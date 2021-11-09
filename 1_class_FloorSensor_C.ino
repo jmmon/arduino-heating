@@ -3,8 +3,8 @@ class FloorSensor_C {
         uint8_t PIN;
 
     public:
-        float currentEMA = 0;
-        float lastEMA = 0;
+        float ema = 0;
+        float lastEma = 0;
 
         FloorSensor_C(uint8_t pin) { // constructor
             PIN = pin;
@@ -20,14 +20,13 @@ class FloorSensor_C {
         };
 
         update() {
-            if (lastEMA == 0) {
-                lastEMA = readTemp();
+            if (lastEma == 0) {
+                lastEma = readTemp();
             }
-            currentEMA = (readTemp() * FLOOR_EMA_MULT + lastEMA * (1 - FLOOR_EMA_MULT));
-            lastEMA = currentEMA;
+            ema = (readTemp() * FLOOR_EMA_MULT + lastEma * (1 - FLOOR_EMA_MULT));
+            lastEma = ema;
 
         };
-
 } 
 floorSensor[] = { 
     FloorSensor_C(FLOOR_TEMP_PIN[0]),

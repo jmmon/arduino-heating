@@ -86,7 +86,7 @@ void updateTEMP() {
         floorSensor[i].update();
     }
 
-    int difference = int(abs(floorSensor[0].currentEMA - floorSensor[1].currentEMA)); // floor sensors error check
+    int difference = int(abs(floorSensor[0].ema - floorSensor[1].ema)); // floor sensors error check
 
     if (difference > 80) { // floor thermistor difference check
         if (DEBUG) {
@@ -94,14 +94,13 @@ void updateTEMP() {
             Serial.println(difference);
         }
 
-        if (floorSensor[0].currentEMA > floorSensor[1].currentEMA) {
-            floorSensor[1].currentEMA = floorSensor[0].currentEMA;
+        if (floorSensor[0].ema > floorSensor[1].ema) {
+            floorSensor[1].ema = floorSensor[0].ema;
         } else {
-            floorSensor[0].currentEMA = floorSensor[1].currentEMA;
+            floorSensor[0].ema = floorSensor[1].ema;
         }
     }
-    floorEmaAvg = (floorSensor[0].currentEMA + floorSensor[1].currentEMA) / FLOOR_SENSOR_COUNT; // avg two readings
-    coldFloor = (floorEmaAvg < FLOOR_WARMUP_TEMPERATURE);
+    floorEmaAvg = (floorSensor[0].ema + floorSensor[1].ema) / FLOOR_SENSOR_COUNT; // avg two readings
 }
 
 
@@ -196,27 +195,3 @@ void calcFlow() {
 //         analogWrite(5, Output);
 //     }
 // }
-
-
-
-
-
-
-
-
-
-
-void emaReadTank() { // every second or whatever
-    const uint8_t EMA_UNITS = 8;
-
-    if (lastEmaTankReading == 0) { // initialization
-        lastEmaTankReading = analogRead(WATER_FLOAT_PIN);
-        for (uint8_t i = 0; i < (EMA_UNITS-1) ; i++) {  
-            emaTankReading = (analogRead(WATER_FLOAT_PIN) * (2. / (1 + EMA_UNITS )) + lastEmaTankReading * (1 - (2. / (1 + EMA_UNITS ))));
-            lastEmaTankReading = emaTankReading;
-        }
-    }
-
-    emaTankReading = (analogRead(WATER_FLOAT_PIN) * (2. / (1 + EMA_UNITS )) + lastEmaTankReading * (1 - (2. / (1 + EMA_UNITS ))));
-    lastEmaTankReading = emaTankReading;
-}

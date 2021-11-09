@@ -9,15 +9,12 @@ const bool DEBUG = false;
 
 #define DHT1PIN 7 //main
 #define DHT2PIN 8 //upstairs
-
 #define DHT3PIN 4 //not yet used
 #define DHT4PIN 12 //not yet used
 
 const uint8_t WATER_FLOW_PIN = 3;   //flow sensor
-
 const uint8_t FLOOR_SENSOR_COUNT = 2;
 const uint8_t FLOOR_TEMP_PIN[2] = {A0, A1};
-
 const uint8_t THERMOSTAT_BUTTONS_PIN = A2;
 const uint8_t WATER_FLOAT_PIN = A3; //tank sensors
 
@@ -32,27 +29,22 @@ DHT dht[4] = {
     {DHT4PIN, DHT22},// greenhouse? // nan
 };
 
-LiquidCrystal_I2C lcd(0x27, 16, 2); // set the LCD address to 0x27 for a 16 chars and 2 line display  
-//SDA = A4 pin; SCL = A5 pin
 
-
-uint32_t currentTime = 0;
-
-uint32_t last250ms = 0;
-uint8_t ms1000ctr = 0;
+uint32_t currentTime = 0; // timer
+uint32_t last250ms = 0; // counters
+uint8_t ms1000ctr = 0; // or use %????
 uint8_t ms2500ctr = 0;
 
-const uint8_t LCD_INTERVAL_SECONDS = 4;
+// SDA = A4 pin; SCL = A5 pin
+LiquidCrystal_I2C lcd(0x27, 16, 2); // set the LCD address to 0x27 for a 16 chars and 2 line display  
+const uint8_t LCD_INTERVAL_QTR_SECS = 12; // 3.5s
 int8_t lcdCounter = 0;
+bool holdSetPage = false;
 
-int16_t lastButtonStatus = 0; //thermostat buttons
+
+int16_t lastButtonStatus = 0; // thermostat buttons
 uint16_t lastTankRead = 0;
 
-uint16_t emaTankReading = 0;
-uint16_t lastEmaTankReading = 0;
-
-const uint8_t LCD_PAGE_MAX = 6;
-uint8_t lcdPage = LCD_PAGE_MAX;
 
 const float EMA_MULT[3] = {
     //  2 / (1 + n)   =>  where (n * TEMPERATURE_READ_INTERVAL) = milliseconds defining EMA calculation
@@ -65,7 +57,6 @@ const float EMA_MULT[3] = {
 float FLOOR_WARMUP_TEMPERATURE = 475; //0-1023, NOTE: insulation (cardboard, rugs) will require higher value
 const float FLOOR_EMA_MULT = 2. / (1 + 10); //10 readings EMA (20s)
 float floorEmaAvg;
-
 bool coldFloor = false;
 
 int tempDispCounter = 5;
@@ -73,27 +64,19 @@ int tempDispCounter2 = 0;
 uint8_t errorCounter1 = 5;
 uint8_t errorCounter2 = 5;
 
+
+// water counter stuff, not working
 float l_minute = 0;
 float totalVolume = 0;
 volatile uint32_t waterCounter = 0;
-
 uint8_t changePerHourMinuteCounter = 0;
 float last59MedEMAs[59];
 
 
-bool holdSetPage = false;
 
-
-
- // *******************************************************
-// AutoPID
-
-//pid settings and gains
-#define outputMin -128
-#define outputMax 127
-#define MIDDLE 0 // greater than this == on
-
-/**
+// *******************************************************
+/** 
+ * AutoPID
  * if output changes slowly compared to temp/input, start with higher gain(KP)[2-8] and lower resets(KI)[0.05-0.5]
  * 
  * @brief KP // how fast system responds
@@ -110,22 +93,23 @@ bool holdSetPage = false;
  * 
  */
 
+// pid settings and gains
+#define outputMin -128
+#define outputMax 127
+#define MIDPOINT 0 // greater than this == on
+
 #define Kp 8
-#define Ki 0//.005
-#define Kd 0//.002
+#define Ki 0 // 0.005
+#define Kd 0 // 0.002
 
 double Input, 
-    Setpoint = 64,
+    Setpoint = 68,
     Output;
 
 AutoPID myPID(&Input, &Setpoint, &Output, outputMin, outputMax, Kp, Ki, Kd);
- // *******************************************************
 
 
-
-
-
- // *******************************************************
+ // **************************************************************************************************************
  // QuickPID
 // const uint32_t sampleTimeUs = 2500000; // 2500ms
 // const int outputMax = 255; // 128 is start of on, 255 - (128/2) = 191

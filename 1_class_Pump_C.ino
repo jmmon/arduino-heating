@@ -2,13 +2,14 @@ class Pump_C {
     private:
         uint8_t PIN = 5;
 
-        uint8_t STARTING_PHASE_PWM = 220;
-        uint8_t ON_PHASE_BASE_PWM = 191;
-        uint8_t COLD_FLOOR_PWM = 255;
-
+        uint8_t STARTING_PHASE_PWM_OFFSET = 48;
         uint8_t STARTING_PHASE_SECONDS = 4;
-        uint8_t ON_CYCLE_MINIMUM_SECONDS = 180;
-        uint16_t OFF_CYCLE_MINIMUM_SECONDS = 300;
+
+        uint8_t ON_PHASE_BASE_PWM = 171;
+        uint8_t COLD_FLOOR_PWM = 223;
+
+        uint8_t ON_CYCLE_MINIMUM_SECONDS = 300; // 3m
+        uint16_t OFF_CYCLE_MINIMUM_SECONDS = 1800; // 30m
 
         uint8_t state = 0;
         uint8_t lastState = 0;
@@ -84,25 +85,30 @@ class Pump_C {
 
 
         void start() {
+            coldFloor = (floorEmaAvg < FLOOR_WARMUP_TEMPERATURE);
             setState(2);
             resetDuration();
             timeRemaining = ON_CYCLE_MINIMUM_SECONDS; // 3 minute minimum
+            
 
-            if (coldFloor) {
-                pwm = COLD_FLOOR_PWM;
-            } else {
-                if (pwm != 0) {
-                    pwm = STARTING_PHASE_PWM;
-                }
-            }
+            // pwm = (pwm != 0) ? (ON_PHASE_BASE_PWM + STARTING_PHASE_PWM_OFFSET) : 0;
+            pwm = (coldFloor) ? COLD_FLOOR_PWM :
+               (pwm != 0) ? (ON_PHASE_BASE_PWM + STARTING_PHASE_PWM_OFFSET) :
+                0;
+
+            uint8_t temp = ON_PHASE_BASE_PWM + ((float) (Output - MIDPOINT) / (outputMax - MIDPOINT) * (255 - ON_PHASE_BASE_PWM)); // set based on Output
+
+            pwm = (pwm != 0 && temp > pwm) ? temp : pwm;
+
             analogWrite(PIN, pwm);
 
         }
 
-        void stop() {
+        void stop(bool init = false) {
+            coldFloor = (floorEmaAvg < FLOOR_WARMUP_TEMPERATURE);
             setState(0);
             resetDuration();
-            timeRemaining = OFF_CYCLE_MINIMUM_SECONDS; // 5 minute minimum
+            timeRemaining = (init) ? 0 : OFF_CYCLE_MINIMUM_SECONDS; // 30 minute wait (except on init)
             pwm = 0;
             analogWrite(PIN, pwm);
         }
@@ -132,6 +138,13 @@ class Pump_C {
                 accumBelow++;
             }
 
+            // if restrained by timer
+            if (timeRemaining > 0) {
+                timeRemaining --;
+            }
+
+            
+            uint8_t tempPwm = ON_PHASE_BASE_PWM + ((float) (Output - MIDPOINT) / (outputMax - MIDPOINT) * (255 - ON_PHASE_BASE_PWM)); // set based on Output
 
             switch(state) {
                 case(0):
@@ -143,7 +156,7 @@ class Pump_C {
                         }
 
                     } else { // while off, not restrained by timeRemaining
-                        if (Output > MIDDLE) {
+                        if (Output > MIDPOINT) { // most common start trigger
                             start();
                         } else {
                             pwm = 0;
@@ -154,19 +167,20 @@ class Pump_C {
 
                 case(1): // on phase
                     if (timeRemaining > 0) { // if on with timer, at least base PWM.
-                        if (coldFloor) {
-                            pwm = COLD_FLOOR_PWM;
-                        } else {
-                            pwm = ((Output > MIDDLE) ? (ON_PHASE_BASE_PWM + ((Output - MIDDLE) / 2)) : ON_PHASE_BASE_PWM);
-                        }
+
+                        pwm = (coldFloor) ? COLD_FLOOR_PWM :
+                            ON_PHASE_BASE_PWM;
+
+                        pwm = (tempPwm > pwm) ? tempPwm : pwm;
+                            
                         
                     } else { // while on
-                        if (Output > MIDDLE) {
-                            if (coldFloor) {
-                                pwm = COLD_FLOOR_PWM;
-                            } else {
-                                pwm = (ON_PHASE_BASE_PWM + ((Output - MIDDLE) / 2));
-                            }
+                        if (Output > MIDPOINT) {
+                            
+                            pwm = (coldFloor) ? COLD_FLOOR_PWM :
+                            (ON_PHASE_BASE_PWM);
+
+                            pwm = (tempPwm > pwm) ? tempPwm : pwm;
                             
                         } else {    //if Output drops below 0 turn it off
                             stop();
@@ -179,11 +193,13 @@ class Pump_C {
                     if (timeRemaining > 0) { // motor start here
                         uint32_t endOfMotorStartup = ON_CYCLE_MINIMUM_SECONDS - STARTING_PHASE_SECONDS;
                         if (timeRemaining > endOfMotorStartup) { // if still starting
-                            if (coldFloor) {
-                                pwm = COLD_FLOOR_PWM;
-                            } else {
-                                pwm = STARTING_PHASE_PWM;
-                            }
+                            // pwm = (ON_PHASE_BASE_PWM + STARTING_PHASE_PWM_OFFSET);
+                            pwm = (coldFloor) ? COLD_FLOOR_PWM : 
+                                (ON_PHASE_BASE_PWM + STARTING_PHASE_PWM_OFFSET);
+
+                            pwm = (tempPwm > pwm) ? tempPwm : pwm;
+                            
+
                             
                         } else {
                             setState(1);
@@ -204,68 +220,7 @@ class Pump_C {
                     break;
             }
 
-            if (timeRemaining > 0) { // if restrained by timer
-                timeRemaining --;
-            }
-
-            // if (timeRemaining > 0) { // if restrained by timer
-            //     timeRemaining --;
-            //     switch(state) {
-            //         case(0): // if off (with timeRemaining)
-            //             if (Output == outputMax) { // special case
-            //                 start();
-            //             } else {
-            //                 pwm = 0;
-            //             }
-            //             break;
-
-            //         case(1): // if on with timer, at least base PWM.
-            //             pwm = ((Output > MIDDLE) ? 
-            //                 (ON_PHASE_BASE_PWM + ((Output - MIDDLE) / 2)) : 
-            //                 ON_PHASE_BASE_PWM);
-            //             break;
-
-            //         case(2): // motor start here
-            //             uint32_t endOfMotorStartup = ON_CYCLE_MINIMUM_SECONDS - STARTING_PHASE_SECONDS;
-            //             if (timeRemaining > endOfMotorStartup) {
-            //                 pwm = STARTING_PHASE_PWM;
-            //             } else {
-            //                 setState(1);
-            //             }
-            //             break;
-
-            //         case(3): // do nothing
-            //             break;
-            //     }
-
-            // } else { // if not restrained by timeRemaining
-            //     switch(state) {
-            //         case(0): // while off, not restrained by timeRemaining
-            //             if (Output > MIDDLE) {
-            //                 start();
-            //             } else {
-            //                 pwm = 0;
-            //             }
-            //             break;
-
-            //         case(1): // while on
-            //             if (Output > MIDDLE) {
-            //                 pwm = (ON_PHASE_BASE_PWM + ((Output - MIDDLE) / 2));
-            //             } else {    //if Output drops below 0 turn it off
-            //                 stop();
-            //             }
-            //         break;
-
-            //         case(2): // won't happen
-            //             break;
-
-            //         case(3): // delay timeRemaining is up, check if motor needs to be on
-            //             holdSetPage = false;
-                        
-            //             setState(0); // 0 state, no timer, this is where we check if we need to start.
-            //             break;
-            //     }
-            // }
-
             analogWrite(PIN, pwm);
         }  
+
+} pump = Pump_C();

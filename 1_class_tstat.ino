@@ -1,70 +1,14 @@
-class WaterTank_C {
-    private: 
-        uint8_t PIN = A3;
-        uint8_t EMA_PERIODS_SHORT = 10; // * 2.5 = 25 s
-        uint8_t EMA_PERIODS_LONG = 60; //  * 2.5 = 150 s
-        uint8_t EMA_PERIODS_DIFF = 20; //  * 2.5 = 50 s
-        
-    public:
-        bool filling = false;
 
-        uint16_t slowEma = 0;
-        uint16_t lastSlowEma = 0;
 
-        uint16_t ema = 0;
-        uint16_t lastEma = 0;
 
-        int16_t diff = 0;
-        int16_t lastDiff = 0;
 
-        int16_t diffEma = 0;
-        int16_t lastDiffEma = 0;
 
-        WaterTank_C() {
-            pinMode(PIN, INPUT);
-        }
 
-        init() {            
-            uint16_t reading = analogRead(PIN);
-            ema = reading;
-            lastEma = reading;
-            slowEma = reading;
-            lastSlowEma = reading;
-            diffEma = ema - slowEma;
-            lastDiffEma = ema - slowEma;
-        }
 
-        
-        update() { // every 2.5 seconds
-          
-            // calculate quick EMA
-            lastEma = ema;
-            ema = (analogRead(PIN) * (2. / (1 + EMA_PERIODS_SHORT )) + lastEma * (1 - (2. / (1 + EMA_PERIODS_SHORT ))));
 
-            // calculate slow EMA
-            lastSlowEma = slowEma;
-            slowEma = (analogRead(PIN) * (2. / (1 + EMA_PERIODS_LONG )) + lastSlowEma * (1 - (2. / (1 + EMA_PERIODS_LONG ))));
 
-            // get differences
-            lastDiff = diff; // save old diff for fun
-            diff = ema - slowEma;
-            
-            lastDiffEma = diffEma;
-            diffEma = (diff * (2. / (1 + EMA_PERIODS_DIFF )) + lastDiffEma * (1 - (2. / (1 + EMA_PERIODS_DIFF ))));
 
-            
-            
-            // Determine if tank is currently being filled
-            uint8_t n = 30; // higher makes it take longer to trigger on filling
-            uint8_t m = 15; // lower makes it harder to trigger off filling
-            
-            // If current read is higher than longerEMAread + window, yes filling.
-            if (ema > (slowEma + n)) filling = true;
-            // if current read is around longerEMAread, not filling. 
-            if ((slowEma - m) < ema && ema < (slowEma + m)) filling = false;
 
-        }
-} waterTank = WaterTank_C();
 
 
 /**

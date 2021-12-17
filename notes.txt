@@ -161,3 +161,9 @@ if on, don't need to "start" motor done
 
 
 Seemed to not run start phase when I turned up the temp earlier. (From (off, preheated, above setpoint) to (on, missing startup))
+
+TODO: 
+    Motor overheats. Need to fix motor cooling (or add a sensor). Might be good to figure out some sort of 250ms break/reset every so often, turn off motor and back on where it was.
+
+    ~ Add in old algorithm stuff so I can switch between the two and decide if I can make PID better
+

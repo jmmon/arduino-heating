@@ -15,8 +15,6 @@ const bool DEBUG = false;
 const uint8_t WATER_FLOW_PIN = 3;   //flow sensor
 const uint8_t FLOOR_SENSOR_COUNT = 2;
 const uint8_t FLOOR_TEMP_PIN[2] = {A0, A1};
-const uint8_t THERMOSTAT_BUTTONS_PIN = A2;
-const uint8_t WATER_FLOAT_PIN = A3; //tank sensors
 
 //{WATER_FLOW_PIN:3, DHT1PIN:4, PUMP_PIN:5, DHT2PIN:6, (DHT3PIN:7)}
 //{FLOOR_TEMP_PIN[0]:A0, FLOOR_TEMP_PIN[1]:A1, THERMOSTAT__BUTTONS_PIN:A2, WATER_FLOAT_PIN:A3}
@@ -37,13 +35,6 @@ uint8_t ms2500ctr = 0;
 
 // SDA = A4 pin; SCL = A5 pin
 LiquidCrystal_I2C lcd(0x27, 16, 2); // set the LCD address to 0x27 for a 16 chars and 2 line display  
-const uint8_t LCD_INTERVAL_QTR_SECS = 12; // 3.5s
-int8_t lcdCounter = 0;
-bool holdSetPage = false;
-
-
-int16_t lastButtonStatus = 0; // thermostat buttons
-uint16_t lastTankRead = 0;
 
 
 const float EMA_MULT[3] = {
@@ -54,7 +45,7 @@ const float EMA_MULT[3] = {
 };
 
 
-float FLOOR_WARMUP_TEMPERATURE = 475; //0-1023, NOTE: insulation (cardboard, rugs) will require higher value
+const float FLOOR_WARMUP_TEMPERATURE = 475; //0-1023, NOTE: insulation (cardboard, rugs) will require higher value
 const float FLOOR_EMA_MULT = 2. / (1 + 10); //10 readings EMA (20s)
 float floorEmaAvg;
 bool coldFloor = false;
@@ -103,11 +94,10 @@ float last59MedEMAs[59];
 #define Kd 0 // 0.002
 
 double Input, 
-    Setpoint = 68,
+    Setpoint = 72,
     Output;
 
 AutoPID myPID(&Input, &Setpoint, &Output, outputMin, outputMax, Kp, Ki, Kd);
-
 
  // **************************************************************************************************************
  // QuickPID

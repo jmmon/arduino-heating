@@ -19,18 +19,9 @@ void debugEmaWater() {
         Serial.print(totalVolume);
         Serial.print(F(" liters, "));
         //check tank levels
-        uint16_t tankReading = analogRead(WATER_FLOAT_PIN);
         Serial.print(F("Level: "));
-        if (tankReading > 999) { // ~1023
-            Serial.print(F("< 25%"));
-        } else if (tankReading > 685) { // ~750
-            Serial.print(F("25~50%"));
-        } else if (tankReading > 32) { // ~330
-            Serial.print(F("50~75%"));
-        } else { //~0
-            Serial.print(F("> 75%"));
-        }
-        Serial.print(F(") "));
+        Serial.print(waterTank.percent);
+        Serial.print(F(" "));
     }
 }
 

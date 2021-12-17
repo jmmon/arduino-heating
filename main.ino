@@ -1,26 +1,25 @@
 void setup() {
     Serial.begin(9600);
-    pinMode(THERMOSTAT_BUTTONS_PIN, INPUT);
     pump.stop(true);
     
     for (uint8_t k = 0; k < AIR_SENSOR_COUNT; k++) {
         dht[k].begin();
     }
-    lcdInitialize();
-    attachInterrupt(digitalPinToInterrupt(WATER_FLOW_PIN), countWater, FALLING);
 
+    display.initialize();
     DEBUG_setup();
-
-    last250ms = millis();
-
     updateTEMP();
     waterTank.init();
 
+    //attachInterrupt(digitalPinToInterrupt(WATER_FLOW_PIN), countWater, FALLING);
 
     // if temperature is more than 4 degrees below or above Setpoint, OUTPUT will be set to min or max respectively
-    myPID.setBangBang(4);
-    // set PID update interval to 4000ms
-    myPID.setTimeStep(1000);
+    //myPID.setBangBang(4);
+    myPID.setBangBang(100); // so high that it disables the feature; setpoint +- 100
+    myPID.setTimeStep(1000);// set PID update interval
+
+    
+    last250ms = millis();
 
 
 // //    if (constrain(output, outputMin, outputMax - outputStep - 5) < output) {
@@ -59,11 +58,11 @@ void loop() {
 
     if (currentTime >= (last250ms + 250)) { // update Setpoint 
         last250ms += 250;
-        updateSetPoint();
+        //updateSetPoint();
         //thermostat.updateSetpoint();
-        
-        lcdUpdate();
-        
+
+        // lcdUpdate();
+        display.update();
 
         if (ms1000ctr >= 4) {
             ms1000ctr = 0;

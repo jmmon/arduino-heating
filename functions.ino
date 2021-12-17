@@ -109,31 +109,7 @@ void countWater() {
 }
 
 
-void updateSetPoint() {
-    int8_t buttonStatus = 0;
-    uint16_t buttonRead = analogRead(THERMOSTAT_BUTTONS_PIN);
-    if (buttonRead > 63) {
-        holdSetPage = true;
-        Serial.println(buttonRead);
-        if (buttonRead > 850) {
-            buttonStatus = 1;
-            for (uint8_t k = 0; k < 2; k++) {  // reset record temps
-                air[k].lowest = air[k].tempF;
-            }
-        } else {
-            buttonStatus = -1;
-            for (uint8_t k = 0; k < 2; k++) {
-                air[k].highest = air[k].tempF;
-            }
-        }
-        
-        Setpoint += double(0.5 * buttonStatus);
-        lcd.clear();
-        lcdPageSet(buttonRead);
-        
-        pump.checkAfter(); // default 3 seconds
-    }
-}
+
 
 
 void calcFlow() {

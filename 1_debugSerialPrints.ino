@@ -112,12 +112,12 @@ void debugHighsLowsFloor() {
             Serial.print(air[1].lowest);
         }
         Serial.print(F(")"));
-        if (changePerHourMinuteCounter == 60) {
-            Serial.print(F("Temp Change per Hr (Medium EMA): "));
-            float avgNow = (air[0].currentEMA[1] + air[1].currentEMA[1]) / 2;
-            float diff = last59MedEMAs[0] - avgNow;
-            Serial.print(diff);
-        }
+        // if (changePerHourMinuteCounter == 60) {
+        //     Serial.print(F("Temp Change per Hr (Medium EMA): "));
+        //     float avgNow = (air[0].currentEMA[1] + air[1].currentEMA[1]) / 2;
+        //     float diff = last59MedEMAs[0] - avgNow;
+        //     Serial.print(diff);
+        // }
         Serial.println();
     }
 }

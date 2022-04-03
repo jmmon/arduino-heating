@@ -1,14 +1,9 @@
 class Air_C {
     private:
         DHT *sensor;
+//         DHTNEW *sensor;
 
     public:
-        Air_C(DHT *s, String l, float w) {
-            sensor = s;
-            label = l;
-            WEIGHT = w;
-        }
-
         float tempC = 0;
         float tempF = 0;
         float WEIGHT = 1;
@@ -21,6 +16,18 @@ class Air_C {
         
         bool working = true;
         String label;
+        
+        Air_C(DHT *s, String l, float w) {  //constructor
+            sensor = s;
+            label = l;
+            WEIGHT = w;
+        }
+
+//        Air_C(DHTNEW *s, String l, float w) {  //constructor
+//            sensor = s;
+//            label = l;
+//            WEIGHT = w;
+//        }
 
         readTemp() {
             //read temp/humid
@@ -29,12 +36,23 @@ class Air_C {
             humid = sensor->readHumidity();
         };
 
-        float getTemp(bool weighted = false) {
-            if (weighted) return (tempF * WEIGHT);
-            return tempF;
+//        readTemp() {
+////          uint32_t start = micros();
+////          int chk = sensor.read();
+////          uint32_t stop = micros();
+//
+//          sensor->read();
+//          tempC = sensor->getTemperature();
+//          tempF = (tempC * 9 / 5) + 32;
+//          humid = sensor->getHumidity();
+//        }
+
+        float getTempEma(bool weighted = false) {
+            if (weighted) return (WEIGHT * currentEMA[0]);
+            return currentEMA[0];
         }
 
-        update() {
+        updateRecords() {
             //update highest / lowest
             if (highest < tempF) {
                 highest = tempF;
@@ -60,4 +78,9 @@ air[] = {
     Air_C(&dht[1], "UPSTAIRS", 2),
     Air_C(&dht[2], "OUTSIDE", 2),
     Air_C(&dht[3], "GREENHOUSE", 2),
+    
+//    Air_C(&dhtnew[0], "MAIN", 1),
+//    Air_C(&dhtnew[1], "UPSTAIRS", 2),
+//    Air_C(&dhtnew[2], "OUTSIDE", 2),
+//    Air_C(&dhtnew[3], "GREENHOUSE", 2),
 };

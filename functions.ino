@@ -4,7 +4,8 @@ void updateTEMP() {
         air[i].readTemp();
     }
 
-    if (isnan(air[0].humid) || isnan(air[0].tempF)) { // check for errors in two main sensors
+    // check for errors in two main sensors
+    if (isnan(air[0].humid) || isnan(air[0].tempF)) {
         if (isnan(air[1].humid) || isnan(air[1].tempF)) {
             Serial.println(F("ERROR BOTH SENSORS "));
         } else {
@@ -53,27 +54,27 @@ void updateTEMP() {
     }
 
     for (uint8_t i = 0; i < AIR_SENSOR_COUNT; i++) { // update highs/lows records (for all air sensors)
-        air[i].update();
+        air[i].updateRecords();
     }
 
-    Input = double(air[0].WEIGHT * air[0].currentEMA[0] + air[1].WEIGHT * air[1].currentEMA[0]) / (air[0].WEIGHT + air[1].WEIGHT);
+    Input = (double)(air[0].getTempEma() * air[0].WEIGHT + air[1].getTempEma() * air[1].WEIGHT) / (air[0].WEIGHT + air[1].WEIGHT);
 
-    debugAirEmas();
+    //debugAirEmas();
 
+    // counter for what? other than debugEmaWater
     if (tempDispCounter2 >= 24) {  // every minute: 
-        debugEmaWater();
+//        debugEmaWater();
 
         if (changePerHourMinuteCounter < 59) {
             changePerHourMinuteCounter++;
         }
         tempDispCounter2 = 0;
         
-        for (uint8_t k=0; k < changePerHourMinuteCounter - 1; k++) {
-            last59MedEMAs[k] = last59MedEMAs[k+1];
-        }
-        last59MedEMAs[58] = (air[0].currentEMA[1] + air[1].currentEMA[1]) / 2;
+        // for (uint8_t k=0; k < changePerHourMinuteCounter - 1; k++) {
+        //     last59MedEMAs[k] = last59MedEMAs[k+1];
+        // }
+        // last59MedEMAs[58] = (air[0].currentEMA[1] + air[1].currentEMA[1]) / 2;
     }
-
     tempDispCounter2++;
 
 
@@ -86,9 +87,10 @@ void updateTEMP() {
         floorSensor[i].update();
     }
 
-    int difference = int(abs(floorSensor[0].ema - floorSensor[1].ema)); // floor sensors error check
-
-    if (difference > 80) { // floor thermistor difference check
+    
+    // floor thermistor difference check, for outlier errors
+    int difference = int(abs(floorSensor[0].ema - floorSensor[1].ema));
+    if (difference > 80) {
         if (DEBUG) {
             Serial.print(F("Floor Read Error. Difference: "));
             Serial.println(difference);
@@ -101,27 +103,32 @@ void updateTEMP() {
         }
     }
     floorEmaAvg = (floorSensor[0].ema + floorSensor[1].ema) / FLOOR_SENSOR_COUNT; // avg two readings
+    floorEmaAvgSlow = (floorSensor[0].slowEma + floorSensor[1].slowEma) / FLOOR_SENSOR_COUNT; // avg two readings
 }
 
 
 void countWater() {
-    waterCounter++;
+    waterPulseCount++;
 }
 
 
 
 
-
-void calcFlow() {
-    if (waterCounter != 0) {
-        float thisDuration = (currentTime - (last250ms + 750)) / 1000;
-        // this cycle's duration in seconds
-        // Pulse frequency (Hz) = 7.5Q, Q is flow rate in L/min.    (Pulse frequency x 60 min) / 7.5Q = flowrate in L/hour
-        l_minute = (waterCounter / 7.5) / thisDuration; // divide by 2.5 because this is on a 2.5s timer  // returns vol per minute extrapolated from 2.5s
-        totalVolume += (l_minute * thisDuration / 60);  // adds vol from the last 2.5s to totalVol
-        waterCounter = 0;
-    }
+void waterResetTotal() {
+    totalMilliLitres = 0;
 }
+
+
+// void calcFlow() {
+//     if (waterPulseCounter != 0) {
+//         float thisDuration = (currentTime - (last250ms + 750)) / 1000;
+//         // this cycle's cycleDuration in seconds
+//         // Pulse frequency (Hz) = 7.5Q, Q is flow rate in L/min.    (Pulse frequency x 60 min) / 7.5Q = flowrate in L/hour
+//         l_minute = (waterPulseCounter / 7.5) / thisDuration; // divide by 2.5 because this is on a 2.5s timer  // returns vol per minute extrapolated from 2.5s
+//         totalVolume += (l_minute * thisDuration / 60);  // adds vol from the last 2.5s to totalVol
+//         waterPulseCounter = 0;
+//     }
+// }
 
 
 // float avg(int inputVal) {

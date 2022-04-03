@@ -20,3 +20,7 @@ disabling proportional PWM
 
 testing "static const byte" chars for the custom chars
 didn't work; is there another type which would work (and save space)?
+
+
+
+Could use net-above/below-temperature time to bump set temperature up, so heat starts sooner to help balance out the net-above/below-temperature

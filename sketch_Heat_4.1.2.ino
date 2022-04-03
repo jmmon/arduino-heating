@@ -1,37 +1,70 @@
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
+// #include <AutoPID.h>
 #include <DHT.h>
-// #include <QuickPID.h>
-#include <AutoPID.h>
+//#include <dhtnew.h>
+#include <ArduPID.h>
+
+#define TONE_USE_INT
+#define TONE_PITCH 432
+#include <TonePitch.h>
 
 const String VERSION_NUMBER = "4.1.2";
 const bool DEBUG = false;
 
-#define DHT1PIN 7 //main
-#define DHT2PIN 8 //upstairs
-#define DHT3PIN 4 //not yet used
-#define DHT4PIN 12 //not yet used
-
-const uint8_t WATER_FLOW_PIN = 3;   //flow sensor
-const uint8_t FLOOR_SENSOR_COUNT = 2;
-const uint8_t FLOOR_TEMP_PIN[2] = {A0, A1};
-
-//{WATER_FLOW_PIN:3, DHT1PIN:4, PUMP_PIN:5, DHT2PIN:6, (DHT3PIN:7)}
-//{FLOOR_TEMP_PIN[0]:A0, FLOOR_TEMP_PIN[1]:A1, THERMOSTAT__BUTTONS_PIN:A2, WATER_FLOAT_PIN:A3}
 
 const uint8_t AIR_SENSOR_COUNT = 4;
-DHT dht[4] = { 
-    {DHT1PIN, DHT22}, 
-    {DHT2PIN, DHT22}, 
-    {DHT3PIN, DHT22}, //  outside, not yet installed // nan
-    {DHT4PIN, DHT22},// greenhouse? // nan
+const uint8_t FLOOR_SENSOR_COUNT = 2;
+
+
+// PINS
+// NANO PWM PINS: (digital) 
+// (3), (5), 6, 9, 10, 11
+const uint8_t WATER_FLOAT_SENSOR_PIN = A3;
+const uint8_t FLOOR_TEMP_PIN[2] = { A0, A1 };
+const uint8_t HEAT_PUMP_PIN = 5;
+const uint8_t T_STAT_BUTTON_PIN = A2;
+
+const uint8_t WATER_VALVE_PIN;
+
+const uint8_t WATER_FLOW_PIN = 3;   //flow sensor
+uint8_t WATER_FLOW_INTURRUPT = 0; // set in setup as inturrupt of above pin
+
+const uint8_t TONE_PIN = 6;
+
+const uint8_t DHT_PIN[4] = {
+    7, // main
+    8, // upstairs
+    4, // one gh, one outside
+    12,
 };
+DHT dht[4] = { 
+    {DHT_PIN[0], DHT22}, 
+    {DHT_PIN[1], DHT22}, 
+    {DHT_PIN[2], DHT22}, //  outside, not yet installed // nan
+    {DHT_PIN[3], DHT22},// greenhouse? // nan
+};
+
+//
+//// set DHTNEW pins
+//DHTNEW downstairs(DHT_PIN[0]);
+//DHTNEW upstairs(DHT_PIN[1]);
+//DHTNEW outside(DHT_PIN[2]);
+//DHTNEW greenhouse(DHT_PIN[3]);
+//// build array to access the sensors
+//DHTNEW  dhtnew[4] = {downstairs, upstairs, outside, greenhouse};
+
+
+
 
 
 uint32_t currentTime = 0; // timer
 uint32_t last250ms = 0; // counters
 uint8_t ms1000ctr = 0; // or use %????
 uint8_t ms2500ctr = 0;
+
+// new timers counter, 20ms base for quick display-screen switching
+// uint32_t last20ms = 0;
 
 // SDA = A4 pin; SCL = A5 pin
 LiquidCrystal_I2C lcd(0x27, 16, 2); // set the LCD address to 0x27 for a 16 chars and 2 line display  
@@ -45,9 +78,9 @@ const float EMA_MULT[3] = {
 };
 
 
-const float FLOOR_WARMUP_TEMPERATURE = 475; //0-1023, NOTE: insulation (cardboard, rugs) will require higher value
-const float FLOOR_EMA_MULT = 2. / (1 + 10); //10 readings EMA (20s)
+const float FLOOR_WARMUP_TEMPERATURE = 580; //0-1023, NOTE: insulation (cardboard, rugs) will require higher value
 float floorEmaAvg;
+float floorEmaAvgSlow;
 bool coldFloor = false;
 
 int tempDispCounter = 5;
@@ -57,11 +90,22 @@ uint8_t errorCounter2 = 5;
 
 
 // water counter stuff, not working
+float calibrationFactor = 4.5;
+
+volatile byte waterPulseCount = 0;
+
+float flowRate = 0;
+float flowMilliLitres = 0;
+float totalMilliLitres = 0;
+
+unsigned long oldTime = 0;
+
 float l_minute = 0;
 float totalVolume = 0;
-volatile uint32_t waterCounter = 0;
 uint8_t changePerHourMinuteCounter = 0;
-float last59MedEMAs[59];
+
+// float last59MedEMAs[59];
+
 
 
 
@@ -84,39 +128,25 @@ float last59MedEMAs[59];
  * 
  */
 
-// pid settings and gains
-#define outputMin -128
-#define outputMax 127
-#define MIDPOINT 0 // greater than this == on
+const double outputMin = -128;
+const double outputMax = 127;
+const double MIDPOINT = 0; // greater than this == on
 
-#define Kp 8
-#define Ki 0 // 0.005
-#define Kd 0 // 0.002
+ // Proportional
+double Kp = 8;
+// Integral (testing 0.05 [was 0.005] starting jan 21 2022)
+double Ki = 0.05; // 0.005
+// Derivative
+double Kd = 0; // 0.002
 
 double Input, 
-    Setpoint = 72,
+    Setpoint = 74,
     Output;
 
-AutoPID myPID(&Input, &Setpoint, &Output, outputMin, outputMax, Kp, Ki, Kd);
+// AutoPID myPID(&Input, &Setpoint, &Output, outputMin, outputMax, Kp, Ki, Kd);
 
- // **************************************************************************************************************
- // QuickPID
-// const uint32_t sampleTimeUs = 2500000; // 2500ms
-// const int outputMax = 255; // 128 is start of on, 255 - (128/2) = 191
-// const int outputMin = 0; // 127 is end of off
 
-// bool printOrPlotter = 0;  // on(1) monitor, off(0) plotter
-// float POn = 0.5;          // proportional on Error to Measurement ratio (0.0-1.0), default = 1.0
-// float DOn = 0.0;          // derivative on Error to Measurement ratio (0.0-1.0), default = 0.0
 
-// byte outputStep = 1;
-// byte hysteresis = 1;
-// int setpoint = 66;       // 1/3 of range for symetrical waveform
-// int output = 85;          // 1/3 of range for symetrical waveform
 
-// float Input, Output, Setpoint = 64;
-// float Kp = 2, Ki = 0.05, Kd = 1;
-// bool pidLoop = false;
 
-// QuickPID _myPID = QuickPID(&Input, &Output, &Setpoint, Kp, Ki, Kd, POn, DOn, QuickPID::DIRECT);
- // *******************************************************
+ArduPID myController;

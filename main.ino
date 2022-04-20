@@ -9,6 +9,38 @@ void setup() {
 
     
 
+    // get and display time works!
+    const String startTimeDate = __TIME__" "__DATE__; // "hrs:mins:secs Jan 10 2022" example
+
+    char* behind; // points to behind the first decimal number
+
+    hrs = strtol(startTimeDate.c_str(), &behind, 10); // get first number
+    mins = strtol(++behind, &behind, 10); // start ++behind, and get second number, repoint behind to new behind
+    secs = strtol(++behind, &behind, 10); // etc
+    String mon = ++behind; // save as string so we can use substring to get the 3 letter month
+    mon = mon.substring(0,3);
+    dys = strtol(4+behind, &behind, 10); // days jump 4 ahead of behind so we skip over the month (since it was not removed)
+    yrs = strtol(++behind, &behind, 10); // last is the year
+    
+    if (mon == "Jan") months = 1; // break down 3 letter month into int
+    else if (mon == "Feb") months = 2;
+    else if (mon == "Mar") months = 3;
+    else if (mon == "Apr") months = 4;
+    else if (mon == "May") months = 5;
+    else if (mon == "Jun") months = 6;
+    else if (mon == "Jul") months = 7;
+    else if (mon == "Aug") months = 8;
+    else if (mon == "Sep") months = 9;
+    else if (mon == "Oct") months = 10;
+    else if (mon == "Nov") months = 11;
+    else if (mon == "Dec") months = 12;
+
+    setTime(hrs, mins, secs, dys, months, yrs);
+
+
+    
+    
+
     display.initialize();
     DEBUG_setup();
     updateTEMP();
@@ -29,19 +61,47 @@ void setup() {
 
 
     // ArduPID setup:
-    myController.begin(&Input, &Output, &Setpoint, Kp, Ki, Kd);
+    ArduPIDController.begin(&Input, &Output, &Setpoint, Kp, Ki, Kd);
     const unsigned int _minSamplePeriodMs = 1000;
-    myController.setSampleTime(_minSamplePeriodMs);
-    myController.setOutputLimits(outputMin, outputMax);
+    ArduPIDController.setSampleTime(_minSamplePeriodMs);
+    ArduPIDController.setOutputLimits(outputMin, outputMax);
    const double windUpMin = -10;
    const double windUpMax = 10;
-    myController.setWindUpLimits(windUpMin, windUpMax);
-    myController.start();
+    ArduPIDController.setWindUpLimits(windUpMin, windUpMax);
+    ArduPIDController.start();
 
     
     last250ms = millis();
     
     tone(TONE_PIN, NOTE_C5, 100);
+    
+//    int ind1 = timedate.indexOf(":"); // (first delimiter)
+//    hrs = int(timedate.substring(0, ind1)); // find first piece (hours);
+//    int ind2 = timedate.indexOf(":", ind1 + 1); // (second delimiter)
+//    mins = int(timedate.substring(ind1 + 1, ind2 + 1)); // minutes
+//    ind1 = timedate.indexOf(" ", ind2 + 1); // space after seconds (third delimiter)
+//    secs = int(timedate.substring(ind2 + 1, ind1 + 1)); // seconds
+//    ind2 = timedate.indexOf(" ", ind1 + 1); // space after Month string (fourth delimiter)
+//    switch(timedate.substring(ind1 + 1, ind2 + 1)) {
+//      case("Jan"): months = 1; break;
+//      case("Feb"): months = 2; break;
+//      case("Mar"): months = 3; break;
+//      case("Apr"): months = 4; break;
+//      case("May"): months = 5; break;
+//      case("Jun"): months = 6; break;
+//      case("Jul"): months = 7; break;
+//      case("Aug"): months = 8; break;
+//      case("Sep"): months = 9; break;
+//      case("Oct"): months = 10; break;
+//      case("Nov"): months = 11; break;
+//      case("Dec"): months = 12; break;
+//    }
+//    ind1 = timedate.indexOf(" ", ind2 + 1); // space after Day string (fifth delimiter)
+//    dys = uint8_ting(timedate.substring(ind2 + 1, ind1+ 1)); // get day
+//    yrs = uint16_t(timedate.substring(ind2 + 1)); // get year
+    
+    
+    
 
 }
 
@@ -53,13 +113,15 @@ void loop() {
     // myPID.run(); // every second
 
     // ArduPID loop:
-    myController.compute();
+    ArduPIDController.compute();
+
+		//display.update(); // new spot
 
     // 250ms Loop:
-    if (currentTime >= (last250ms + 250)) { // update Setpoint 
+    if (currentTime - last250ms >= 250) { // update Setpoint 
         last250ms += 250;
         // update display screen
-        display.update();
+        display.update(); // old spot
         
         // 1000ms Loop:
         if (ms1000ctr >= 4) {

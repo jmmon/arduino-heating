@@ -1,3 +1,5 @@
+#include <TimeLib.h>
+
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
 // #include <AutoPID.h>
@@ -109,6 +111,21 @@ uint8_t changePerHourMinuteCounter = 0;
 
 
 
+
+// Time:
+
+uint8_t hrs;
+uint8_t mins;
+uint8_t secs;
+uint8_t months;
+uint8_t dys;
+uint16_t yrs;
+
+time_t t = now();
+
+
+
+
 // *******************************************************
 /** 
  * AutoPID
@@ -140,7 +157,7 @@ double Ki = 0.05; // 0.005
 double Kd = 0; // 0.002
 
 double Input, 
-    Setpoint = 74,
+    Setpoint = 68,
     Output;
 
 // AutoPID myPID(&Input, &Setpoint, &Output, outputMin, outputMax, Kp, Ki, Kd);
@@ -149,4 +166,4 @@ double Input,
 
 
 
-ArduPID myController;
+ArduPID ArduPIDController;

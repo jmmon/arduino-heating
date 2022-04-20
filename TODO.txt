@@ -24,3 +24,28 @@ didn't work; is there another type which would work (and save space)?
 
 
 Could use net-above/below-temperature time to bump set temperature up, so heat starts sooner to help balance out the net-above/below-temperature
+
+
+
+
+
+
+
+
+
+
+TODO 4/3/22
+
+(using the t-stat pin with a different wavelength to distinguish)
+
+Add screen menu functionality using a button to switch between screens.
+
+press => cycles to the next page in the menu cycle (all pages existing);
+				- starts a timer: 5 seconds?
+					* after time is up, switches to view cycle
+				- minimum time between presses to be sure it's intentional (~150ms?)
+
+double press => pause the screen (pause the cycle timer)
+
+press+hold => enable/disable page from the view cycle 
+			-(beep will sound: a "do, mi" or "do fa" note frequencies)

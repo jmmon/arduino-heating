@@ -29,8 +29,21 @@ Could use net-above/below-temperature time to bump set temperature up, so heat s
 
 
 
+04/20/2022
+Cleaned up variables!
+
+before:
+	Sketch uses 26416 bytes (85%) of program storage space. Maximum is 30720 bytes.
+	Global variables use 1389 bytes (67%) of dynamic memory, leaving 659 bytes for local variables. Maximum is 2048 bytes.
+
+after:
+	Sketch uses 23482 bytes (76%) of program storage space. Maximum is 30720 bytes.
+	Global variables use 1289 bytes (62%) of dynamic memory, leaving 759 bytes for local variables. Maximum is 2048 bytes.
 
 
+Saved this much: !!
+	26416 - 23482 = 	2934 bytes storage,
+	1389 - 1289 =  		100 bytes memory
 
 
 
@@ -49,3 +62,5 @@ double press => pause the screen (pause the cycle timer)
 
 press+hold => enable/disable page from the view cycle 
 			-(beep will sound: a "do, mi" or "do fa" note frequencies)
+
+

@@ -15,11 +15,9 @@ class Air_C {
         float lastEMA[3];    // {short, medium, long}
         
         bool working = true;
-        String label;
         
-        Air_C(DHT *s, String l, float w) {  //constructor
+        Air_C(DHT *s, float w) {  //constructor
             sensor = s;
-            label = l;
             WEIGHT = w;
         }
 
@@ -74,10 +72,10 @@ class Air_C {
 
 }
 air[] = {
-    Air_C(&dht[0], "MAIN", 1),
-    Air_C(&dht[1], "UPSTAIRS", 2),
-    Air_C(&dht[2], "OUTSIDE", 2),
-    Air_C(&dht[3], "GREENHOUSE", 2),
+    Air_C(&dht[0], 1), //"MAIN"
+    Air_C(&dht[1], 2), //"UPSTAIRS"
+    Air_C(&dht[2], 2), //"OUTSIDE"
+    Air_C(&dht[3], 2), //"GREENHOUSE"
     
 //    Air_C(&dhtnew[0], "MAIN", 1),
 //    Air_C(&dhtnew[1], "UPSTAIRS", 2),

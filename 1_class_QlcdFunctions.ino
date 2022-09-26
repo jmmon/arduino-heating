@@ -134,7 +134,7 @@ private:
 	uint16_t lastButtonRead = 0;
 	uint32_t lastPressTime = 0;
 
-	uint8_t currentLcdPage = -1;		 // + 1 will make it start at page 0,
+	uint8_t currentPage = -1;		 // + 1 will make it start at page 0,
 	int8_t lcdPageSwitchCounter = 0; // counts down
 	bool holdSetPage = false;
 
@@ -170,44 +170,46 @@ public:
 		lcd.createChar(7, customCharSunAndHouse);
 		lcd.createChar(8, customCharDotInsideHouse);
 	}
+ 
+  // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  // Helper functions:
+  // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-	void startAlarmTimer(uint32_t _duration, uint16_t _spacing)
-	{
-		toneStartingTime = currentTime;
-		toneTimerSpacing = _spacing;
-		toneDuration = _duration * 1000; // in ms
-	}
+  String formatTimeToString(uint32_t _t)
+  { // takes seconds
+    // get base time from seconds count
+    uint16_t hours = _t / 3600;
+    _t -= (hours * 3600);
+    uint16_t minutes = _t / 60;
+    _t -= (minutes * 60);
+    uint16_t seconds = _t;
 
-	void stopAlarmTimer()
-	{
-		toneStartingTime = 0;
-		toneDuration = 0;
-	}
+    // rollover if necessary
+    while (seconds >= 60)
+    {
+      minutes += 1;
+      seconds -= 60;
+    }
+    while (minutes >= 60)
+    {
+      hours += 1;
+      minutes -= 60;
+    }
 
-	void soundTheAlarm()
-	{
-		if (currentTime - toneStartingTime % (toneTimerSpacing * 25) == 0)
-		//based off currentTime, this will actually trigger based off ms % timerSpacing, which is not what is wanted.
-		// I want it to trigger based on a starting time counter which will count up ....
-		// every 0.25s, if (ms time passed since start) % (toneSpacingQtrSeconds * 25ms) == 0, should do what I want?
-		{
-			tone(TONE_PIN, NOTE_C5, 250); // play our tone on pin for 250ms
-		}
-		else
-		{
-			noTone(TONE_PIN);
-		}
-	}
+    return (((hours < 10) ? "0" : "") + String(hours) +
+            ((minutes < 10) ? ":0" : ":") + (String(minutes)) +
+            ((seconds < 10) ? ":0" : ":") + String(seconds));
+  }
 
-	// void beepOnIntervalByType(uint8_t type) {
-	// 	uint16_t DURATION = 500;
-	// 	uint16_t interval = type * 1000 + 1000; // some formula for the beeping intervals
+  String formatHoursWithTenths(int32_t _t)
+  {
+    return String((_t / 3600), 1);
+  }
 
-	// 	//if firing at the correct timer spacing, start the tone
-	// 	// else no tone
-	// 	if (currentTime - toneStartingTime % tomeTimer)
-	// }
-
+  // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  // Utility functions:
+  // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	
 	void detectButtons()
 	{
 		uint16_t buttonRead = analogRead(T_STAT_BUTTON_PIN);
@@ -250,83 +252,52 @@ public:
 			Setpoint += double(SETPOINT_ADJ_PER_TICK * thermostatChangeDirection);
 
 			lcd.clear();
-			showPage_Set();
+			show_Set();
 			holdSetPage = true;
 			pump.checkAfter(); // default 3 seconds
 		}
 		lastButtonRead = buttonRead;
 	}
 
-	String formatTimeToString(uint32_t _t)
-	{ // takes seconds
-		// get base time from seconds count
-		uint16_t hours = _t / 3600;
-		_t -= (hours * 3600);
-		uint16_t minutes = _t / 60;
-		_t -= (minutes * 60);
-		uint16_t seconds = _t;
-
-		// rollover if necessary
-		while (seconds >= 60)
-		{
-			minutes += 1;
-			seconds -= 60;
-		}
-		while (minutes >= 60)
-		{
-			hours += 1;
-			minutes -= 60;
-		}
-
-		return (((hours < 10) ? "0" : "") + String(hours) +
-						((minutes < 10) ? ":0" : ":") + (String(minutes)) +
-						((seconds < 10) ? ":0" : ":") + String(seconds));
-	}
-
-	String formatHoursWithTenths(int32_t _t)
-  {
-		return String((_t / 3600), 1);
-	}
-
-	void printCurrentLcdPage()
+	void printCurrentPage()
 	{
-		switch (currentLcdPage)
+		switch (currentPage)
 		{ // display proper page, with auto rollover/recall
 		case (0):
-			showPage_Time(); // new!
+			show_Time(); // new!
 			break;
 		case (1):
 			showPage_Temperature();
 			break;
 		case (2):
-			showPage_Greenhouse();
+			show_Greenhouse();
 			break;
 		case (3):
 			showPage_PumpCycleInfo();
 			break;
 
 		case (4):
-			showPage_Time(); // new!
+			show_Time(); // new!
 			break;
 		case (5):
 			showPage_Temperature();
 			break;
 		case (6):
-			showPage_AccumTime();
+			show_AccumTime();
 			break;
 		case (7):
-			showPage_WaterFilling();
+			show_WaterFilling();
 			break;
 		case (8):
-			showPage_WaterFlowCounter();
+			show_WaterFlowCounter();
 			break;
-		default: // currentLcdPage > highest ? rollover to 0 and reprint immediately
-			currentLcdPage = 0;
-			printCurrentLcdPage();
+		default: // currentPage > highest ? rollover to 0 and reprint immediately
+			currentPage = 0;
+			printCurrentPage();
 		}
 	}
 
-	void updatePage()
+	void switchPage()
 	{
 		// reset holdSetPage when ready
 		if (
@@ -341,13 +312,13 @@ public:
 		if (lcdPageSwitchCounter <= 0)
 		{
 			lcdPageSwitchCounter = LCD_INTERVAL_QTR_SECS;
-			currentLcdPage++; // is rolled over in the printCurrentLcdPage function
+			currentPage++; // is rolled over in the printCurrentPage function
 		}
 
 		// display lcdPageSet if locked to that page; else refresh the page
 		if (holdSetPage)
 		{
-			showPage_Set();
+			show_Set();
 		}
 		else
 		{
@@ -355,7 +326,7 @@ public:
 			{ // every 3.5 sec
 				lcd.clear();
 			}
-			printCurrentLcdPage(); // every sec
+			printCurrentPage(); // every sec
 		}
 	}
 
@@ -372,6 +343,47 @@ public:
 
 		digitalWrite(WATER_VALVE_PIN, (isValveClosed) ? HIGH : LOW);
 	}
+ 
+ void startAlarmTimer(uint32_t _duration, uint16_t _spacing)
+  {
+    toneStartingTime = currentTime;
+    toneTimerSpacing = _spacing;
+    toneDuration = _duration * 1000; // in ms
+  }
+
+  void stopAlarmTimer()
+  {
+    toneStartingTime = 0;
+    toneDuration = 0;
+  }
+
+  void soundTheAlarm()
+  {
+    if (currentTime - toneStartingTime % (toneTimerSpacing * 25) == 0)
+    //based off currentTime, this will actually trigger based off ms % timerSpacing, which is not what is wanted.
+    // I want it to trigger based on a starting time counter which will count up ....
+    // every 0.25s, if (ms time passed since start) % (toneSpacingQtrSeconds * 25ms) == 0, should do what I want?
+    {
+      tone(TONE_PIN, NOTE_C5, 250); // play our tone on pin for 250ms
+    }
+    else
+    {
+      noTone(TONE_PIN);
+    }
+  }
+
+  // void beepOnIntervalByType(uint8_t type) {
+  //  uint16_t DURATION = 500;
+  //  uint16_t interval = type * 1000 + 1000; // some formula for the beeping intervals
+
+  //  //if firing at the correct timer spacing, start the tone
+  //  // else no tone
+  //  if (currentTime - toneStartingTime % tomeTimer)
+  // }
+  
+  // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  // Update function:
+  // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	void update()
 	{ // every 0.25s
@@ -385,7 +397,7 @@ public:
 			setpointTimer = SETPOINT_TIMER_INTERVAL;
 		}
 
-		updatePage();
+		switchPage();
 
 		if (waterTank.filling)
 		{												// WIP: Tank Is Being Filled indicator shows on all pages
@@ -509,7 +521,7 @@ public:
 		lcd.print(Output);
 	}
 
-	void showPage_AccumTime()
+	void show_AccumTime()
 	{											 // Total time and time spent with pump on/off
 		lcd.setCursor(0, 0); // top
 		lcd.write(6);				 // setpoint (thermometer)
@@ -529,7 +541,7 @@ public:
 		lcd.print(formatHoursWithTenths((difference < 0) ? difference * -1 : difference)); // 16
 	}
 
-	void showPage_Set()
+	void show_Set()
 	{													// Set Temperature page
 		lcd.setCursor(0, 0);		// top
 		lcd.print(F("Temp"));		// 6
@@ -549,7 +561,7 @@ public:
 		lcd.print(Output, 2);
 	}
 
-	void showPage_Greenhouse()
+	void show_Greenhouse()
 	{ // Show greenhouse and exterior sensor readings
 		lcd.setCursor(0, 0);
 		lcd.print(F("GH"));
@@ -571,7 +583,7 @@ public:
 		lcd.print(F("%  "));				// 16
 	}
 
-	void showPage_WaterFilling()
+	void show_WaterFilling()
 	{											 // Water Filling Temp Page
 		lcd.setCursor(0, 0); // top
 		lcd.write(5);
@@ -596,7 +608,7 @@ public:
 		lcd.print(floorSensor[1].ema, 0);
 	}
 
-	void showPage_WaterFlowCounter()
+	void show_WaterFlowCounter()
 	{
 		// flow rate
 		lcd.setCursor(0, 0);
@@ -613,7 +625,7 @@ public:
 		lcd.print(F(" l"));
 	}
 
-	void showPage_Time()
+	void show_Time()
 	{
 		t = now(); // update time when this is called!!
 		lcd.setCursor(0, 0);

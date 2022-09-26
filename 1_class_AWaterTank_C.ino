@@ -20,6 +20,10 @@
 // 1/100 + 1/30 =   0.04333333 full resistance (not really!)
 // 1/100 + 1/240 =  0.01416667 empty resistance
 
+
+
+
+
 // This is the EMA which is displayed as the level
 //  higher is smoother but slower response so less accurate
 const uint8_t EMA_PERIODS_SHORT = 20; // * 2.5s per period = 50 s
@@ -68,10 +72,10 @@ public:
 	int16_t lastDiffEma = 0;
 
 	// Special values:
-	// 0 == "EE"
-	// 100 == "FF"
-	// 101 == "ER"
-	// 255 || -1 == "--";
+	// 0 == "EE" // empty
+	// 100 == "FF" // full
+	// 101 == "ER" // error
+	// 255 || -1 == "--"; // initial state
 	uint8_t percent, lastPercent, displayPercent = 255; // initialize as '--'
 	
 	WaterTank_C()

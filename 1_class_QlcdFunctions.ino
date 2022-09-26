@@ -175,7 +175,7 @@ public:
 	{
 		toneStartingTime = currentTime;
 		toneTimerSpacing = _spacing;
-		toneDuration = _duration * 1000;
+		toneDuration = _duration * 1000; // in ms
 	}
 
 	void stopAlarmTimer()
@@ -186,7 +186,10 @@ public:
 
 	void soundTheAlarm()
 	{
-		if (currentTime % toneTimerSpacing == 0)
+		if (currentTime - toneStartingTime % (toneTimerSpacing * 25) == 0)
+		//based off currentTime, this will actually trigger based off ms % timerSpacing, which is not what is wanted.
+		// I want it to trigger based on a starting time counter which will count up ....
+		// every 0.25s, if (ms time passed since start) % (toneSpacingQtrSeconds * 25ms) == 0, should do what I want?
 		{
 			tone(TONE_PIN, NOTE_C5, 250); // play our tone on pin for 250ms
 		}
@@ -195,6 +198,15 @@ public:
 			noTone(TONE_PIN);
 		}
 	}
+
+	// void beepOnIntervalByType(uint8_t type) {
+	// 	uint16_t DURATION = 500;
+	// 	uint16_t interval = type * 1000 + 1000; // some formula for the beeping intervals
+
+	// 	//if firing at the correct timer spacing, start the tone
+	// 	// else no tone
+	// 	if (currentTime - toneStartingTime % tomeTimer)
+	// }
 
 	void detectButtons()
 	{
@@ -212,7 +224,7 @@ public:
 			// buttons also turn off water filling alarm early! yay!
 			if (toneStartingTime > 0)
 			{
-				stopAlarmTimer()
+				stopAlarmTimer();
 			}
 
 			if (lastButtonRead > 63)
@@ -272,6 +284,7 @@ public:
 	}
 
 	String formatHoursWithTenths(int32_t _t)
+  {
 		return String((_t / 3600), 1);
 	}
 

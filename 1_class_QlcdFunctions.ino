@@ -371,15 +371,6 @@ public:
       noTone(TONE_PIN);
     }
   }
-
-  // void beepOnIntervalByType(uint8_t type) {
-  //  uint16_t DURATION = 500;
-  //  uint16_t interval = type * 1000 + 1000; // some formula for the beeping intervals
-
-  //  //if firing at the correct timer spacing, start the tone
-  //  // else no tone
-  //  if (currentTime - toneStartingTime % tomeTimer)
-  // }
   
   // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   // Update function:

@@ -72,7 +72,7 @@ const float EMA_MULT[3] = {
 		2. / (1 + 1800), // 1800 * 2.5s = 4500s EMA = 75m
 };
 
-const float FLOOR_WARMUP_TEMPERATURE = 580; // 0-1023, NOTE: insulation (cardboard, rugs) will require higher value
+const float FLOOR_WARMUP_TEMPERATURE = 600; // 0-1023, NOTE: insulation (cardboard, rugs) will require higher value
 float floorEmaAvg;
 float floorEmaAvgSlow;
 bool coldFloor = false;

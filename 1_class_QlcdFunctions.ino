@@ -134,7 +134,7 @@ private:
 	uint16_t lastButtonRead = 0;
 	uint32_t lastPressTime = 0;
 
-	uint8_t currentPage = -1;		 // + 1 will make it start at page 0,
+	uint8_t currentPage = -1;				 // + 1 will make it start at page 0,
 	int8_t lcdPageSwitchCounter = 0; // counts down
 	bool holdSetPage = false;
 
@@ -170,46 +170,46 @@ public:
 		lcd.createChar(7, customCharSunAndHouse);
 		lcd.createChar(8, customCharDotInsideHouse);
 	}
- 
-  // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  // Helper functions:
-  // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-  String formatTimeToString(uint32_t _t)
-  { // takes seconds
-    // get base time from seconds count
-    uint16_t hours = _t / 3600;
-    _t -= (hours * 3600);
-    uint16_t minutes = _t / 60;
-    _t -= (minutes * 60);
-    uint16_t seconds = _t;
+	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	// Helper functions:
+	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    // rollover if necessary
-    while (seconds >= 60)
-    {
-      minutes += 1;
-      seconds -= 60;
-    }
-    while (minutes >= 60)
-    {
-      hours += 1;
-      minutes -= 60;
-    }
+	String formatTimeToString(uint32_t _t)
+	{ // takes seconds
+		// get base time from seconds count
+		uint16_t hours = _t / 3600;
+		_t -= (hours * 3600);
+		uint16_t minutes = _t / 60;
+		_t -= (minutes * 60);
+		uint16_t seconds = _t;
 
-    return (((hours < 10) ? "0" : "") + String(hours) +
-            ((minutes < 10) ? ":0" : ":") + (String(minutes)) +
-            ((seconds < 10) ? ":0" : ":") + String(seconds));
-  }
+		// rollover if necessary
+		while (seconds >= 60)
+		{
+			minutes += 1;
+			seconds -= 60;
+		}
+		while (minutes >= 60)
+		{
+			hours += 1;
+			minutes -= 60;
+		}
 
-  String formatHoursWithTenths(int32_t _t)
-  {
-    return String((_t / 3600), 1);
-  }
+		return (((hours < 10) ? "0" : "") + String(hours) +
+						((minutes < 10) ? ":0" : ":") + (String(minutes)) +
+						((seconds < 10) ? ":0" : ":") + String(seconds));
+	}
 
-  // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  // Utility functions:
-  // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	
+	String formatHoursWithTenths(int32_t _t)
+	{
+		return String((_t / 3600), 1);
+	}
+
+	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	// Utility functions:
+	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 	void detectButtons()
 	{
 		uint16_t buttonRead = analogRead(T_STAT_BUTTON_PIN);
@@ -343,38 +343,38 @@ public:
 
 		digitalWrite(WATER_VALVE_PIN, (isValveClosed) ? HIGH : LOW);
 	}
- 
- void startAlarmTimer(uint32_t _duration, uint16_t _spacing)
-  {
-    toneStartingTime = currentTime;
-    toneTimerSpacing = _spacing;
-    toneDuration = _duration * 1000; // in ms
-  }
 
-  void stopAlarmTimer()
-  {
-    toneStartingTime = 0;
-    toneDuration = 0;
-  }
+	void startAlarmTimer(uint32_t _duration, uint16_t _spacing)
+	{
+		toneStartingTime = currentTime;
+		toneTimerSpacing = _spacing;
+		toneDuration = _duration * 1000; // in ms
+	}
 
-  void soundTheAlarm()
-  {
-    if (currentTime - toneStartingTime % (toneTimerSpacing * 25) == 0)
-    //based off currentTime, this will actually trigger based off ms % timerSpacing, which is not what is wanted.
-    // I want it to trigger based on a starting time counter which will count up ....
-    // every 0.25s, if (ms time passed since start) % (toneSpacingQtrSeconds * 25ms) == 0, should do what I want?
-    {
-      tone(TONE_PIN, NOTE_C5, 250); // play our tone on pin for 250ms
-    }
-    else
-    {
-      noTone(TONE_PIN);
-    }
-  }
-  
-  // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  // Update function:
-  // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	void stopAlarmTimer()
+	{
+		toneStartingTime = 0;
+		toneDuration = 0;
+	}
+
+	void soundTheAlarm()
+	{
+		if (currentTime - toneStartingTime % (toneTimerSpacing * 25) == 0)
+		// based off currentTime, this will actually trigger based off ms % timerSpacing, which is not what is wanted.
+		//  I want it to trigger based on a starting time counter which will count up ....
+		//  every 0.25s, if (ms time passed since start) % (toneSpacingQtrSeconds * 25ms) == 0, should do what I want?
+		{
+			tone(TONE_PIN, NOTE_C5, 250); // play our tone on pin for 250ms
+		}
+		else
+		{
+			noTone(TONE_PIN);
+		}
+	}
+
+	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	// Update function:
+	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	void update()
 	{ // every 0.25s
@@ -482,14 +482,14 @@ public:
 	void showPage_PumpCycleInfo()
 	{ // heating cycle page
 		// display cycle info, time/cycleDuration
-		lcd.setCursor(0, 0);											 // line 1
-		lcd.print(pump.getStatus());							 // 3 chars
-		lcd.print(F(" "));												 // 4
+		lcd.setCursor(0, 0);															 // line 1
+		lcd.print(pump.getStatus());											 // 3 chars
+		lcd.print(F(" "));																 // 4
 		lcd.print(formatTimeToString(pump.cycleDuration)); // 8 chars (12)
 
-		lcd.setCursor(0, 1);															// bot
-		lcd.print(F("RunTtl"));														// 6
-		lcd.write(4);																			// small colon // 7
+		lcd.setCursor(0, 1);																	// bot
+		lcd.print(F("RunTtl"));																// 6
+		lcd.write(4);																					// small colon // 7
 		lcd.print(formatHoursWithTenths(currentTime / 1000)); // 15
 	}
 
@@ -528,7 +528,7 @@ public:
 		lcd.print(pump.state); // 1
 		difference = pump.accumOn - (totalSeconds - pump.accumOn);
 		lcd.print((difference < 0) ? " Off" : "  On");
-		lcd.write(4);																																	 // 8
+		lcd.write(4);																																			 // 8
 		lcd.print(formatHoursWithTenths((difference < 0) ? difference * -1 : difference)); // 16
 	}
 

@@ -272,19 +272,6 @@ public:
 
 	void printCurrentPage()
 	{
-		// render lcdPageSet if locked to that page; else refresh the page
-		if (holdSetPage)
-		{
-			show_Set();
-			return;
-		}
-
-		// if going into a new page, clear it
-		bool isNewPageNext = lcdPageSwitchCounter == LCD_INTERVAL_QTR_SECS;
-		if (isNewPageNext)
-		{
-			lcd.clear();
-		}
 
 		// render current page every call, and rollover currentPage when needed
 		switch (currentPage)
@@ -322,13 +309,14 @@ public:
 			currentPage = 0;
 			printCurrentPage();
 		}
+		// }
 	}
 
 	void incrementSwitchPageCounter()
 	{
 		// disable holdSetPage once pump moves out of "delayed" state
-		bool isPumpDelayed = pump.state == 3;
-		if (!isPumpDelayed && holdSetPage)
+		bool isPumpNotDelayed = pump.state != 3;
+		if (isPumpNotDelayed && holdSetPage)
 		{
 			holdSetPage = false;
 		}
@@ -342,7 +330,23 @@ public:
 			currentPage++; // is rolled over in the printCurrentPage function
 		}
 
-		printCurrentPage();
+		// render lcdPageSet if locked to that page; else refresh the page
+		if (holdSetPage)
+		{
+			show_Set();
+		}
+		else
+		{
+
+			// if going into a new page, clear it
+			bool isNewPageNext = lcdPageSwitchCounter == LCD_INTERVAL_QTR_SECS;
+			if (isNewPageNext)
+			{
+				lcd.clear();
+			}
+			printCurrentPage();
+		}
+		// printCurrentPage();
 	}
 
 	void regulateValve()
@@ -352,11 +356,12 @@ public:
 		if (shouldValveBeClosed)
 		{
 			valveCloseTimer--;
-			return;
 		}
-
-		// after timer, open the valve
-		isValveClosed = false;
+		else
+		{
+			// after timer, open the valve
+			isValveClosed = false;
+		}
 		digitalWrite(WATER_VALVE_PIN, (isValveClosed) ? HIGH : LOW);
 	}
 
@@ -627,19 +632,14 @@ public:
 		lcd.print(F(" "));
 		lcd.write(126); // pointing right
 		lcd.print((waterTank.diffEma < 10) ? F("  ") : F(" "));
-		// if (waterTank.diffEma < 10) {
-		//     lcd.print(F("  "));
-		// } else {
-		//     lcd.print(F(" "));
-		// }
 		lcd.print(waterTank.diffEma); // 13
 
 		lcd.setCursor(0, 1); // top
 		lcd.print(F("Flr"));
 		lcd.write(4);					  // sm colon // 4
-		lcd.print(floorSensor[0].ema, 0); // +3
+		lcd.print(floorSensor[0].ema); // +3
 		lcd.print(F(":"));
-		lcd.print(floorSensor[1].ema, 0);
+		lcd.print(floorSensor[1].ema);
 	}
 
 	void show_WaterFlowCounter()

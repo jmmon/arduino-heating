@@ -4,7 +4,7 @@
 #include <LiquidCrystal_I2C.h>
 // #include <AutoPID.h>
 #include <DHT.h>
-//#include <dhtnew.h>
+// #include <dhtnew.h>
 #include <ArduPID.h>
 
 #define TONE_USE_INT
@@ -33,16 +33,16 @@ uint8_t WATER_FLOW_INTERRUPT = 0; // set in setup as interrupt of above pin
 const uint8_t TONE_PIN = 6;
 
 const uint8_t DHT_PIN[4] = {
-		7, // main
-		8, // upstairs
-		4, // one gh, one outside
-		12,
+	7, // main
+	8, // upstairs
+	4, // one gh, one outside
+	12,
 };
 DHT dht[4] = {
-		{DHT_PIN[0], DHT22},
-		{DHT_PIN[1], DHT22},
-		{DHT_PIN[2], DHT22}, //  outside, not yet installed // nan
-		{DHT_PIN[3], DHT22}, // greenhouse? // nan
+	{DHT_PIN[0], DHT22},
+	{DHT_PIN[1], DHT22},
+	{DHT_PIN[2], DHT22}, //  outside, not yet installed // nan
+	{DHT_PIN[3], DHT22}, // greenhouse? // nan
 };
 
 //
@@ -55,8 +55,8 @@ DHT dht[4] = {
 // DHTNEW  dhtnew[4] = {downstairs, upstairs, outside, greenhouse};
 
 uint32_t currentTime = 0; // timer
-uint32_t last250ms = 0;		// counters
-uint8_t ms1000ctr = 0;		// or use %????
+uint32_t last250ms = 0;	  // counters
+uint8_t ms1000ctr = 0;	  // or use %????
 uint8_t ms2500ctr = 0;
 
 // new timers counter, 20ms base for quick display-screen switching
@@ -66,13 +66,13 @@ uint8_t ms2500ctr = 0;
 LiquidCrystal_I2C lcd(0x27, 16, 2); // set the LCD address to 0x27 for a 16 chars and 2 line display
 
 const float EMA_MULT[3] = {
-		//  2 / (1 + n)   =>  where (n * TEMPERATURE_READ_INTERVAL) = milliseconds defining EMA calculation
-		2. / (1 + 12),	 // 12 * 2.5s = 30s   EMA =   0.5m
-		2. / (1 + 600),	 // 600 * 2.5s = 1500s EMA =  25m
-		2. / (1 + 1800), // 1800 * 2.5s = 4500s EMA = 75m
+	//  2 / (1 + n)   =>  where (n * TEMPERATURE_READ_INTERVAL) = milliseconds defining EMA calculation
+	2. / (1 + 12),	 // 12 * 2.5s = 30s   EMA =   0.5m
+	2. / (1 + 600),	 // 600 * 2.5s = 1500s EMA =  25m
+	2. / (1 + 1800), // 1800 * 2.5s = 4500s EMA = 75m
 };
 
-const float FLOOR_WARMUP_TEMPERATURE = 600; // 0-1023, NOTE: insulation (cardboard, rugs) will require higher value
+const float FLOOR_WARMUP_TEMPERATURE = 580; // 0-1023, NOTE: insulation (cardboard, rugs) will require higher value
 float floorEmaAvg;
 float floorEmaAvgSlow;
 bool coldFloor = false;
@@ -133,10 +133,17 @@ double Ki = 0.05; // 0.005
 // Derivative
 double Kd = 0; // 0.002
 
-double Input,
-		Setpoint = 68,
-		Output;
+double Input;
+double Setpoint = 68;
+double Output;
 
 // AutoPID myPID(&Input, &Setpoint, &Output, outputMin, outputMax, Kp, Ki, Kd);
 
 ArduPID ArduPIDController;
+
+uint16_t calcEma(uint16_t reading, uint16_t lastEma, uint16_t days)
+{
+
+	// ema = (floatSensorReadValue * (2. / (1 + EMA_PERIODS_SHORT)) + lastEma * (1 - (2. / (1 + EMA_PERIODS_SHORT))));
+	return (reading * (2. / (1 + days)) + lastEma * (1 - (2. / (1 + days))));
+}

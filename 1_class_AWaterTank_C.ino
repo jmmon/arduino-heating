@@ -20,10 +20,6 @@
 // 1/100 + 1/30 =   0.04333333 full resistance (not really!)
 // 1/100 + 1/240 =  0.01416667 empty resistance
 
-
-
-
-
 // This is the EMA which is displayed as the level
 //  higher is smoother but slower response so less accurate
 const uint8_t EMA_PERIODS_SHORT = 20; // * 2.5s per period = 50 s
@@ -77,7 +73,7 @@ public:
 	// 101 == "ER" // error
 	// 255 || -1 == "--"; // initial state
 	uint8_t percent, lastPercent, displayPercent = 255; // initialize as '--'
-	
+
 	WaterTank_C()
 	{ // constructor
 		pinMode(WATER_FLOAT_SENSOR_PIN, INPUT);
@@ -91,15 +87,15 @@ public:
 	uint8_t calculateTankPercent()
 	{
 		return ((ema <= ERROR_HIGH_BOUND) ? 101 : // error (lowest)
-								(ema <= LOW_BOUND) ? 0
-																	 : // empty
-								(ema <= HIGH_BOUND) ? (float)100 * (ema - LOW_BOUND) / (HIGH_BOUND - LOW_BOUND)
-																		: // normal range
-								100);									// full
+					(ema <= LOW_BOUND) ? 0
+									   : // empty
+					(ema <= HIGH_BOUND) ? (float)100 * (ema - LOW_BOUND) / (HIGH_BOUND - LOW_BOUND)
+										: // normal range
+					100);				  // full
 	}
 
 	update()
-	{																																			// every 2.5 seconds
+	{																		// every 2.5 seconds
 		uint16_t floatSensorReadValue = analogRead(WATER_FLOAT_SENSOR_PIN); // float sensor
 
 		// calculate water level EMAs
@@ -109,34 +105,39 @@ public:
 		lastDiffEma = diffEma;
 
 		// EMA calcs
-		ema = (floatSensorReadValue * (2. / (1 + EMA_PERIODS_SHORT)) + lastEma * (1 - (2. / (1 + EMA_PERIODS_SHORT))));
-		slowEma = (floatSensorReadValue * (2. / (1 + EMA_PERIODS_LONG)) + lastSlowEma * (1 - (2. / (1 + EMA_PERIODS_LONG))));
+		ema = calcEma(floatSensorReadValue, lastEma, EMA_PERIODS_SHORT);
+		slowEma = calcEma(floatSensorReadValue, lastSlowEma, EMA_PERIODS_LONG);
 		diff = ema - slowEma;
-		diffEma = (diff * (2. / (1 + EMA_PERIODS_DIFF)) + lastDiffEma * (1 - (2. / (1 + EMA_PERIODS_DIFF))));
+		diffEma = calcEma(diff, lastDiffEma, EMA_PERIODS_DIFF);
 
 		// calculate tank percent based on ema
 		lastPercent = percent;
 		percent = calculateTankPercent();
 
-		if (displayPercent == 255)
+		bool isInitialization = displayPercent == 255;
+		if (isInitialization)
 		{ // on init ('--')
 			displayPercent = (displayPercent != percent) ? percent : displayPercent;
 		}
 
 		// stabilize readings: stops wobble, i.e. 55 -> 54 -> 55 -> 54 -> 55
+		bool isFillingAndGreater = filling && percent > displayPercent;
+		bool isDrainingAndLesser = !filling && percent < displayPercent;
 		if (
-				(filling && percent > displayPercent) || // when filling, allow it to increase
-				(!filling && percent < displayPercent)	 // when not filling, allow it to decrease
+			(isFillingAndGreater) || // when filling, allow it to increase
+			(isDrainingAndLesser)	 // when not filling, allow it to decrease
 		)
 		{
 			displayPercent = percent;
 		}
 
+		bool isTankRising = diffEma >= FILL_TRIGGER;
+		bool isFull = percent == 100;
 		// water flow reset
 		if (
-				filling &&
-				percent == 100 &&
-				diffEma >= FILL_TRIGGER)
+			filling &&
+			isFull &&
+			isTankRising)
 		{
 			waterResetTotal();
 		}
@@ -144,22 +145,25 @@ public:
 		// Determine if tank is currently being filled:
 
 		// while tank is rising, adjust filling boolean based on if tank is at 100%
-		if (diffEma >= FILL_TRIGGER)
+		if (isTankRising)
 		{
 			filling = (percent != 100);
 		}
-		else if (diffEma <= STOP_FILL_TRIGGER)
-			filling = false;
-
+		else
+		{
+			bool shouldStopRising = diffEma <= STOP_FILL_TRIGGER;
+			if (shouldStopRising)
+				filling = false;
+		}
 		// detect moment the tank fills to 100%
-		if (filling && (percent == 100))
+		if (filling && isFull)
 		{
 			filling = false;
 			newlyFull = true;
 
 			// pin our tank reading to 100% for the moment
 			ema = lastEma = slowEma = lastSlowEma = HIGH_BOUND; // set to max
-			diffEma = lastDiffEma = 0;													// reset to 0
+			diffEma = lastDiffEma = 0;							// reset to 0
 		}
 	}
 

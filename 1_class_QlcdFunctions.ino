@@ -1,82 +1,82 @@
 const byte customCharInside[8] = { // "inside"
-		B00000,
-		B00000,
-		B00000,
-		B10100,
-		B01111,
-		B11100,
-		B01000,
-		B01000};
+	B00000,
+	B00000,
+	B00000,
+	B10100,
+	B01111,
+	B11100,
+	B01000,
+	B01000};
 
 const byte customCharOutside[8] = { // "outside"
-		B01010,
-		B00110,
-		B01110,
-		B00000,
-		B00000,
-		B01111,
-		B01000,
-		B01000};
+	B01010,
+	B00110,
+	B01110,
+	B00000,
+	B00000,
+	B01111,
+	B01000,
+	B01000};
 
 const byte customCharDegF[8] = { // "degrees F"
-		B01000,
-		B10100,
-		B01000,
-		B00111,
-		B00100,
-		B00110,
-		B00100,
-		B00100};
+	B01000,
+	B10100,
+	B01000,
+	B00111,
+	B00100,
+	B00110,
+	B00100,
+	B00100};
 
 const byte customCharSmColon[8] = { // small colon + space
-		B00000,
-		B00000,
-		B01000,
-		B00000,
-		B00000,
-		B01000,
-		B00000,
-		B00000};
+	B00000,
+	B00000,
+	B01000,
+	B00000,
+	B00000,
+	B01000,
+	B00000,
+	B00000};
 
 const byte customCharDroplet[8] = { // water droplet
-		B00100,
-		B01110,
-		B01010,
-		B10111,
-		B10111,
-		B10111,
-		B11111,
-		B01110};
+	B00100,
+	B01110,
+	B01010,
+	B10111,
+	B10111,
+	B10111,
+	B11111,
+	B01110};
 
 const byte customCharSetpoint[8] = { // thermometer with indicator
-		B00000,
-		B01000,
-		B11001,
-		B01011,
-		B11001,
-		B01000,
-		B10100,
-		B01000};
+	B00000,
+	B01000,
+	B11001,
+	B01011,
+	B11001,
+	B01000,
+	B10100,
+	B01000};
 
 const byte customCharSunAndHouse[8] = {
-		B11000,
-		B11000,
-		B00010,
-		B00111,
-		B01111,
-		B00101,
-		B00111,
-		B00111};
+	B11000,
+	B11000,
+	B00010,
+	B00111,
+	B01111,
+	B00101,
+	B00111,
+	B00111};
 
 const byte customCharDotInsideHouse[8] = {
-		B00100,
-		B01010,
-		B11111,
-		B10001,
-		B10001,
-		B10101,
-		B10001,
-		B10001};
+	B00100,
+	B01010,
+	B11111,
+	B10001,
+	B10001,
+	B10101,
+	B10001,
+	B10001};
 
 /* struct consts:
 Sketch uses 26416 bytes (85%) of program storage space. Maximum is 30720 bytes.
@@ -109,12 +109,12 @@ Global variables use 1370 bytes (66%) of dynamic memory, leaving 678 bytes for l
 
 */
 
-const float SETPOINT_ADJ_PER_TICK = 1;		 // degrees change
+const float SETPOINT_ADJ_PER_TICK = 1;	   // degrees change
 const uint8_t SETPOINT_TIMER_INTERVAL = 2; // quarter seconds
 
 const uint8_t LCD_INTERVAL_QTR_SECS = 14; // 3.5s
 
-const uint16_t TONE_DURATION = 180;			// seconds
+const uint16_t TONE_DURATION = 180;		// seconds
 const uint16_t TONE_DURATION_FULL = 60; // when hits 100%, beep for this long
 const uint8_t TONE_TIMER_SPACING_SLOW = 16;
 const uint8_t TONE_TIMER_SPACING_FAST = 4;
@@ -134,7 +134,7 @@ private:
 	uint16_t lastButtonRead = 0;
 	uint32_t lastPressTime = 0;
 
-	uint8_t currentPage = -1;				 // + 1 will make it start at page 0,
+	uint8_t currentPage = -1;		 // + 1 will make it start at page 0,
 	int8_t lcdPageSwitchCounter = 0; // counts down
 	bool holdSetPage = false;
 
@@ -197,8 +197,8 @@ public:
 		}
 
 		return (((hours < 10) ? "0" : "") + String(hours) +
-						((minutes < 10) ? ":0" : ":") + (String(minutes)) +
-						((seconds < 10) ? ":0" : ":") + String(seconds));
+				((minutes < 10) ? ":0" : ":") + (String(minutes)) +
+				((seconds < 10) ? ":0" : ":") + String(seconds));
 	}
 
 	String formatHoursWithTenths(int32_t _t)
@@ -214,34 +214,41 @@ public:
 	{
 		uint16_t buttonRead = analogRead(T_STAT_BUTTON_PIN);
 
-		if (buttonRead > 63)
+		bool isButtonPressDetected = buttonRead > 63;
+		if (isButtonPressDetected)
 		{
-			int8_t thermostatChangeDirection = 0;
+			// initialize variable
+			int8_t changeTstatByAmount = 0;
 
 			if (DEBUG)
 			{
 				Serial.println(buttonRead);
 			}
 
-			// buttons also turn off water filling alarm early! yay!
-			if (toneStartingTime > 0)
+			// button press will turn off alarm! Yay!
+			bool isAlarmTimerOn = toneStartingTime > 0;
+			if (isAlarmTimerOn)
 			{
 				stopAlarmTimer();
 			}
 
-			if (lastButtonRead > 63)
+			bool isButtonHeldForSecondTick = lastButtonRead > 63;
+			bool isTopButton = buttonRead > 850;
+			if (isButtonHeldForSecondTick)
 			{ // delays adjustment by 1 tick
-				if (buttonRead > 850)
+				if (isTopButton)
 				{
-					thermostatChangeDirection = 1;
+					changeTstatByAmount = 1;
+					// reset record lows
 					for (uint8_t k = 0; k < 2; k++)
-					{ // reset record temps
+					{
 						air[k].lowest = air[k].tempF;
 					}
 				}
-				else
+				else // bottom button
 				{
-					thermostatChangeDirection = -1;
+					changeTstatByAmount = -1;
+					// reset record highs
 					for (uint8_t k = 0; k < 2; k++)
 					{
 						air[k].highest = air[k].tempF;
@@ -249,38 +256,57 @@ public:
 				}
 			}
 
-			Setpoint += double(SETPOINT_ADJ_PER_TICK * thermostatChangeDirection);
+			// apply the changes to setpoint
+			Setpoint += double(SETPOINT_ADJ_PER_TICK * changeTstatByAmount);
 
+			// show (and hold onto) our set page
 			lcd.clear();
 			show_Set();
 			holdSetPage = true;
+			// check if needs to run
 			pump.checkAfter(); // default 3 seconds
 		}
+		// save for next time
 		lastButtonRead = buttonRead;
 	}
 
 	void printCurrentPage()
 	{
+		// render lcdPageSet if locked to that page; else refresh the page
+		if (holdSetPage)
+		{
+			show_Set();
+			return;
+		}
+
+		// if going into a new page, clear it
+		bool isNewPageNext = lcdPageSwitchCounter == LCD_INTERVAL_QTR_SECS;
+		if (isNewPageNext)
+		{
+			lcd.clear();
+		}
+
+		// render current page every call, and rollover currentPage when needed
 		switch (currentPage)
-		{ // display proper page, with auto rollover/recall
+		{
 		case (0):
 			show_Time(); // new!
 			break;
 		case (1):
-			showPage_Temperature();
+			show_Temperature();
 			break;
 		case (2):
 			show_Greenhouse();
 			break;
 		case (3):
-			showPage_PumpCycleInfo();
+			show_PumpCycleInfo();
 			break;
 
 		case (4):
 			show_Time(); // new!
 			break;
 		case (5):
-			showPage_Temperature();
+			show_Temperature();
 			break;
 		case (6):
 			show_AccumTime();
@@ -291,57 +317,63 @@ public:
 		case (8):
 			show_WaterFlowCounter();
 			break;
-		default: // currentPage > highest ? rollover to 0 and reprint immediately
+		default:
+			// currentPage > highest ? rollover to 0 and rerun
 			currentPage = 0;
 			printCurrentPage();
 		}
 	}
 
-	void switchPage()
+	void incrementSwitchPageCounter()
 	{
-		// reset holdSetPage when ready
-		if (
-				pump.state != 3 &&
-				holdSetPage)
+		// disable holdSetPage once pump moves out of "delayed" state
+		bool isPumpDelayed = pump.state == 3;
+		if (!isPumpDelayed && holdSetPage)
 		{
 			holdSetPage = false;
 		}
 
-		// switch page every 3.5 seconds
+		// increment currentPage every 3.5 seconds
 		lcdPageSwitchCounter--;
-		if (lcdPageSwitchCounter <= 0)
+		bool readyToSwitchPage = lcdPageSwitchCounter == 0;
+		if (readyToSwitchPage)
 		{
 			lcdPageSwitchCounter = LCD_INTERVAL_QTR_SECS;
 			currentPage++; // is rolled over in the printCurrentPage function
 		}
 
-		// display lcdPageSet if locked to that page; else refresh the page
-		if (holdSetPage)
-		{
-			show_Set();
-		}
-		else
-		{
-			if (lcdPageSwitchCounter == LCD_INTERVAL_QTR_SECS)
-			{ // every 3.5 sec
-				lcd.clear();
-			}
-			printCurrentPage(); // every sec
-		}
+		printCurrentPage();
 	}
 
 	void regulateValve()
 	{
-		if (valveCloseTimer > 0)
+		// should be closed during our timer (when tank gets full)
+		bool shouldValveBeClosed = valveCloseTimer > 0;
+		if (shouldValveBeClosed)
 		{
 			valveCloseTimer--;
+			return;
+		}
+
+		// after timer, open the valve
+		isValveClosed = false;
+		digitalWrite(WATER_VALVE_PIN, (isValveClosed) ? HIGH : LOW);
+	}
+
+	void regulateTimer()
+	{
+		bool isTimerOn = toneStartingTime > 0;
+		bool shouldTimerBeOn = currentTime - toneDuration < toneStartingTime;
+		if (isTimerOn && shouldTimerBeOn)
+		{
+			// check if should be beeping right now
+			soundTheAlarm();
 		}
 		else
 		{
-			isValveClosed = false;
+			//
+			stopAlarmTimer();
 		}
-
-		digitalWrite(WATER_VALVE_PIN, (isValveClosed) ? HIGH : LOW);
 	}
 
 	void startAlarmTimer(uint32_t _duration, uint16_t _spacing)
@@ -376,35 +408,50 @@ public:
 	// Update function:
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+	// runs every 0.25s
 	void update()
-	{ // every 0.25s
-		// if update every occurrence, the timer could happen here, or in loop:
-
+	{
 		// setpoint delay
 		setpointTimer--;
-		if (setpointTimer <= 0)
+		bool shouldChangeSetpoint = setpointTimer == 0;
+		if (shouldChangeSetpoint)
 		{
 			detectButtons();
 			setpointTimer = SETPOINT_TIMER_INTERVAL;
 		}
 
-		switchPage();
+		incrementSwitchPageCounter();
 
 		if (waterTank.filling)
-		{												// WIP: Tank Is Being Filled indicator shows on all pages
-			lcd.setCursor(15, 0); // top right
-			lcd.write(5);
+		{
+			lcd.setCursor(13, 0); // top right
+			lcd.write(5);		  // draw droplet
+			writeWaterLevel();	  // draw waterLevel
 		}
 
 		if (waterTank.filling)
 		{
-			if (waterTank.displayPercent >= TONE_TIMER_TRIGGER_PERCENT_FAST)
+			bool isWaterTankPercentOver95 = waterTank.displayPercent >= TONE_TIMER_TRIGGER_PERCENT_FAST;
+			bool isWaterTankPercentOver90 = waterTank.displayPercent >= TONE_TIMER_TRIGGER_PERCENT_SLOW;
+			if (isWaterTankPercentOver95)
 			{
-				startAlarmTimer(TONE_DURATION, TONE_TIMER_SPACING_FAST);
+				// reset startingTime??
+				// when should timer be reset (so that it can enable)?
+				toneStartingTime = 0;
 			}
-			else if (waterTank.displayPercent >= TONE_TIMER_TRIGGER_PERCENT_SLOW)
+
+			bool isAlarmReset = toneStartingTime == 0;
+			if (isAlarmReset)
 			{
-				startAlarmTimer(TONE_DURATION, TONE_TIMER_SPACING_SLOW);
+
+				if (isWaterTankPercentOver95)
+				{
+					startAlarmTimer(TONE_DURATION, TONE_TIMER_SPACING_FAST);
+				}
+				else if (isWaterTankPercentOver90)
+				{
+					startAlarmTimer(TONE_DURATION, TONE_TIMER_SPACING_SLOW);
+				}
 			}
 		}
 		else if (waterTank.newlyFull)
@@ -418,15 +465,7 @@ public:
 			valveCloseTimer = VALVE_CLOSE_DURATION;
 		}
 
-		if (toneStartingTime > 0 &&
-				currentTime - toneDuration < toneStartingTime)
-		{
-			soundTheAlarm();
-		}
-		else
-		{
-			stopAlarmTimer();
-		}
+		regulateTimer();
 
 		regulateValve();
 
@@ -436,29 +475,33 @@ public:
 	// Pages:
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-	void showPage_Temperature()
+	void show_Temperature()
 	{
 		// first line
 		lcd.setCursor(0, 0);
 		lcd.write(8); // inside icon //1
 		lcd.print(Input, 1);
-		lcd.print(F(" "));									// 6
+		lcd.print(F(" "));					// 6
 		lcd.print(air[0].currentEMA[0], 1); // 5
-		lcd.print(F("/"));									// 6
+		lcd.print(F("/"));					// 6
 		lcd.print(air[1].currentEMA[0], 1); // 10
-		lcd.write(1);												// degrees F // 11
+		lcd.write(1);						// degrees F // 11
 
 		// second line
 		lcd.setCursor(0, 1);
-		lcd.write(6);						// thermometer
+		lcd.write(6);			// thermometer
 		lcd.print(Setpoint, 1); // 6
-		lcd.write(1);						// degrees F // 7
+		lcd.write(1);			// degrees F // 7
 		lcd.print(" ");
 		lcd.write(126); // pointing right
 		lcd.print(Output, 2);
 		lcd.setCursor(13, 1);
 		lcd.write(5); // water droplet // 14
-									// new
+		writeWaterLevel();
+	}
+
+	void writeWaterLevel()
+	{
 		// handle conversion / formatting:
 		switch (waterTank.displayPercent)
 		{
@@ -479,17 +522,17 @@ public:
 		}
 	}
 
-	void showPage_PumpCycleInfo()
+	void show_PumpCycleInfo()
 	{ // heating cycle page
 		// display cycle info, time/cycleDuration
-		lcd.setCursor(0, 0);															 // line 1
-		lcd.print(pump.getStatus());											 // 3 chars
-		lcd.print(F(" "));																 // 4
+		lcd.setCursor(0, 0);							   // line 1
+		lcd.print(pump.getStatus());					   // 3 chars
+		lcd.print(F(" "));								   // 4
 		lcd.print(formatTimeToString(pump.cycleDuration)); // 8 chars (12)
 
-		lcd.setCursor(0, 1);																	// bot
-		lcd.print(F("RunTtl"));																// 6
-		lcd.write(4);																					// small colon // 7
+		lcd.setCursor(0, 1);								  // bot
+		lcd.print(F("RunTtl"));								  // 6
+		lcd.write(4);										  // small colon // 7
 		lcd.print(formatHoursWithTenths(currentTime / 1000)); // 15
 	}
 
@@ -513,39 +556,39 @@ public:
 	}
 
 	void show_AccumTime()
-	{											 // Total time and time spent with pump on/off
+	{						 // Total time and time spent with pump on/off
 		lcd.setCursor(0, 0); // top
-		lcd.write(6);				 // setpoint (thermometer)
-		lcd.write(4);				 // 8
+		lcd.write(6);		 // setpoint (thermometer)
+		lcd.write(4);		 // 8
 		const uint32_t totalSeconds = currentTime / 1000;
 		int32_t difference = pump.accumAbove - (totalSeconds - pump.accumAbove); // positive or negative
 		String hours = formatHoursWithTenths(difference);
 		lcd.print((" ") + ((difference < 0) ? hours : ("+") + hours));
 
-		lcd.setCursor(0, 1);	 // bot
+		lcd.setCursor(0, 1);   // bot
 		lcd.print(F("State")); // 7
-		lcd.write(4);					 // 8
+		lcd.write(4);		   // 8
 		lcd.print(pump.state); // 1
 		difference = pump.accumOn - (totalSeconds - pump.accumOn);
 		lcd.print((difference < 0) ? " Off" : "  On");
-		lcd.write(4);																																			 // 8
+		lcd.write(4);																	   // 8
 		lcd.print(formatHoursWithTenths((difference < 0) ? difference * -1 : difference)); // 16
 	}
 
 	void show_Set()
-	{													// Set Temperature page
-		lcd.setCursor(0, 0);		// top
-		lcd.print(F("Temp"));		// 6
-		lcd.write(4);						// sm colon  // 7
-		lcd.print(Input, 1);		// 11
-		lcd.write(1);						// Replaces "*F" // 12
+	{							// Set Temperature page
+		lcd.setCursor(0, 0);	// top
+		lcd.print(F("Temp"));	// 6
+		lcd.write(4);			// sm colon  // 7
+		lcd.print(Input, 1);	// 11
+		lcd.write(1);			// Replaces "*F" // 12
 		lcd.print(F("      ")); // 16
 
 		lcd.setCursor(0, 1); // bot
 		lcd.print(F("   ")); // 3
 		lcd.write(6);
 		lcd.print(Setpoint, 1); // 6
-		lcd.write(1);						// degrees F // 7
+		lcd.write(1);			// degrees F // 7
 		lcd.print(" ");
 		// lcd.write(127); //pointing left // 9 // 7
 		lcd.write(126); // pointing right
@@ -556,12 +599,12 @@ public:
 	{ // Show greenhouse and exterior sensor readings
 		lcd.setCursor(0, 0);
 		lcd.print(F("GH"));
-		lcd.write(4);												// sm colon
+		lcd.write(4);						// sm colon
 		lcd.print(air[3].currentEMA[0], 1); // 7
 		lcd.write(1);
-		lcd.print(F(" "));					// 9
+		lcd.print(F(" "));			// 9
 		lcd.print(air[3].humid, 1); // 13
-		lcd.print(F("%  "));				// 16
+		lcd.print(F("%  "));		// 16
 
 		lcd.setCursor(0, 1);
 		lcd.print(F(" "));
@@ -569,13 +612,13 @@ public:
 		lcd.print(F(" "));
 		lcd.print(air[2].currentEMA[0], 1); // 7
 		lcd.write(1);
-		lcd.print(F(" "));					// 9
+		lcd.print(F(" "));			// 9
 		lcd.print(air[2].humid, 1); // 13
-		lcd.print(F("%  "));				// 16
+		lcd.print(F("%  "));		// 16
 	}
 
 	void show_WaterFilling()
-	{											 // Water Filling Temp Page
+	{						 // Water Filling Temp Page
 		lcd.setCursor(0, 0); // top
 		lcd.write(5);
 		lcd.print(waterTank.ema); // 4
@@ -593,7 +636,7 @@ public:
 
 		lcd.setCursor(0, 1); // top
 		lcd.print(F("Flr"));
-		lcd.write(4);											// sm colon // 4
+		lcd.write(4);					  // sm colon // 4
 		lcd.print(floorSensor[0].ema, 0); // +3
 		lcd.print(F(":"));
 		lcd.print(floorSensor[1].ema, 0);
@@ -629,12 +672,12 @@ public:
 		lcd.print(F(" "));
 		const uint8_t dayOfWeek = weekday(t); // number!
 		lcd.print(
-				(dayOfWeek == 1) ? "Sun" : (dayOfWeek == 2) ? "Mon"
-															 : (dayOfWeek == 3)		? "Tue"
-															 : (dayOfWeek == 4)		? "Wed"
-															 : (dayOfWeek == 5)		? "Thu"
-															 : (dayOfWeek == 6)		? "Fri"
-																										: "Sat");
+			(dayOfWeek == 1) ? "Sun" : (dayOfWeek == 2) ? "Mon"
+								   : (dayOfWeek == 3)	? "Tue"
+								   : (dayOfWeek == 4)	? "Wed"
+								   : (dayOfWeek == 5)	? "Thu"
+								   : (dayOfWeek == 6)	? "Fri"
+														: "Sat");
 
 		lcd.setCursor(0, 1);
 		lcd.print(day(t));

@@ -148,6 +148,8 @@ private:
 
 	bool isValveClosed = false;
 	uint16_t valveCloseTimer = 0;
+	uint8_t alarmCounter = 0; // constantly counts up, so it's okay for it to cycle back to 0
+	uint16_t alarmCountdown = 0;
 
 public:
 	Display_c()
@@ -226,10 +228,10 @@ public:
 			}
 
 			// button press will turn off alarm! Yay!
-			bool isAlarmTimerOn = toneStartingTime > 0;
-			if (isAlarmTimerOn)
-			{
-				stopAlarmTimer();
+			if (alarmCountdown > 0 || alarmCounter > 1) {
+				alarmCountdown = 0;
+				alarmCounter = 1; // set to odd number
+				checkBeep(2); // silences tone if odd number
 			}
 
 			bool isButtonHeldForSecondTick = lastButtonRead > 63;
@@ -365,49 +367,49 @@ public:
 		digitalWrite(WATER_VALVE_PIN, (isValveClosed) ? HIGH : LOW);
 	}
 
-	void regulateTimer()
-	{
-		bool isTimerOn = toneStartingTime > 0;
-		bool shouldTimerBeOn = currentTime - toneDuration < toneStartingTime;
-		if (isTimerOn && shouldTimerBeOn)
-		{
-			// check if should be beeping right now
-			soundTheAlarm();
-		}
-		else
-		{
-			//
-			stopAlarmTimer();
-		}
-	}
+	// void regulateTimer()
+	// {
+	// 	bool isTimerOn = toneStartingTime > 0;
+	// 	bool shouldTimerBeOn = currentTime - toneDuration < toneStartingTime;
+	// 	if (isTimerOn && shouldTimerBeOn)
+	// 	{
+	// 		// check if should be beeping right now
+	// 		soundTheAlarm();
+	// 	}
+	// 	else
+	// 	{
+	// 		//
+	// 		stopAlarmTimer();
+	// 	}
+	// }
 
-	void startAlarmTimer(uint32_t _duration, uint16_t _spacing)
-	{
-		toneStartingTime = currentTime;
-		toneTimerSpacing = _spacing;
-		toneDuration = _duration * 1000; // in ms
-	}
+	// void startAlarmTimer(uint32_t _duration, uint16_t _spacing)
+	// {
+	// 	toneStartingTime = currentTime;
+	// 	toneTimerSpacing = _spacing;
+	// 	toneDuration = _duration * 1000; // in ms
+	// }
 
-	void stopAlarmTimer()
-	{
-		toneStartingTime = 0;
-		toneDuration = 0;
-	}
+	// void stopAlarmTimer()
+	// {
+	// 	toneStartingTime = 0;
+	// 	toneDuration = 0;
+	// }
 
-	void soundTheAlarm()
-	{
-		if (currentTime - toneStartingTime % (toneTimerSpacing * 25) == 0)
-		// based off currentTime, this will actually trigger based off ms % timerSpacing, which is not what is wanted.
-		//  I want it to trigger based on a starting time counter which will count up ....
-		//  every 0.25s, if (ms time passed since start) % (toneSpacingQtrSeconds * 25ms) == 0, should do what I want?
-		{
-			tone(TONE_PIN, NOTE_C5, 250); // play our tone on pin for 250ms
-		}
-		else
-		{
-			noTone(TONE_PIN);
-		}
-	}
+	// void soundTheAlarm()
+	// {
+	// 	if (currentTime - toneStartingTime % (toneTimerSpacing * 25) == 0)
+	// 	// based off currentTime, this will actually trigger based off ms % timerSpacing, which is not what is wanted.
+	// 	//  I want it to trigger based on a starting time counter which will count up ....
+	// 	//  every 0.25s, if (ms time passed since start) % (toneSpacingQtrSeconds * 25ms) == 0, should do what I want?
+	// 	{
+	// 		tone(TONE_PIN, NOTE_C5, 250); // play our tone on pin for 250ms
+	// 	}
+	// 	else
+	// 	{
+	// 		noTone(TONE_PIN);
+	// 	}
+	// }
 
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	// Update function:
@@ -436,26 +438,34 @@ public:
 
 		if (waterTank.filling)
 		{
+			// do alarm stuff
 			bool isWaterTankPercentOver95 = waterTank.displayPercent >= TONE_TIMER_TRIGGER_PERCENT_FAST;
 			bool isWaterTankPercentOver90 = waterTank.displayPercent >= TONE_TIMER_TRIGGER_PERCENT_SLOW;
-			if (isWaterTankPercentOver95)
-			{
-				// reset startingTime??
-				// when should timer be reset (so that it can enable)?
-				toneStartingTime = 0;
-			}
 
-			bool isAlarmReset = toneStartingTime == 0;
-			if (isAlarmReset)
+			// Basically,
+			// TODO:
+			// 	What I want is: if (tank is filling and) tank is between 90 and 95%,
+			//		The beeper should beep every ~4 seconds (until tank is no longer filling)
+			//		(Increment a counter, and if counter % 16 == 0, do a beep, else, stop the beep)
+			// And, if (tank is filling and) tank is above 95%,
+			//		The beeper should beep every ~1 seconds (until tank is no longer filling)
+			//		(Increment a counter, and if counter % 4 == 0, do a beep, else, stop the beep)
+			// And, if the tank is newly full,
+			// 		The beeper should beep every ~0.5 seconds for a duration of 180 seconds.
+			//		(Increment a counter, and if counter % 2 == 0, do a beep, else, stop the beep)
+			if (isWaterTankPercentOver90)
 			{
 
+				alarmCounter++;
 				if (isWaterTankPercentOver95)
 				{
-					startAlarmTimer(TONE_DURATION, TONE_TIMER_SPACING_FAST);
+					// fast beeping
+					checkBeep(4);
 				}
-				else if (isWaterTankPercentOver90)
+				else
 				{
-					startAlarmTimer(TONE_DURATION, TONE_TIMER_SPACING_SLOW);
+					// slow beeping
+					checkBeep(16);
 				}
 			}
 		}
@@ -464,18 +474,48 @@ public:
 			// moment it hits 100%
 			waterTank.newlyFull = false;
 
-			startAlarmTimer(TONE_DURATION_FULL, TONE_TIMER_SPACING_SOLID);
+			alarmCountdown = 180 * 4; // seconds * 4
 
 			isValveClosed = true;
 			valveCloseTimer = VALVE_CLOSE_DURATION;
 		}
 
-		regulateTimer();
-
 		regulateValve();
+
+		if (alarmCountdown > 0)
+		{
+			checkBeep(2, alarmCountdown);
+		}
 
 	} // end update (every 0.25 seconds)
 
+	void checkBeep(uint8_t spacing, uint16_t countdown = 0)
+	{
+		if (countdown > 0)
+		{
+			countdown--;
+			if (countdown % spacing == 0)
+			{
+
+				tone(TONE_PIN, NOTE_C5, 250); // play our tone on pin for 250ms
+			}
+			else
+			{
+				noTone(TONE_PIN);
+			}
+			return;
+		}
+		// checks counter, spacing should be 16, 4, or 2 (for example)
+
+		if (alarmCounter % spacing == 0)
+		{
+			tone(TONE_PIN, NOTE_C5, 250); // play our tone on pin for 250ms
+		}
+		else
+		{
+			noTone(TONE_PIN);
+		}
+	}
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	// Pages:
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -636,7 +676,7 @@ public:
 
 		lcd.setCursor(0, 1); // top
 		lcd.print(F("Flr"));
-		lcd.write(4);					  // sm colon // 4
+		lcd.write(4);				   // sm colon // 4
 		lcd.print(floorSensor[0].ema); // +3
 		lcd.print(F(":"));
 		lcd.print(floorSensor[1].ema);

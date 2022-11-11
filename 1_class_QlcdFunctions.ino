@@ -279,39 +279,30 @@ public:
 		switch (currentPage)
 		{
 		case (0):
-			show_Time(); // new!
-			break;
-		case (1):
 			show_Temperature();
 			break;
-		case (2):
-			show_Greenhouse();
-			break;
-		case (3):
+
+		case (1):
 			show_PumpCycleInfo();
+			break;
+			
+		case (2):
+			show_Temperature();
+			break;
+
+		case (3):
+			show_AccumTime();
 			break;
 
 		case (4):
-			show_Time(); // new!
-			break;
-		case (5):
-			show_Temperature();
-			break;
-		case (6):
-			show_AccumTime();
-			break;
-		case (7):
 			show_WaterFilling();
 			break;
-		case (8):
-			show_WaterFlowCounter();
-			break;
+
+		// currentPage > highest ? rollover to 0 and rerun
 		default:
-			// currentPage > highest ? rollover to 0 and rerun
 			currentPage = 0;
 			printCurrentPage();
 		}
-		// }
 	}
 
 	void incrementSwitchPageCounter()

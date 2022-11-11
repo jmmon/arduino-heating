@@ -45,9 +45,14 @@ const uint8_t FILL_TRIGGER = 44; // average variation can reach over 22 so this 
 const uint8_t STOP_FILL_TRIGGER = 30; // lower makes it harder to trigger OFF filling
 
 // bounds for reading from float sensor
-const uint16_t LOW_BOUND = 350;
+// At ~0%, the tank seems to bounce between 232~197
+// Can measure different fill points as I fill (once the hose thaws!)
+//780 - 250 = 530
+// 530 / 100 == 5.3 units per percent
+// so 50% should be 5.3 * 50 + 250 == 515
+const uint16_t LOW_BOUND = 250;
 const uint16_t HIGH_BOUND = 780;
-const uint8_t ERROR_HIGH_BOUND = 250;
+const uint8_t ERROR_HIGH_BOUND = 190;
 
 class WaterTank_C
 {

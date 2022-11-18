@@ -307,7 +307,7 @@ public:
 
 	void incrementSwitchPageCounter()
 	{
-		// disable holdSetPage once pump moves out of "delayed" state
+		// if holding, and pump moves out of "delayed", turn off holdSetPage
 		if (pump.state != 3 && holdSetPage)
 		{
 			holdSetPage = false;
@@ -318,8 +318,8 @@ public:
 		bool readyToSwitchPage = lcdPageSwitchCounter == 0;
 		if (readyToSwitchPage)
 		{
-			lcdPageSwitchCounter = LCD_INTERVAL_QTR_SECS;
 			currentPage++; // is rolled over in the printCurrentPage function
+			lcdPageSwitchCounter = LCD_INTERVAL_QTR_SECS;
 		}
 
 		// render lcdPageSet if locked to that page; else refresh the page
@@ -329,7 +329,6 @@ public:
 		}
 		else
 		{
-
 			// if going into a new page, clear it
 			bool isNewPageNext = lcdPageSwitchCounter == LCD_INTERVAL_QTR_SECS;
 			if (isNewPageNext)

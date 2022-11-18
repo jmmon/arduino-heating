@@ -3,7 +3,7 @@
 // 590/632 - 32m in to on-cycle
 // 622/649 floor (warm but not hot)
 
-const uint8_t ON_PHASE_BASE_PWM = 125;
+const uint8_t ON_PHASE_BASE_PWM = 255;
 const uint8_t COLD_FLOOR_PWM_BOOST = 75;
 
 // PWM boost during motor start
@@ -33,7 +33,7 @@ public:
 	uint32_t accumAbove = 0; // total time spent above setpoint
 
 	// using 16_t so it can overflow past 255 and be corrected to max 255
-	uint16_t pwm = 0; // holds motor PWM
+	uint8_t pwm = 0; // holds motor PWM
 
 	uint8_t state = 0; // holds motor state
 	// uint8_t lastState = 0;
@@ -105,7 +105,7 @@ public:
 		coldFloor = isCold();
 		state = 0;
 		resetDuration();
-		pwm = 0;
+		setPwm(0);
 		timeRemaining = (skipTimer) ? 0 : OFF_CYCLE_MINIMUM_SECONDS; // 30 minute wait (except on init)
 	}
 
@@ -171,8 +171,8 @@ public:
 			// bool isPulsePwmGreater = pulsePwm >= pwm;
 			// pwm = (isPulsePwmGreater) ? pulsePwm : pwm;
 
-			bool isPulsePwmGreater = pulsePwm >= pwm;
-			uint16_t nextPwm = isPulsePwmGreater ? ON_PHASE_BASE_PWM + PULSE_PWM_AMOUNT : pwm;
+			uint16_t pulsePwm = ON_PHASE_BASE_PWM + PULSE_PWM_AMOUNT;
+			uint16_t nextPwm = pulsePwm >= pwm ? pulsePwm : pwm;
 			setPwm(nextPwm);
 		}
 	}

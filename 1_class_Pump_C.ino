@@ -18,10 +18,10 @@ const uint32_t END_OF_STARTUP_TIMER = ON_CYCLE_MINIMUM_SECONDS - STARTING_PHASE_
 
 // PWM boost every so often, in case pump gets hung up:
 const uint16_t PULSE_PWM_SECONDS_INTERVAL = 3600; // seconds (every hour)
-const uint8_t PULSE_PWM_AMOUNT = 22;			  // boost
-uint16_t pulsePwmCounter = 0;					  // counts the seconds since last boost
+const uint8_t PULSE_PWM_AMOUNT = 22;							// boost
+uint16_t pulsePwmCounter = 0;											// counts the seconds since last boost
 
-static const uint8_t DELAY_SECONDS = 3;		   // default cycleDuration for delay-start
+static const uint8_t DELAY_SECONDS = 3;				 // default cycleDuration for delay-start
 const uint8_t EMERGENCY_ON_TRIGGER_OFFSET = 5; // if in 30-min off cycle, if temp drops by this amount off target, start the pump
 
 uint32_t timeRemaining = 0; // Counter for minimum cycle times
@@ -29,10 +29,12 @@ uint32_t timeRemaining = 0; // Counter for minimum cycle times
 class Pump_C
 {
 public:
-	uint32_t accumOn = 0;	 // time spent On
+	uint32_t accumOn = 0;		 // time spent On
 	uint32_t accumAbove = 0; // total time spent above setpoint
 
-	uint8_t pwm = 0;   // holds motor PWM
+	// using 16_t so it can overflow past 255 and be corrected to max 255
+	uint16_t pwm = 0; // holds motor PWM
+
 	uint8_t state = 0; // holds motor state
 	// uint8_t lastState = 0;
 	uint32_t cycleDuration = 0; // for this cycle
@@ -43,10 +45,26 @@ public:
 		pinMode(HEAT_PUMP_PIN, OUTPUT);
 	}
 
+	// if temp is cold return true, else if slow/fast temp are warm, return
+	boolean isCold()
+	{
+		return (floorEmaAvg < FLOOR_WARMUP_TEMPERATURE) || !((floorEmaAvg >= FLOOR_WARMUP_TEMPERATURE) &&
+																												(floorEmaAvgSlow >= FLOOR_WARMUP_TEMPERATURE));
+
+		// if (floorEmaAvg < FLOOR_WARMUP_TEMPERATURE) return true;
+		
+		// if ((floorEmaAvg >= FLOOR_WARMUP_TEMPERATURE) && (floorEmaAvgSlow >= FLOOR_WARMUP_TEMPERATURE)) return false;
+	}
+
+	void setPwm(uint16_t target)
+	{
+		pwm = target > 255 ? 255 : target;
+	}
+
 	String getStatus()
 	{
 		return (state == 0) ? "OFF" : (state == 3) ? "---"
-												   : String(pwm);
+																							 : String(pwm);
 	}
 
 	void resetDuration()
@@ -55,7 +73,7 @@ public:
 		cycleDuration = 0;
 	}
 
-	// 
+	//
 	void start()
 	{
 		bool isPumpOn = pwm > 0;
@@ -69,19 +87,22 @@ public:
 
 		resetDuration();
 		timeRemaining = ON_CYCLE_MINIMUM_SECONDS;
-		pulsePwmCounter = 0;						   // reset "pwm pulse" counter when turning on
+		pulsePwmCounter = 0;													 // reset "pwm pulse" counter when turning on
 		startingPhaseStepAdjust = STARTING_PHASE_STEP; // smooth pwm transition, subtract this from pwm, and then --
 
-
-		coldFloor = (floorEmaAvg < FLOOR_WARMUP_TEMPERATURE);
-		pwm = ON_PHASE_BASE_PWM + STARTING_PHASE_PWM_BOOST; //181
-		bool isFloorCold_AndBetterPWM = coldFloor && (COLD_FLOOR_PWM_BOOST + pwm) > pwm;
-		pwm += (coldFloor && (COLD_FLOOR_PWM_BOOST + pwm) > pwm) ? COLD_FLOOR_PWM_BOOST : 0;
+		// check if floor is cold
+		coldFloor = isCold();
+		// calculate pwm
+		uint16_t nextPwm = ON_PHASE_BASE_PWM + STARTING_PHASE_PWM_BOOST; // 181
+		// add on COLD_FLOOR_PWM_BOOST if coldFloor
+		nextPwm += (coldFloor && (COLD_FLOOR_PWM_BOOST + nextPwm) > nextPwm) ? COLD_FLOOR_PWM_BOOST : 0;
+		setPwm(nextPwm);
 	}
 
 	void stop(bool skipTimer = false)
 	{
-		coldFloor = (floorEmaAvg < FLOOR_WARMUP_TEMPERATURE);
+		// check for cold floor so it stays up to date
+		coldFloor = isCold();
 		state = 0;
 		resetDuration();
 		pwm = 0;
@@ -98,32 +119,42 @@ public:
 	{ // continue run phase
 		state = 1;
 		// turn off coldFloor if floor stays warm for a bit
-		if (
-			(floorEmaAvg >= FLOOR_WARMUP_TEMPERATURE) &&
-			(floorEmaAvgSlow >= FLOOR_WARMUP_TEMPERATURE))
-		{
-			coldFloor = false;
-		}
-
-		pwm = (coldFloor) ? ON_PHASE_BASE_PWM + COLD_FLOOR_PWM_BOOST : ON_PHASE_BASE_PWM;
+		coldFloor = isCold();
+		// if (
+		// 	(floorEmaAvg >= FLOOR_WARMUP_TEMPERATURE) &&
+		// 	(floorEmaAvgSlow >= FLOOR_WARMUP_TEMPERATURE))
+		// {
+		// 	coldFloor = false;
+		// }
+		uint16_t nextPwm = (coldFloor) ? ON_PHASE_BASE_PWM + COLD_FLOOR_PWM_BOOST : ON_PHASE_BASE_PWM;
+		setPwm(nextPwm);
 	}
 
 	void stepDownPwm()
 	{ // during startup phase
-		if (coldFloor)
-		{
-			if ((pwm - startingPhaseStepAdjust) >= (ON_PHASE_BASE_PWM + COLD_FLOOR_PWM_BOOST))
-				pwm -= startingPhaseStepAdjust;
-			else
-				pwm = ON_PHASE_BASE_PWM + COLD_FLOOR_PWM_BOOST;
-		}
-		else
-		{
-			if ((pwm - startingPhaseStepAdjust) >= ON_PHASE_BASE_PWM)
-				pwm -= startingPhaseStepAdjust;
-			else
-				pwm = ON_PHASE_BASE_PWM;
-		}
+
+		uint16_t basePwm = (coldFloor) ? ON_PHASE_BASE_PWM + COLD_FLOOR_PWM_BOOST : ON_PHASE_BASE_PWM;
+		uint16_t nextPwm = ((pwm - startingPhaseStepAdjust) >= (basePwm)) ? pwm - startingPhaseStepAdjust : basePwm;
+		setPwm(nextPwm);
+
+		// if (coldFloor)
+		// {
+		// 	uint16_t basePwm = (coldFloor) ? ON_PHASE_BASE_PWM + COLD_FLOOR_PWM_BOOST : ON_PHASE_BASE_PWM;
+		// 	uint16_t nextPwm = ((pwm - startingPhaseStepAdjust) >= (basePwm)) ? pwm - startingPhaseStepAdjust : basePwm;
+		// 	// if ((pwm - startingPhaseStepAdjust) >= (ON_PHASE_BASE_PWM + COLD_FLOOR_PWM_BOOST))
+		// 	// 	pwm -= startingPhaseStepAdjust;
+		// 	// else
+		// 	// 	pwm = ON_PHASE_BASE_PWM + COLD_FLOOR_PWM_BOOST;
+		// }
+		// else
+		// {
+		// 	uint16_t basePwm = (coldFloor) ? ON_PHASE_BASE_PWM + COLD_FLOOR_PWM_BOOST : ON_PHASE_BASE_PWM;
+		// 	uint16_t nextPwm = ((pwm - startingPhaseStepAdjust) >= basePwm) ? pwm - startingPhaseStepAdjust : basePwm;
+		// 	// if ((pwm - startingPhaseStepAdjust) >= ON_PHASE_BASE_PWM)
+		// 	// 	pwm -= startingPhaseStepAdjust;
+		// 	// else
+		// 	// 	pwm = ON_PHASE_BASE_PWM;
+		// }
 
 		if (startingPhaseStepAdjust - 1 >= 1)
 			startingPhaseStepAdjust -= 1;
@@ -136,84 +167,87 @@ public:
 		if (isTimeForPwmPulse)
 		{
 			pulsePwmCounter = 0;
-			uint8_t pulsePwm = ON_PHASE_BASE_PWM + PULSE_PWM_AMOUNT ;
+			// uint16_t pulsePwm = ON_PHASE_BASE_PWM + PULSE_PWM_AMOUNT;
+			// bool isPulsePwmGreater = pulsePwm >= pwm;
+			// pwm = (isPulsePwmGreater) ? pulsePwm : pwm;
+
 			bool isPulsePwmGreater = pulsePwm >= pwm;
-			pwm = (isPulsePwmGreater) ? pulsePwm : pwm;
+			uint16_t nextPwm = isPulsePwmGreater ? ON_PHASE_BASE_PWM + PULSE_PWM_AMOUNT : pwm;
+			setPwm(nextPwm);
 		}
 	}
 
 	void update()
-	{					 // called every second
+	{									 // called every second
 		cycleDuration++; // this cycle cycleDuration
 		debugHighsLowsFloor();
 
+ 		// time spent on
 		bool isPumpOn = pwm > 0;
-		if (isPumpOn)
-		{ // time spent on
-			accumOn++;
-		}
+		if (isPumpOn)	accumOn++;
 
+ 		// time spent above setpoint
 		bool isAboveTargetTemperature = Input >= Setpoint;
-		if (isAboveTargetTemperature)
-		{ // time spent above setpoint
-			accumAbove++;
-		}
+		if (isAboveTargetTemperature)	accumAbove++;
 
 		bool isDuringACycle = timeRemaining > 0;
 		if (isDuringACycle)
 		{
 			// timer is running, should stay in these states
 			timeRemaining--;
-			if (state == 0)
-			{ // offWithTimer();
-				// special cases in extreme change
-				bool shouldNeedMaxOutput = Output == outputMax;
-				if (shouldNeedMaxOutput)
-					start();
-				
-				bool isTempBelowMaximumOffset = Input <= Setpoint - EMERGENCY_ON_TRIGGER_OFFSET;
-				if (isTempBelowMaximumOffset)
-					start();
-			}
-			else if (state == 1)
-			{ // onWithTimer();
-				runOn();
-				pulsePwm(); // occasional higher PWM pulse
-			}
-			else if (state == 2)
-			{ // startup();
-				bool isStillStartingUp = timeRemaining > END_OF_STARTUP_TIMER;
-				if (isStillStartingUp)
-					stepDownPwm();
-				else
+			
+			switch(state) {
+				case(0): // offWithTimer();
+					// special cases in extreme change
+					bool shouldNeedMaxOutput = Output == outputMax;
+					if (shouldNeedMaxOutput)
+						start();
+
+					bool isTempBelowMaximumOffset = Input <= Setpoint - EMERGENCY_ON_TRIGGER_OFFSET;
+					if (isTempBelowMaximumOffset)
+						start();
+				break;
+
+				case(1): // onWithTimer();
 					runOn();
+					pulsePwm(); // occasional higher PWM pulse
+				break;
+
+				case(2):  // startup();
+					bool isStillStartingUp = timeRemaining > END_OF_STARTUP_TIMER;
+					if (isStillStartingUp)
+						stepDownPwm();
+					else
+						runOn();
+				break;
 			}
 		}
 		else
 		{
 			// NO timer restriction (extended phase)
-			if (state == 0)
-			{ // offContinued();
-				bool shouldPumpBeOn = Output > MIDPOINT;
-				if (shouldPumpBeOn)
-					start(); // most common start trigger
-				else if (pwm > 0)
-					stop(); // coming from delay, in case we need to stop
-			}
-			else if (state == 1)
-			{ // onContinued();
-				bool shouldPumpBeOff = Output <= MIDPOINT;
-				if (shouldPumpBeOff)
-					stop(); // most common stop trigger
-				else
-				{
-					runOn();
-					pulsePwm();
-				}
-			}
-			else if (state == 3)
-			{			   // delayTimerEnd();
-				state = 0; // it'll check next update
+			switch(state) {
+				case(0): // offContinued();
+					bool shouldPumpBeOn = Output > MIDPOINT;
+					if (shouldPumpBeOn)
+						start(); // most common start trigger
+					else if (pwm > 0)
+						stop(); // coming from delay, in case we need to stop
+				break;
+
+				case(1): // onContinued();
+					bool shouldPumpBeOff = Output <= MIDPOINT;
+					if (shouldPumpBeOff)
+						stop(); // most common stop trigger
+					else
+					{
+						runOn();
+						pulsePwm();
+					}
+				break;
+
+				case(3): // delayTimerEnd();
+					state = 0; // it'll check next update
+				break;
 			}
 		}
 

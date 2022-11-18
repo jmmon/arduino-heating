@@ -35,7 +35,7 @@ const uint8_t EMA_PERIODS_LONG = 160; //  * 2.5   400 sec
 
 // This is the EMA for our difference between the above EMAs
 //  should be ??
-const uint8_t EMA_PERIODS_DIFF = 16; //  * 2.5 = 50 s
+const uint8_t EMA_PERIODS_DIFF = 10; //  * 2.5 = 50 s
 
 // higher makes it take longer to trigger ON filling
 //  difference(EMA) must be > this to trigger filling, should be high

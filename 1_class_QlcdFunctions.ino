@@ -308,8 +308,7 @@ public:
 	void incrementSwitchPageCounter()
 	{
 		// disable holdSetPage once pump moves out of "delayed" state
-		bool isPumpNotDelayed = pump.state != 3;
-		if (isPumpNotDelayed && holdSetPage)
+		if (pump.state != 3 && holdSetPage)
 		{
 			holdSetPage = false;
 		}
@@ -337,6 +336,7 @@ public:
 			{
 				lcd.clear();
 			}
+			// refresh the page, or print the new page if it switched
 			printCurrentPage();
 		}
 		// printCurrentPage();

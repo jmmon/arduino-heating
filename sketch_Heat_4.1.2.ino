@@ -77,10 +77,8 @@ float floorEmaAvg;
 float floorEmaAvgSlow;
 bool coldFloor = false;
 
-int tempDispCounter = 5;
-int tempDispCounter2 = 0;
-uint8_t errorCounter1 = 5;
-uint8_t errorCounter2 = 5;
+uint8_t tempDispCounter = 5;
+uint8_t tempDispCounter2 = 0;
 
 // water counter stuff, not working
 float calibrationFactor = 4.5;

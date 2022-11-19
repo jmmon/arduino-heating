@@ -1,0 +1,66 @@
+lcd references:
+air,
+pump,
+waterTank,
+floorSensor
+
+Sketch uses 18510 bytes (60%) of program storage space. Maximum is 30720 bytes.
+Global variables use 1348 bytes (65%) of dynamic memory, leaving 700 bytes for local variables. Maximum is 2048 bytes.
+
+Sketch uses 18422 bytes (59%) of program storage space. Maximum is 30720 bytes.
+Global variables use 1332 bytes (65%) of dynamic memory, leaving 716 bytes for local variables. Maximum is 2048 bytes.
+
+Sketch uses 18354 bytes (59%) of program storage space. Maximum is 30720 bytes.
+Global variables use 1332 bytes (65%) of dynamic memory, leaving 716 bytes for local variables. Maximum is 2048 bytes.
+
+
+disabling proportional PWM
+
+
+
+testing "static const byte" chars for the custom chars
+didn't work; is there another type which would work (and save space)?
+
+
+
+Could use net-above/below-temperature time to bump set temperature up, so heat starts sooner to help balance out the net-above/below-temperature
+
+
+
+
+
+04/20/2022
+Cleaned up variables!
+
+before:
+	Sketch uses 26416 bytes (85%) of program storage space. Maximum is 30720 bytes.
+	Global variables use 1389 bytes (67%) of dynamic memory, leaving 659 bytes for local variables. Maximum is 2048 bytes.
+
+after:
+	Sketch uses 23482 bytes (76%) of program storage space. Maximum is 30720 bytes.
+	Global variables use 1289 bytes (62%) of dynamic memory, leaving 759 bytes for local variables. Maximum is 2048 bytes.
+
+
+Saved this much: !!
+	26416 - 23482 = 	2934 bytes storage,
+	1389 - 1289 =  		100 bytes memory
+
+
+
+TODO 4/3/22
+
+(using the t-stat pin with a different wavelength to distinguish)
+
+Add screen menu functionality using a button to switch between screens.
+
+press => cycles to the next page in the menu cycle (all pages existing);
+				- starts a timer: 5 seconds?
+					* after time is up, switches to view cycle
+				- minimum time between presses to be sure it's intentional (~150ms?)
+
+double press => pause the screen (pause the cycle timer)
+
+press+hold => enable/disable page from the view cycle 
+			-(beep will sound: a "do, mi" or "do fa" note frequencies)
+
+

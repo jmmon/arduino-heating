@@ -3,7 +3,7 @@
 // 590/632 - 32m in to on-cycle
 // 622/649 floor (warm but not hot)
 
-const uint8_t ON_PHASE_BASE_PWM = 125,
+const uint8_t ON_PHASE_BASE_PWM = 155,
 							COLD_FLOOR_PWM_BOOST = 44;
 
 // PWM boost during motor start

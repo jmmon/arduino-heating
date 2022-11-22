@@ -218,7 +218,7 @@ public:
 
 		bool isButtonPressDetected = buttonRead > 63;
 
-		if (!isButtonPressDetected)
+		if (!isButtonPressDetected) {
 			// save for next time
 			lastButtonRead = buttonRead;
 			return;

@@ -48,17 +48,21 @@ public:
 	// if temp is cold return true, else if slow/fast temp are warm, return
 	boolean isCold()
 	{
-		return (floorEmaAvg < FLOOR_WARMUP_TEMPERATURE) || !((floorEmaAvg >= FLOOR_WARMUP_TEMPERATURE) &&
-																												(floorEmaAvgSlow >= FLOOR_WARMUP_TEMPERATURE));
+		// return (floorEmaAvg < FLOOR_WARMUP_TEMPERATURE) || !((floorEmaAvg >= FLOOR_WARMUP_TEMPERATURE) &&
+		// 																										(floorEmaAvgSlow >= FLOOR_WARMUP_TEMPERATURE));
 
+		return (floorEmaAvg < FLOOR_WARMUP_TEMPERATURE);
 		// if (floorEmaAvg < FLOOR_WARMUP_TEMPERATURE) return true;
 		
 		// if ((floorEmaAvg >= FLOOR_WARMUP_TEMPERATURE) && (floorEmaAvgSlow >= FLOOR_WARMUP_TEMPERATURE)) return false;
 	}
+	boolean isWarm() {
+		return ((floorEmaAvg >= FLOOR_WARMUP_TEMPERATURE) && (floorEmaAvgSlow >= FLOOR_WARMUP_TEMPERATURE));
+	}
 
 	void setPwm(uint16_t target)
 	{
-		pwm = target > 255 ? 255 : target;
+		pwm = target >= 255 ? 255 : target;
 	}
 
 	String getStatus()
@@ -119,7 +123,7 @@ public:
 	{ // continue run phase
 		state = 1;
 		// turn off coldFloor if floor stays warm for a bit
-		coldFloor = isCold();
+		coldFloor = !isWarm();
 		// if (
 		// 	(floorEmaAvg >= FLOOR_WARMUP_TEMPERATURE) &&
 		// 	(floorEmaAvgSlow >= FLOOR_WARMUP_TEMPERATURE))
@@ -200,11 +204,9 @@ public:
 				case(0): // offWithTimer();
 					// special cases in extreme change
 					bool shouldNeedMaxOutput = Output == outputMax;
-					if (shouldNeedMaxOutput)
-						start();
-
 					bool isTempBelowMaximumOffset = Input <= Setpoint - EMERGENCY_ON_TRIGGER_OFFSET;
-					if (isTempBelowMaximumOffset)
+
+					if (isTempBelowMaximumOffset || shouldNeedMaxOutput)
 						start();
 				break;
 
@@ -228,9 +230,11 @@ public:
 			switch(state) {
 				case(0): // offContinued();
 					bool shouldPumpBeOn = Output > MIDPOINT;
+					bool isPumpOn = pwm > 0;
+
 					if (shouldPumpBeOn)
 						start(); // most common start trigger
-					else if (pwm > 0)
+					else if (isPumpOn)
 						stop(); // coming from delay, in case we need to stop
 				break;
 

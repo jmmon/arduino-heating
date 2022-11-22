@@ -161,7 +161,7 @@ public:
 				filling = false;
 		}
 		// detect moment the tank fills to 100%
-		if (filling && isFull)
+		if (filling && (percent == 100))
 		{
 			filling = false;
 			newlyFull = true;

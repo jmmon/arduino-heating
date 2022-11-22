@@ -479,33 +479,52 @@ public:
 
 	} // end update (every 0.25 seconds)
 
+	void beepOnTime(uint8_t counter, uint16_t spacing) {
+		if (counter % spacing == 0)
+			tone(TONE_PIN, NOTE_C5, 250); // play our tone on pin for 250ms
+		else
+			noTone(TONE_PIN);
+	}
+
+	// takes spacing (n * 0.25s) and optional countdown timer for when hitting maximum
 	void checkBeep(uint8_t spacing, uint16_t countdown = 0)
 	{
+		// if countdown, we count down the timer and beep when needed
+		uint16_t counter = alarmCounter;
 		if (countdown > 0)
 		{
 			countdown--;
-			if (countdown % spacing == 0)
-			{
+			counter = countdown;
+		}
 
-				tone(TONE_PIN, NOTE_C5, 250); // play our tone on pin for 250ms
-			}
-			else
-			{
-				noTone(TONE_PIN);
-			}
-			return;
-		}
-		// checks counter, spacing should be 16, 4, or 2 (for example)
-
-		if (alarmCounter % spacing == 0)
-		{
-			tone(TONE_PIN, NOTE_C5, 250); // play our tone on pin for 250ms
-		}
-		else
-		{
-			noTone(TONE_PIN);
-		}
+		beepOnTime(counter, spacing);
 	}
+
+
+
+	// void checkBeep(uint8_t spacing, uint16_t countdown = 0)
+	// {
+	// 	// if countdown, we count down the timer and beep when needed
+	// 	if (countdown > 0)
+	// 	{
+	// 		countdown--;
+	// 	beepOnTime(countdown, spacing);
+	// 		// if (countdown % spacing == 0)
+	// 		// 	tone(TONE_PIN, NOTE_C5, 250); // play our tone on pin for 250ms
+	// 		// else
+	// 		// 	noTone(TONE_PIN);
+			
+	// 		return;
+	// 	}
+	// 	// checks counter, spacing should be 16, 4, or 2 (for example)
+
+	// 	beepOnTime(alarmCounter, spacing);
+	// 	// if (alarmCounter % spacing == 0)
+	// 	// 	tone(TONE_PIN, NOTE_C5, 250); // play our tone on pin for 250ms
+	// 	// else
+	// 	// 	noTone(TONE_PIN);
+	// }
+
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	// Pages:
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

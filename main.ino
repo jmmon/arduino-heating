@@ -51,7 +51,7 @@ void setup()
 
 	setTime(hrs, mins, secs, dys, months, yrs);
 
-	display.initialize();
+	Tstat.initialize();
 	DEBUG_startup();
 	updateTEMP();
 	waterTank.init();
@@ -93,23 +93,23 @@ void loop()
 	// ArduPID loop:
 	ArduPIDController.compute();
 
-	// display.update(); // new spot
+	// Tstat.update(); // new spot
 
 	// 250ms Loop:
 	if (currentTime - last250ms >= 250)
-	{ // update Setpoint
+	{ 
 		last250ms += 250;
-		// update display screen
-		display.update(); // old spot
+   // update Setpoint
+		Tstat.update(); // old spot
 
 		// 1000ms Loop:
 		if (ms1000ctr >= 4)
 		{
 			ms1000ctr = 0;
+      pump.update();
+      
 			// calc flowrate (not working)
 			// calcFlow();
-			// run pump update
-			pump.update();
 			// waterCalcFlow();
 		}
 		ms1000ctr++;
@@ -119,10 +119,8 @@ void loop()
 		{
 			ms2500ctr = 0;
 
-			// update water tank level
 			waterTank.update();
-			// update air temperature
-			updateTEMP();
+			updateTEMP(); // read air temp
 		}
 		ms2500ctr++;
 	}

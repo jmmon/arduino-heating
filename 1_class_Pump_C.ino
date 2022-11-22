@@ -32,13 +32,10 @@ public:
 	uint32_t accumOn = 0;		 // time spent On
 	uint32_t accumAbove = 0; // total time spent above setpoint
 
-	// using 16_t so it can overflow past 255 and be corrected to max 255
 	uint8_t pwm = 0; // holds motor PWM
 
 	uint8_t state = 0; // holds motor state
-	// uint8_t lastState = 0;
 	uint32_t cycleDuration = 0; // for this cycle
-	// uint32_t lastDuration = 0;
 
 	Pump_C()
 	{ // constructor
@@ -48,13 +45,7 @@ public:
 	// if temp is cold return true, else if slow/fast temp are warm, return
 	bool isCold()
 	{
-		// return (floorEmaAvg < FLOOR_WARMUP_TEMPERATURE) || !((floorEmaAvg >= FLOOR_WARMUP_TEMPERATURE) &&
-		// 																										(floorEmaAvgSlow >= FLOOR_WARMUP_TEMPERATURE));
-
 		return (floorEmaAvg < FLOOR_WARMUP_TEMPERATURE);
-		// if (floorEmaAvg < FLOOR_WARMUP_TEMPERATURE) return true;
-
-		// if ((floorEmaAvg >= FLOOR_WARMUP_TEMPERATURE) && (floorEmaAvgSlow >= FLOOR_WARMUP_TEMPERATURE)) return false;
 	}
 
 	bool isWarm()
@@ -64,14 +55,14 @@ public:
 
 	void setPwm(uint16_t target)
 	{
-		pwm = target >= 255 ? 255 : (target <= 0) ? 0
-																							: target;
+		pwm = target >= 255 ? 255 : target;
 	}
 
 	String getStatus()
 	{
-		return (state == 0) ? "OFF" : (state == 3) ? "---"
-																							 : String(pwm);
+		return (state == 0) ? "OFF" 
+		 : (state == 3) ? "---"
+		 : String(pwm);
 	}
 
 	void resetDuration()
@@ -83,13 +74,6 @@ public:
 	//
 	void start()
 	{
-		// bool isPumpOn = pwm > 0;
-		// if (isPumpOn)
-		// {
-		// 	runOn();
-		// 	return;
-		// }
-
 		state = 2; // motor starting phase
 
 		resetDuration();
@@ -127,12 +111,6 @@ public:
 		state = 1;
 		// turn off coldFloor if floor stays warm for a bit
 		coldFloor = !isWarm();
-		// if (
-		// 	(floorEmaAvg >= FLOOR_WARMUP_TEMPERATURE) &&
-		// 	(floorEmaAvgSlow >= FLOOR_WARMUP_TEMPERATURE))
-		// {
-		// 	coldFloor = false;
-		// }
 		uint16_t nextPwm = (coldFloor) ? ON_PHASE_BASE_PWM + COLD_FLOOR_PWM_BOOST : ON_PHASE_BASE_PWM;
 		setPwm(nextPwm);
 	}
@@ -143,25 +121,6 @@ public:
 		uint16_t basePwm = (coldFloor) ? ON_PHASE_BASE_PWM + COLD_FLOOR_PWM_BOOST : ON_PHASE_BASE_PWM;
 		uint16_t nextPwm = ((pwm - startingPhaseStepAdjust) >= (basePwm)) ? pwm - startingPhaseStepAdjust : basePwm;
 		setPwm(nextPwm);
-
-		// if (coldFloor)
-		// {
-		// 	uint16_t basePwm = (coldFloor) ? ON_PHASE_BASE_PWM + COLD_FLOOR_PWM_BOOST : ON_PHASE_BASE_PWM;
-		// 	uint16_t nextPwm = ((pwm - startingPhaseStepAdjust) >= (basePwm)) ? pwm - startingPhaseStepAdjust : basePwm;
-		// 	// if ((pwm - startingPhaseStepAdjust) >= (ON_PHASE_BASE_PWM + COLD_FLOOR_PWM_BOOST))
-		// 	// 	pwm -= startingPhaseStepAdjust;
-		// 	// else
-		// 	// 	pwm = ON_PHASE_BASE_PWM + COLD_FLOOR_PWM_BOOST;
-		// }
-		// else
-		// {
-		// 	uint16_t basePwm = (coldFloor) ? ON_PHASE_BASE_PWM + COLD_FLOOR_PWM_BOOST : ON_PHASE_BASE_PWM;
-		// 	uint16_t nextPwm = ((pwm - startingPhaseStepAdjust) >= basePwm) ? pwm - startingPhaseStepAdjust : basePwm;
-		// 	// if ((pwm - startingPhaseStepAdjust) >= ON_PHASE_BASE_PWM)
-		// 	// 	pwm -= startingPhaseStepAdjust;
-		// 	// else
-		// 	// 	pwm = ON_PHASE_BASE_PWM;
-		// }
 
 		if (startingPhaseStepAdjust - 1 >= 1)
 			startingPhaseStepAdjust -= 1;
@@ -174,9 +133,6 @@ public:
 		if (isTimeForPwmPulse)
 		{
 			pulsePwmCounter = 0;
-			// uint16_t pulsePwm = ON_PHASE_BASE_PWM + PULSE_PWM_AMOUNT;
-			// bool isPulsePwmGreater = pulsePwm >= pwm;
-			// pwm = (isPulsePwmGreater) ? pulsePwm : pwm;
 
 			uint16_t pulsePwm = ON_PHASE_BASE_PWM + PULSE_PWM_AMOUNT;
 			uint16_t nextPwm = pulsePwm >= pwm ? pulsePwm : pwm;
@@ -199,77 +155,83 @@ public:
 		if (isAboveTargetTemperature)
 			accumAbove++;
 
+		bool pwmHasChanged = checkCycle();
+
+		if (pwmHasChanged) analogWrite(HEAT_PUMP_PIN, pwm);
+
+	}
+
+	bool checkCycle() {
+		uint8_t lastPwm = pwm;
+
 		bool isDuringACycle = timeRemaining > 0;
 		if (isDuringACycle)
 		{
 			// timer is running, should stay in these states
 			timeRemaining--;
 
-			switch (state)
-			{
-				case (0): // offWithTimer();
-					// special cases in extreme change
-					bool shouldNeedMaxOutput = Output == outputMax;
-					bool isTempBelowMaximumOffset = Input <= Setpoint - EMERGENCY_ON_TRIGGER_OFFSET;
+			if (state == 0)
+			{ // offWithTimer();
+				// special cases in extreme change
+				bool shouldNeedMaxOutput = Output == outputMax;
+				bool isTempBelowMaximumOffset = Input <= Setpoint - EMERGENCY_ON_TRIGGER_OFFSET;
 
-					if (isTempBelowMaximumOffset || shouldNeedMaxOutput)
-						start();
-					break;
+				if (isTempBelowMaximumOffset || shouldNeedMaxOutput)
+					start();
+			}
 
-				case (1): // onWithTimer();
+			else if (state == 1)
+			{ // onWithTimer();
+				runOn();
+				pulsePwm(); // occasional higher PWM pulse
+			}
+
+			else if (state == 2)
+			{ // startup();
+				bool isStillStartingUp = timeRemaining > END_OF_STARTUP_TIMER;
+				if (isStillStartingUp)
+					stepDownPwm();
+				else
 					runOn();
-					pulsePwm(); // occasional higher PWM pulse
-					break;
-
-				case (2): // startup();
-					bool isStillStartingUp = timeRemaining > END_OF_STARTUP_TIMER;
-					if (isStillStartingUp)
-						stepDownPwm();
-					else
-						runOn();
-					break;
-
-				default:
-					break;
 			}
 		}
 		else
 		{
 			// NO timer restriction (extended phase)
-			switch (state)
-			{
-				case (0): // offContinued() && check after delayedStart
-					bool shouldPumpBeOn = Output > MIDPOINT;
-					bool isPumpOn = pwm > 0;
+			if (state == 0)
+			{ // offContinued() && check after delayedStart
+				bool shouldPumpBeOn = Output > MIDPOINT;
+				bool isPumpOn = pwm > 0;
 
-					if (shouldPumpBeOn)
-						if (isPumpOn) runOn();
-						else start(); // most common start trigger
-					else if (isPumpOn)
-						stop(); // coming from delay, in case we need to stop
-					break;
-
-				case (1): // onContinued();
-					bool shouldPumpBeOff = Output <= MIDPOINT;
-					if (shouldPumpBeOff)
-						stop(); // most common stop trigger
-					else
-					{
+				if (shouldPumpBeOn)
+					if (isPumpOn)
 						runOn();
-						pulsePwm();
-					}
-					break;
+					else
+						start(); // most common start trigger
+				else if (isPumpOn)
+					stop(); // coming from delay, in case we need to stop
+			}
 
-				case (3):		 // delayTimerEnd();
-					state = 0; // it'll check next update
-					break;
-				
-				default:
-					break;
+			else if (state == 1)
+			{ // onContinued();
+				bool shouldPumpBeOff = Output <= MIDPOINT;
+				if (shouldPumpBeOff)
+					stop(); // most common stop trigger
+				else
+				{
+					runOn();
+					pulsePwm();
+				}
+			}
+
+			else if (state == 3)
+			{						 // delayTimerEnd();
+				state = 0; // it'll check next update
 			}
 		}
 
-		analogWrite(HEAT_PUMP_PIN, pwm);
+		if (pwm == lastPwm) return false;
+		return true;
 	}
 
 } pump = Pump_C();

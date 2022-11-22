@@ -138,11 +138,7 @@ private:
 	int8_t lcdPageSwitchCounter = 0; // counts down
 	bool holdSetPage = false;
 
-	// uint16_t toneTimer = 0;
 	uint8_t toneTimerSpacing = 0;
-
-	// uint32_t toneEndingTime = 0;
-
 	uint32_t toneDuration = 0;
 	uint32_t toneStartingTime = 0;
 
@@ -303,18 +299,19 @@ public:
 		default:
 			currentPage = 0;
 			printCurrentPage();
+			break;
 		}
 	}
 
 	void incrementSwitchPageCounter()
 	{
-		// if holding, and pump moves out of "delayed", turn off holdSetPage
-		if (pump.state != 3 && holdSetPage) holdSetPage = false;
+		// if holding, and pump moves out of "delayed" phase, turn off holdSetPage
+		if (holdSetPage && pump.state != 3 ) holdSetPage = false;
 		
 
 		// increment currentPage every 3.5 seconds
 		lcdPageSwitchCounter--;
-		bool readyToSwitchPage = lcdPageSwitchCounter == 0;
+		bool readyToSwitchPage = lcdPageSwitchCounter <= 0;
 		if (readyToSwitchPage)
 		{
 			currentPage++; // is rolled over in the printCurrentPage function
@@ -325,6 +322,12 @@ public:
 		if (holdSetPage)
 		{
 			show_Set();
+
+			lcd.setCursor(11, 0); // top right
+			lcd.print(F("H"));		  // draw droplet
+			lcd.print(pump.state);
+			lcd.print(F(":"));
+			lcd.print(timeRemaining);
 		}
 		else
 		{
@@ -360,8 +363,8 @@ public:
 	{
 		// setpoint delay
 		setpointTimer--;
-		bool shouldChangeSetpoint = setpointTimer == 0;
-		if (shouldChangeSetpoint)
+		bool shouldDetectButtons = setpointTimer == 0;
+		if (shouldDetectButtons)
 		{
 			detectButtons();
 			setpointTimer = SETPOINT_TIMER_INTERVAL;
@@ -652,6 +655,6 @@ public:
 		lcd.print(year(t));
 	}
 
-} display = Display_c();
+} Tstat = Display_c();
 
 // // note: lcd.write() {0~64 == ??}, {65~90 == A~Z}, {91~96 == ??}, {97~122 == a~z}, {123-127 == ??}

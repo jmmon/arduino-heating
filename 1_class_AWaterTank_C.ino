@@ -138,14 +138,15 @@ public:
 
 		bool isTankRising = diffEma >= FILL_TRIGGER;
 		bool isFull = percent == 100;
-		// water flow reset
-		if (
-			filling &&
-			isFull &&
-			isTankRising)
-		{
-			waterResetTotal();
-		}
+
+		// // water flow reset
+		// if (
+		// 	filling &&
+		// 	isFull &&
+		// 	isTankRising)
+		// {
+		// 	waterResetTotal();
+		// }
 
 		// Determine if tank is currently being filled:
 

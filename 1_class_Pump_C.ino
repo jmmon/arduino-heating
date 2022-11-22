@@ -187,7 +187,7 @@ public:
 	void update()
 	{									 // called every second
 		cycleDuration++; // this cycle cycleDuration
-		debugHighsLowsFloor();
+		DEBUG_highsLowsFloor();
 
 		// time spent on
 		bool isPumpOn = pwm > 0;

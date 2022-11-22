@@ -99,12 +99,12 @@ void updateTEMP()
 
 	Input = (double)(air[0].getTempEma() * air[0].WEIGHT + air[1].getTempEma() * air[1].WEIGHT) / (air[0].WEIGHT + air[1].WEIGHT);
 
-	// debugAirEmas();
+	// DEBUG_airEmas();
 
-	// counter for what? other than debugEmaWater
+	// counter for what? other than DEBUG_emaWater
 	if (tempDispCounter2 >= 24)
 	{ // every minute:
-		//        debugEmaWater();
+		//        DEBUG_emaWater();
 
 		if (changePerHourMinuteCounter < 59)
 		{

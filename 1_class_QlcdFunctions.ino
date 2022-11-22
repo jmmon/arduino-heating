@@ -217,57 +217,58 @@ public:
 		uint16_t buttonRead = analogRead(T_STAT_BUTTON_PIN);
 
 		bool isButtonPressDetected = buttonRead > 63;
-		if (isButtonPressDetected)
-		{
-			// initialize variable
-			int8_t changeTstatByAmount = 0;
 
-			if (DEBUG)
-			{
-				Serial.println(buttonRead);
-			}
-
-			// button press will turn off alarm! Yay!
-			if (alarmCountdown > 0 || alarmCounter > 1) {
-				alarmCountdown = 0;
-				alarmCounter = 1; // set to odd number
-				checkBeep(2); // silences tone if odd number
-			}
-
-			bool isButtonHeldForSecondTick = lastButtonRead > 63;
-			bool isTopButton = buttonRead > 850;
-			if (isButtonHeldForSecondTick)
-			{ // delays adjustment by 1 tick
-				if (isTopButton)
-				{
-					changeTstatByAmount = 1;
-					// reset record lows
-					for (uint8_t k = 0; k < 2; k++)
-					{
-						air[k].lowest = air[k].tempF;
-					}
-				}
-				else // bottom button
-				{
-					changeTstatByAmount = -1;
-					// reset record highs
-					for (uint8_t k = 0; k < 2; k++)
-					{
-						air[k].highest = air[k].tempF;
-					}
-				}
-			}
-
-			// apply the changes to setpoint
-			Setpoint += double(SETPOINT_ADJ_PER_TICK * changeTstatByAmount);
-
-			// show (and hold onto) our set page
-			lcd.clear();
-			show_Set();
-			holdSetPage = true;
-			// check if needs to run
-			pump.checkAfter(); // default 3 seconds
+		if (!isButtonPressDetected)
+			// save for next time
+			lastButtonRead = buttonRead;
+			return;
 		}
+
+		if (DEBUG)
+			Serial.println(buttonRead);
+		
+
+		// initialize variable
+		int8_t changeTstatByAmount = 0;
+
+		// button press will turn off alarm! Yay!
+		bool alarmIsOn = alarmCountdown > 0 || alarmCounter > 1;
+		if (alarmIsOn) {
+			alarmCountdown = 0;
+			alarmCounter = 1; // set to odd number
+			checkBeep(2); // silences tone if odd number
+		}
+
+		bool isButtonHeldForSecondTick = lastButtonRead > 63;
+		bool isTopButton = buttonRead > 850;
+		if (isButtonHeldForSecondTick)
+		{ // delays adjustment by 1 tick
+			if (isTopButton)
+			{
+				changeTstatByAmount = 1;
+				// reset record lows
+				for (uint8_t k = 0; k < 2; k++)
+					air[k].lowest = air[k].tempF;
+			}
+			else // bottom button
+			{
+				changeTstatByAmount = -1;
+				// reset record highs
+				for (uint8_t k = 0; k < 2; k++)
+					air[k].highest = air[k].tempF;
+			}
+		}
+
+		// apply the changes to setpoint
+		Setpoint += double(SETPOINT_ADJ_PER_TICK * changeTstatByAmount);
+
+		// show (and hold onto) our set page
+		lcd.clear();
+		show_Set();
+		holdSetPage = true;
+		// check if needs to run
+		pump.checkAfter(); // default 3 seconds
+
 		// save for next time
 		lastButtonRead = buttonRead;
 	}
@@ -308,10 +309,8 @@ public:
 	void incrementSwitchPageCounter()
 	{
 		// if holding, and pump moves out of "delayed", turn off holdSetPage
-		if (pump.state != 3 && holdSetPage)
-		{
-			holdSetPage = false;
-		}
+		if (pump.state != 3 && holdSetPage) holdSetPage = false;
+		
 
 		// increment currentPage every 3.5 seconds
 		lcdPageSwitchCounter--;
@@ -331,10 +330,7 @@ public:
 		{
 			// if going into a new page, clear it
 			bool isNewPageNext = lcdPageSwitchCounter == LCD_INTERVAL_QTR_SECS;
-			if (isNewPageNext)
-			{
-				lcd.clear();
-			}
+			if (isNewPageNext) lcd.clear();
 			// refresh the page, or print the new page if it switched
 			printCurrentPage();
 		}
@@ -345,61 +341,15 @@ public:
 	{
 		// should be closed during our timer (when tank gets full)
 		bool shouldValveBeClosed = valveCloseTimer > 0;
+
 		if (shouldValveBeClosed)
-		{
 			valveCloseTimer--;
-		}
 		else
-		{
 			// after timer, open the valve
 			isValveClosed = false;
-		}
+
 		digitalWrite(WATER_VALVE_PIN, (isValveClosed) ? HIGH : LOW);
 	}
-
-	// void regulateTimer()
-	// {
-	// 	bool isTimerOn = toneStartingTime > 0;
-	// 	bool shouldTimerBeOn = currentTime - toneDuration < toneStartingTime;
-	// 	if (isTimerOn && shouldTimerBeOn)
-	// 	{
-	// 		// check if should be beeping right now
-	// 		soundTheAlarm();
-	// 	}
-	// 	else
-	// 	{
-	// 		//
-	// 		stopAlarmTimer();
-	// 	}
-	// }
-
-	// void startAlarmTimer(uint32_t _duration, uint16_t _spacing)
-	// {
-	// 	toneStartingTime = currentTime;
-	// 	toneTimerSpacing = _spacing;
-	// 	toneDuration = _duration * 1000; // in ms
-	// }
-
-	// void stopAlarmTimer()
-	// {
-	// 	toneStartingTime = 0;
-	// 	toneDuration = 0;
-	// }
-
-	// void soundTheAlarm()
-	// {
-	// 	if (currentTime - toneStartingTime % (toneTimerSpacing * 25) == 0)
-	// 	// based off currentTime, this will actually trigger based off ms % timerSpacing, which is not what is wanted.
-	// 	//  I want it to trigger based on a starting time counter which will count up ....
-	// 	//  every 0.25s, if (ms time passed since start) % (toneSpacingQtrSeconds * 25ms) == 0, should do what I want?
-	// 	{
-	// 		tone(TONE_PIN, NOTE_C5, 250); // play our tone on pin for 250ms
-	// 	}
-	// 	else
-	// 	{
-	// 		noTone(TONE_PIN);
-	// 	}
-	// }
 
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	// Update function:
@@ -433,7 +383,6 @@ public:
 			bool isWaterTankPercentOver90 = waterTank.displayPercent >= TONE_TIMER_TRIGGER_PERCENT_SLOW;
 
 			// Basically,
-			// TODO:
 			// 	What I want is: if (tank is filling and) tank is between 90 and 95%,
 			//		The beeper should beep every ~4 seconds (until tank is no longer filling)
 			//		(Increment a counter, and if counter % 16 == 0, do a beep, else, stop the beep)
@@ -445,18 +394,13 @@ public:
 			//		(Increment a counter, and if counter % 2 == 0, do a beep, else, stop the beep)
 			if (isWaterTankPercentOver90)
 			{
+				alarmCounter++; // count while above 90% (and filling)
 
-				alarmCounter++;
+				// beep when it should
 				if (isWaterTankPercentOver95)
-				{
-					// fast beeping
-					checkBeep(4);
-				}
+					checkBeep(4); // fast beeping
 				else
-				{
-					// slow beeping
-					checkBeep(16);
-				}
+					checkBeep(16); // slow beeping
 			}
 		}
 		else if (waterTank.newlyFull)
@@ -472,10 +416,7 @@ public:
 
 		regulateValve();
 
-		if (alarmCountdown > 0)
-		{
-			checkBeep(2, alarmCountdown);
-		}
+		if (alarmCountdown > 0) checkBeep(2, alarmCountdown);
 
 	} // end update (every 0.25 seconds)
 
@@ -499,31 +440,6 @@ public:
 
 		beepOnTime(counter, spacing);
 	}
-
-
-
-	// void checkBeep(uint8_t spacing, uint16_t countdown = 0)
-	// {
-	// 	// if countdown, we count down the timer and beep when needed
-	// 	if (countdown > 0)
-	// 	{
-	// 		countdown--;
-	// 	beepOnTime(countdown, spacing);
-	// 		// if (countdown % spacing == 0)
-	// 		// 	tone(TONE_PIN, NOTE_C5, 250); // play our tone on pin for 250ms
-	// 		// else
-	// 		// 	noTone(TONE_PIN);
-			
-	// 		return;
-	// 	}
-	// 	// checks counter, spacing should be 16, 4, or 2 (for example)
-
-	// 	beepOnTime(alarmCounter, spacing);
-	// 	// if (alarmCounter % spacing == 0)
-	// 	// 	tone(TONE_PIN, NOTE_C5, 250); // play our tone on pin for 250ms
-	// 	// else
-	// 	// 	noTone(TONE_PIN);
-	// }
 
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	// Pages:

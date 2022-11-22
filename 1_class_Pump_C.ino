@@ -46,23 +46,26 @@ public:
 	}
 
 	// if temp is cold return true, else if slow/fast temp are warm, return
-	boolean isCold()
+	bool isCold()
 	{
 		// return (floorEmaAvg < FLOOR_WARMUP_TEMPERATURE) || !((floorEmaAvg >= FLOOR_WARMUP_TEMPERATURE) &&
 		// 																										(floorEmaAvgSlow >= FLOOR_WARMUP_TEMPERATURE));
 
 		return (floorEmaAvg < FLOOR_WARMUP_TEMPERATURE);
 		// if (floorEmaAvg < FLOOR_WARMUP_TEMPERATURE) return true;
-		
+
 		// if ((floorEmaAvg >= FLOOR_WARMUP_TEMPERATURE) && (floorEmaAvgSlow >= FLOOR_WARMUP_TEMPERATURE)) return false;
 	}
-	boolean isWarm() {
+
+	bool isWarm()
+	{
 		return ((floorEmaAvg >= FLOOR_WARMUP_TEMPERATURE) && (floorEmaAvgSlow >= FLOOR_WARMUP_TEMPERATURE));
 	}
 
 	void setPwm(uint16_t target)
 	{
-		pwm = target >= 255 ? 255 : target;
+		pwm = target >= 255 ? 255 : (target <= 0) ? 0
+																							: target;
 	}
 
 	String getStatus()
@@ -80,12 +83,12 @@ public:
 	//
 	void start()
 	{
-		bool isPumpOn = pwm > 0;
-		if (isPumpOn)
-		{
-			runOn();
-			return;
-		}
+		// bool isPumpOn = pwm > 0;
+		// if (isPumpOn)
+		// {
+		// 	runOn();
+		// 	return;
+		// }
 
 		state = 2; // motor starting phase
 
@@ -186,59 +189,67 @@ public:
 		cycleDuration++; // this cycle cycleDuration
 		debugHighsLowsFloor();
 
- 		// time spent on
+		// time spent on
 		bool isPumpOn = pwm > 0;
-		if (isPumpOn)	accumOn++;
+		if (isPumpOn)
+			accumOn++;
 
- 		// time spent above setpoint
+		// time spent above setpoint
 		bool isAboveTargetTemperature = Input >= Setpoint;
-		if (isAboveTargetTemperature)	accumAbove++;
+		if (isAboveTargetTemperature)
+			accumAbove++;
 
 		bool isDuringACycle = timeRemaining > 0;
 		if (isDuringACycle)
 		{
 			// timer is running, should stay in these states
 			timeRemaining--;
-			
-			switch(state) {
-				case(0): // offWithTimer();
+
+			switch (state)
+			{
+				case (0): // offWithTimer();
 					// special cases in extreme change
 					bool shouldNeedMaxOutput = Output == outputMax;
 					bool isTempBelowMaximumOffset = Input <= Setpoint - EMERGENCY_ON_TRIGGER_OFFSET;
 
 					if (isTempBelowMaximumOffset || shouldNeedMaxOutput)
 						start();
-				break;
+					break;
 
-				case(1): // onWithTimer();
+				case (1): // onWithTimer();
 					runOn();
 					pulsePwm(); // occasional higher PWM pulse
-				break;
+					break;
 
-				case(2):  // startup();
+				case (2): // startup();
 					bool isStillStartingUp = timeRemaining > END_OF_STARTUP_TIMER;
 					if (isStillStartingUp)
 						stepDownPwm();
 					else
 						runOn();
-				break;
+					break;
+
+				default:
+					break;
 			}
 		}
 		else
 		{
 			// NO timer restriction (extended phase)
-			switch(state) {
-				case(0): // offContinued();
+			switch (state)
+			{
+				case (0): // offContinued() && check after delayedStart
 					bool shouldPumpBeOn = Output > MIDPOINT;
 					bool isPumpOn = pwm > 0;
 
 					if (shouldPumpBeOn)
-						start(); // most common start trigger
+						if (isPumpOn) runOn();
+						else start(); // most common start trigger
 					else if (isPumpOn)
 						stop(); // coming from delay, in case we need to stop
-				break;
+					break;
 
-				case(1): // onContinued();
+				case (1): // onContinued();
 					bool shouldPumpBeOff = Output <= MIDPOINT;
 					if (shouldPumpBeOff)
 						stop(); // most common stop trigger
@@ -247,11 +258,14 @@ public:
 						runOn();
 						pulsePwm();
 					}
-				break;
+					break;
 
-				case(3): // delayTimerEnd();
+				case (3):		 // delayTimerEnd();
 					state = 0; // it'll check next update
-				break;
+					break;
+				
+				default:
+					break;
 			}
 		}
 

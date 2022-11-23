@@ -20,9 +20,9 @@ class FloorSensor_C {
 
 		uint16_t readTemp(uint8_t loops = 10) {
 			uint32_t val = 0;
-			for (uint8_t z = 0; z < loops; z++) {
-				val += analogRead(PIN);
-			}
+			
+			for (uint8_t z = 0; z < loops; z++) val += analogRead(PIN);
+			
 			return val / loops;
 		}
 
@@ -40,7 +40,6 @@ class FloorSensor_C {
 			ema = calcEma(floorRead, lastEma, FLOOR_EMA_DAYS);
 			slowEma = calcEma(floorRead, lastSlowEma, FLOOR_EMA_DAYS_SLOW);
 		}
-
 
 } 
 floorSensor[] = { 

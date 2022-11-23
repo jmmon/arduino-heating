@@ -47,7 +47,7 @@ const uint8_t STOP_FILL_TRIGGER = 30; // lower makes it harder to trigger OFF fi
 // bounds for reading from float sensor
 // At ~0%, the tank seems to bounce between 232~197
 // Can measure different fill points as I fill (once the hose thaws!)
-//780 - 250 = 530
+// 780 - 250 = 530
 // 530 / 100 == 5.3 units per percent
 // so 50% should be 5.3 * 50 + 250 == 515
 const uint16_t LOW_BOUND = 250;
@@ -92,15 +92,15 @@ public:
 	uint8_t calculateTankPercent()
 	{
 		return ((ema <= ERROR_HIGH_BOUND) ? 101 : // error (lowest)
-					(ema <= LOW_BOUND) ? 0
-									   : // empty
-					(ema <= HIGH_BOUND) ? (float)100 * (ema - LOW_BOUND) / (HIGH_BOUND - LOW_BOUND)
-										: // normal range
-					100);				  // full
+								(ema <= LOW_BOUND) ? 0
+																	 : // empty
+								(ema <= HIGH_BOUND) ? (float)100 * (ema - LOW_BOUND) / (HIGH_BOUND - LOW_BOUND)
+																		: // normal range
+								100);									// full
 	}
 
 	update()
-	{																		// every 2.5 seconds
+	{																																			// every 2.5 seconds
 		uint16_t floatSensorReadValue = analogRead(WATER_FLOAT_SENSOR_PIN); // float sensor
 
 		// calculate water level EMAs
@@ -119,18 +119,18 @@ public:
 		lastPercent = percent;
 		percent = calculateTankPercent();
 
+		// set to percent instead of '--' (initialization)
 		bool isInitialization = displayPercent == 255;
 		if (isInitialization)
-		{ // on init ('--')
-			displayPercent = (displayPercent != percent) ? percent : displayPercent;
-		}
+		 	displayPercent = (displayPercent != percent) ? percent : displayPercent;
+		
 
 		// stabilize readings: stops wobble, i.e. 55 -> 54 -> 55 -> 54 -> 55
 		bool isFillingAndGreater = filling && percent > displayPercent;
 		bool isDrainingAndLesser = !filling && percent < displayPercent;
 		if (
-			(isFillingAndGreater) || // when filling, allow it to increase
-			(isDrainingAndLesser)	 // when not filling, allow it to decrease
+				(isFillingAndGreater) || // when filling, allow it to increase
+				(isDrainingAndLesser)		 // when not filling, allow it to decrease
 		)
 		{
 			displayPercent = percent;
@@ -169,7 +169,7 @@ public:
 
 			// pin our tank reading to 100% for the moment
 			ema = lastEma = slowEma = lastSlowEma = HIGH_BOUND; // set to max
-			diffEma = lastDiffEma = 0;							// reset to 0
+			diffEma = lastDiffEma = 0;													// reset to 0
 		}
 	}
 

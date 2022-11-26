@@ -101,17 +101,15 @@ void loop()
 	// ArduPID loop:
 	ArduPIDController.compute();
 
-	// Tstat.update(); // new spot
-
-	// 250ms Loop:
+	// 250ms Loop, which also regulates a 1000ms loop and a 2500ms loop 
 	if (currentTime - last250ms >= 250)
 	{ 
 		last250ms += 250;
-   // update Setpoint
-		Tstat.update(); // old spot
+		Tstat.update(); 
 
 		// 1000ms Loop:
-		if (ms1000ctr >= 4)
+		ms1000ctr++;
+		if (ms1000ctr > 4)
 		{
 			ms1000ctr = 0;
       pump.update();
@@ -120,17 +118,16 @@ void loop()
 			// calcFlow();
 			// waterCalcFlow();
 		}
-		ms1000ctr++;
 
 		// 2500ms Loop:
-		if (ms2500ctr >= 10)
+		ms2500ctr++;
+		if (ms2500ctr > 10)
 		{
 			ms2500ctr = 0;
 
 			waterTank.update();
 			updateTEMP(); // read air temp
 		}
-		ms2500ctr++;
 	}
 }
 
@@ -158,13 +155,13 @@ void waterCalcFlow()
 		// that to scale the output. We also apply the calibrationFactor to scale the output
 		// based on the number of pulses per second per units of measure (litres/minute in
 		// this case) coming from the sensor.
-		flowRate = ((1000.0 / (millis() - oldTime)) * waterPulseCount) / calibrationFactor;
+		flowRate = ((1000.0 / (currentTime - oldTime)) * waterPulseCount) / calibrationFactor;
 
 		// Note the time this processing pass was executed. Note that because we've
 		// disabled interrupts the millis() function won't actually be incrementing right
 		// at this point, but it will still return the value it was set to just before
 		// interrupts went away.
-		oldTime = millis();
+		oldTime = currentTime;
 
 		// Divide the flow rate in litres/minute by 60 to determine how many litres have
 		// passed through the sensor in this 1 second interval, then multiply by 1000 to

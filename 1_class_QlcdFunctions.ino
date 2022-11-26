@@ -1,8 +1,6 @@
 #include <Arduino.h>
 #include <LiquidCrystal_I2C.h>
-
-//#define TONE_USE_INT
-//#define TONE_PITCH 432
+#include <TimeLib.h>
 
 const byte customCharInside[8] = { // "inside"
 	B00000,

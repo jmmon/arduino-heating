@@ -228,7 +228,7 @@ public:
 		}
 
 		// return true if changed
-		return !(pwm == lastPwm)
+		return !(pwm == lastPwm);
 	}
 
 } pump = Pump_C();

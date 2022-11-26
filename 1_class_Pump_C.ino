@@ -1,3 +1,5 @@
+#include <Arduino.h>
+
 // Floor Sensor approximate readings examples
 // ~489/ 518 cold floor
 // 590/632 - 32m in to on-cycle
@@ -158,8 +160,8 @@ public:
 	bool checkCycle()
 	{
 		uint8_t lastPwm = pwm;
-
 		bool isDuringACycle = timeRemaining > 0;
+
 		if (isDuringACycle)
 		{
 			// timer is running, should stay in these states
@@ -225,9 +227,8 @@ public:
 			}
 		}
 
-		if (pwm == lastPwm)
-			return false;
-		return true;
+		// return true if changed
+		return !(pwm == lastPwm)
 	}
 
 } pump = Pump_C();

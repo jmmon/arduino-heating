@@ -1,13 +1,8 @@
-void setup()
-{
-	Serial.begin(9600);
-	pump.stop(true);
+#include <Arduino.h>
+#include <ArduPID.h>
+#include <TimeLib.h>
 
-	for (uint8_t k = 0; k < AIR_SENSOR_COUNT; k++)
-	{
-		dht[k].begin();
-		//        dhtnew[k].setType(22);
-	}
+void timeSetup() {
 
 	// get and display time works!
 	const String startTimeDate = __TIME__ " "__DATE__; // "hrs:mins:secs Jan 10 2022" example
@@ -50,11 +45,24 @@ void setup()
 		months = 12;
 
 	setTime(hrs, mins, secs, dys, months, yrs);
+}
 
+void setup()
+{
+	Serial.begin(9600);
+	pump.stop(true);
+
+	for (uint8_t k = 0; k < AIR_SENSOR_COUNT; k++)
+	{
+		dht[k].begin();
+		//        dhtnew[k].setType(22);
+	}
+
+	timeSetup();
 	Tstat.initialize();
 	DEBUG_startup();
-	updateTEMP();
 	waterTank.init();
+	updateTEMP();
 
 	pinMode(WATER_FLOW_PIN, INPUT);
 	digitalWrite(WATER_FLOW_PIN, HIGH);

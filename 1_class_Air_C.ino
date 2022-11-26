@@ -1,3 +1,6 @@
+#include <Arduino.h>
+#include <DHT.h>
+
 class Air_C
 {
 private:
@@ -10,8 +13,8 @@ public:
 	float WEIGHT = 1;
 	float humid = 0;
 
-	float highest = -1000;
-	float lowest = 1000;
+	float highest = -200;
+	float lowest = 200;
 	float currentEMA[3]; // {short, medium, long} EMA
 	float lastEMA[3];		 // {short, medium, long}
 
@@ -63,13 +66,12 @@ public:
 			lowest = tempF;
 
 		// update EMAs (short, medium, long)
-		for (uint8_t ema = 0; ema < 3; ema++)
-		{ // update EMA
-			if (lastEMA[ema] == 0)
-				lastEMA[ema] = tempF;
+		for (uint8_t i = 0; i < 3; i++)
+		{ // save as lastEMA before updating the currentEMA
+			lastEMA[i] = lastEMA[i] == 0 ? tempF : currentEMA[i];
 
-			currentEMA[ema] = tempF * EMA_MULT[ema] + lastEMA[ema] * (1 - EMA_MULT[ema]);
-			lastEMA[ema] = currentEMA[ema];
+			//currentEMA[i] = tempF * EMA_MULT[i] + lastEMA[i] * (1 - EMA_MULT[i]);
+			currentEMA[i] = calcEma(tempF, lastEMA[i], EMA_MULT_PERIODS[i]);
 		}
 	};
 

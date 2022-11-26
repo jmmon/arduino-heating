@@ -1,3 +1,4 @@
+#include <Arduino.h>
 
 const uint16_t FLOOR_EMA_DAYS = 10; // 10 readings EMA (20s)
 const uint16_t FLOOR_EMA_DAYS_SLOW = 300; // 300 readings EMA (600s)

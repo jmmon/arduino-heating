@@ -1,3 +1,5 @@
+#include <Arduino.h>
+
 void DEBUG_startup()
 {
 	if (DEBUG)

@@ -1,3 +1,4 @@
+#include <Arduino.h>
 
 void airSensorNanCheck()
 {
@@ -82,9 +83,7 @@ void updateTEMP()
 {
 	// air temp stuff
 	for (uint8_t i = 0; i < AIR_SENSOR_COUNT; i++)
-	{
 		air[i].readTemp();
-	}
 
 	// check for errors in two main sensors
 	airSensorNanCheck();
@@ -92,10 +91,9 @@ void updateTEMP()
 	// check for strange readings (>20 from long avg) on two main air sensors
 	airSensorOutlierCheck();
 
+	// update highs/lows records (for all air sensors)
 	for (uint8_t i = 0; i < AIR_SENSOR_COUNT; i++)
-	{ // update highs/lows records (for all air sensors)
 		air[i].updateRecords();
-	}
 
 	Input = (double)(air[0].getTempEma() * air[0].WEIGHT + air[1].getTempEma() * air[1].WEIGHT) / (air[0].WEIGHT + air[1].WEIGHT);
 
@@ -107,9 +105,8 @@ void updateTEMP()
 		//        DEBUG_emaWater();
 
 		if (changePerHourMinuteCounter < 59)
-		{
 			changePerHourMinuteCounter++;
-		}
+
 		tempDispCounter2 = 0;
 
 		// for (uint8_t k=0; k < changePerHourMinuteCounter - 1; k++) {
@@ -120,10 +117,9 @@ void updateTEMP()
 	tempDispCounter2++;
 
 	// floor temp stuff
+	// update floor emas
 	for (uint8_t i = 0; i < FLOOR_SENSOR_COUNT; i++)
-	{ // update floor emas
 		floorSensor[i].update();
-	}
 
 	// floor thermistor difference check, for outlier errors
 	int difference = int(abs(floorSensor[0].ema - floorSensor[1].ema));
@@ -136,13 +132,9 @@ void updateTEMP()
 		}
 
 		if (floorSensor[0].ema > floorSensor[1].ema)
-		{
 			floorSensor[1].ema = floorSensor[0].ema;
-		}
 		else
-		{
 			floorSensor[0].ema = floorSensor[1].ema;
-		}
 	}
 	floorEmaAvg = (floorSensor[0].ema + floorSensor[1].ema) / FLOOR_SENSOR_COUNT;							// avg two readings
 	floorEmaAvgSlow = (floorSensor[0].slowEma + floorSensor[1].slowEma) / FLOOR_SENSOR_COUNT; // avg two readings

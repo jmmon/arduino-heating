@@ -1,3 +1,5 @@
+#include <Arduino.h>
+
 // water level sensor input: 5v
 
 // float sensor has ohm output: 240 ohm empty ~~~ 30 ohm full (++ wire resistance) (off of 5v)
@@ -122,19 +124,15 @@ public:
 		// set to percent instead of '--' (initialization)
 		bool isInitialization = displayPercent == 255;
 		if (isInitialization)
-		 	displayPercent = (displayPercent != percent) ? percent : displayPercent;
-		
+			displayPercent = (displayPercent != percent) ? percent : displayPercent;
 
 		// stabilize readings: stops wobble, i.e. 55 -> 54 -> 55 -> 54 -> 55
 		bool isFillingAndGreater = filling && percent > displayPercent;
 		bool isDrainingAndLesser = !filling && percent < displayPercent;
-		if (
-				(isFillingAndGreater) || // when filling, allow it to increase
-				(isDrainingAndLesser)		 // when not filling, allow it to decrease
-		)
-		{
+		// when not filling, allow it to decrease
+		// when filling, allow it to increase
+		if ((isFillingAndGreater) || (isDrainingAndLesser))
 			displayPercent = percent;
-		}
 
 		bool isTankRising = diffEma >= FILL_TRIGGER;
 		bool isFull = percent == 100;

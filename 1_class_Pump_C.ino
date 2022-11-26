@@ -34,7 +34,7 @@ public:
 
 	uint8_t pwm = 0; // holds motor PWM
 
-	uint8_t state = 0; // holds motor state
+	uint8_t state = 0;					// holds motor state
 	uint32_t cycleDuration = 0; // for this cycle
 
 	Pump_C()
@@ -45,12 +45,7 @@ public:
 	// if temp is cold return true, else if slow/fast temp are warm, return
 	bool isCold()
 	{
-		return (floorEmaAvg < FLOOR_WARMUP_TEMPERATURE);
-	}
-
-	bool isWarm()
-	{
-		return ((floorEmaAvg >= FLOOR_WARMUP_TEMPERATURE) && (floorEmaAvgSlow >= FLOOR_WARMUP_TEMPERATURE));
+		return (floorEmaAvg < FLOOR_WARMUP_TEMPERATURE || floorEmaAvgSlow < FLOOR_WARMUP_TEMPERATURE);
 	}
 
 	void setPwm(uint16_t target)
@@ -60,14 +55,13 @@ public:
 
 	String getStatus()
 	{
-		return (state == 0) ? "OFF" 
-		 : (state == 3) ? "---"
-		 : String(pwm);
+		return (state == 0)		? "OFF"
+					 : (state == 3) ? "---"
+													: String(pwm);
 	}
 
 	void resetDuration()
 	{
-		// lastDuration = cycleDuration;
 		cycleDuration = 0;
 	}
 
@@ -110,7 +104,7 @@ public:
 	{ // continue run phase
 		state = 1;
 		// turn off coldFloor if floor stays warm for a bit
-		coldFloor = !isWarm();
+		coldFloor = isCold();
 		uint16_t nextPwm = (coldFloor) ? ON_PHASE_BASE_PWM + COLD_FLOOR_PWM_BOOST : ON_PHASE_BASE_PWM;
 		setPwm(nextPwm);
 	}
@@ -157,11 +151,12 @@ public:
 
 		bool pwmHasChanged = checkCycle();
 
-		if (pwmHasChanged) analogWrite(HEAT_PUMP_PIN, pwm);
-
+		if (pwmHasChanged)
+			analogWrite(HEAT_PUMP_PIN, pwm);
 	}
 
-	bool checkCycle() {
+	bool checkCycle()
+	{
 		uint8_t lastPwm = pwm;
 
 		bool isDuringACycle = timeRemaining > 0;
@@ -230,7 +225,8 @@ public:
 			}
 		}
 
-		if (pwm == lastPwm) return false;
+		if (pwm == lastPwm)
+			return false;
 		return true;
 	}
 

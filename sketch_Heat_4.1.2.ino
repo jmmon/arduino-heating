@@ -123,7 +123,7 @@ time_t t = now();
  *
  *
  * @brief KD // seconds or minutes, requires clean input signal (minimal noise)
- *  finally KD monitoris ramp time, and increase this to reduce overshoot, or reduce to increase stability.
+ *  finally KD monitors ramp time, and increase this to reduce overshoot, or reduce to increase stability.
  *
  */
 

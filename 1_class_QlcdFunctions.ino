@@ -3,84 +3,84 @@
 #include <TimeLib.h>
 
 const byte customCharInside[8] = { // "inside"
-	B00000,
-	B00000,
-	B00000,
-	B10100,
-	B01111,
-	B11100,
-	B01000,
-	B01000};
+		B00000,
+		B00000,
+		B00000,
+		B10100,
+		B01111,
+		B11100,
+		B01000,
+		B01000};
 
 const byte customCharOutside[8] = { // "outside"
-	B01010,
-	B00110,
-	B01110,
-	B00000,
-	B00000,
-	B01111,
-	B01000,
-	B01000};
+		B01010,
+		B00110,
+		B01110,
+		B00000,
+		B00000,
+		B01111,
+		B01000,
+		B01000};
 
 const byte customCharDegF[8] = { // "degrees F"
-	B01000,
-	B10100,
-	B01000,
-	B00111,
-	B00100,
-	B00110,
-	B00100,
-	B00100};
+		B01000,
+		B10100,
+		B01000,
+		B00111,
+		B00100,
+		B00110,
+		B00100,
+		B00100};
 
 const byte customCharSmColon[8] = { // small colon + space
-	B00000,
-	B00000,
-	B01000,
-	B00000,
-	B00000,
-	B01000,
-	B00000,
-	B00000};
+		B00000,
+		B00000,
+		B01000,
+		B00000,
+		B00000,
+		B01000,
+		B00000,
+		B00000};
 
 const byte customCharDroplet[8] = { // water droplet
-	B00100,
-	B01110,
-	B01010,
-	B10111,
-	B10111,
-	B10111,
-	B11111,
-	B01110};
+		B00100,
+		B01110,
+		B01010,
+		B10111,
+		B10111,
+		B10111,
+		B11111,
+		B01110};
 
 const byte customCharSetpoint[8] = { // thermometer with indicator
-	B00000,
-	B01000,
-	B11001,
-	B01011,
-	B11001,
-	B01000,
-	B10100,
-	B01000};
+		B00000,
+		B01000,
+		B11001,
+		B01011,
+		B11001,
+		B01000,
+		B10100,
+		B01000};
 
 const byte customCharSunAndHouse[8] = {
-	B11000,
-	B11000,
-	B00010,
-	B00111,
-	B01111,
-	B00101,
-	B00111,
-	B00111};
+		B11000,
+		B11000,
+		B00010,
+		B00111,
+		B01111,
+		B00101,
+		B00111,
+		B00111};
 
 const byte customCharDotInsideHouse[8] = {
-	B00100,
-	B01010,
-	B11111,
-	B10001,
-	B10001,
-	B10101,
-	B10001,
-	B10001};
+		B00100,
+		B01010,
+		B11111,
+		B10001,
+		B10001,
+		B10101,
+		B10001,
+		B10001};
 
 /* struct consts:
 Sketch uses 26416 bytes (85%) of program storage space. Maximum is 30720 bytes.
@@ -113,12 +113,12 @@ Global variables use 1370 bytes (66%) of dynamic memory, leaving 678 bytes for l
 
 */
 
-const float SETPOINT_ADJ_PER_TICK = 1;	   // degrees change
+const float SETPOINT_ADJ_PER_TICK = 1;		 // degrees change
 const uint8_t SETPOINT_TIMER_INTERVAL = 2; // quarter seconds
 
 const uint8_t LCD_INTERVAL_QTR_SECS = 14; // 3.5s
 
-const uint16_t TONE_DURATION = 180;		// seconds
+const uint16_t TONE_DURATION = 180;			// seconds
 const uint16_t TONE_DURATION_FULL = 60; // when hits 100%, beep for this long
 const uint8_t TONE_TIMER_SPACING_SLOW = 16;
 const uint8_t TONE_TIMER_SPACING_FAST = 4;
@@ -138,7 +138,7 @@ private:
 	uint16_t lastButtonRead = 0;
 	uint32_t lastPressTime = 0;
 
-	uint8_t currentPage = -1;		 // + 1 will make it start at page 0,
+	uint8_t currentPage = -1;				 // + 1 will make it start at page 0,
 	int8_t lcdPageSwitchCounter = 0; // counts down
 	bool holdSetPage = false;
 
@@ -199,8 +199,8 @@ public:
 		}
 
 		return (((hours < 10) ? "0" : "") + String(hours) +
-				((minutes < 10) ? ":0" : ":") + (String(minutes)) +
-				((seconds < 10) ? ":0" : ":") + String(seconds));
+						((minutes < 10) ? ":0" : ":") + (String(minutes)) +
+						((seconds < 10) ? ":0" : ":") + String(seconds));
 	}
 
 	String formatHoursWithTenths(int32_t _t)
@@ -218,7 +218,8 @@ public:
 
 		bool isButtonPressDetected = buttonRead > 63;
 
-		if (!isButtonPressDetected) {
+		if (!isButtonPressDetected)
+		{
 			// save for next time
 			lastButtonRead = buttonRead;
 			return;
@@ -226,17 +227,17 @@ public:
 
 		if (DEBUG)
 			Serial.println(buttonRead);
-		
 
 		// initialize variable
 		int8_t changeTstatByAmount = 0;
 
 		// button press will turn off alarm! Yay!
 		bool alarmIsOn = alarmCountdown > 0 || alarmCounter > 1;
-		if (alarmIsOn) {
+		if (alarmIsOn)
+		{
 			alarmCountdown = 0;
 			alarmCounter = 1; // set to odd number
-			checkBeep(2); // silences tone if odd number
+			checkBeep(2);			// silences tone if odd number
 		}
 
 		bool isButtonHeldForSecondTick = lastButtonRead > 63;
@@ -286,7 +287,7 @@ public:
 		case (1):
 			show_PumpCycleInfo();
 			break;
-			
+
 		case (2):
 			show_Temperature();
 			break;
@@ -310,8 +311,8 @@ public:
 	void incrementSwitchPageCounter()
 	{
 		// if holding, and pump moves out of "delayed" phase, turn off holdSetPage
-		if (holdSetPage && pump.state != 3 ) holdSetPage = false;
-		
+		if (holdSetPage && pump.state != 3)
+			holdSetPage = false;
 
 		// increment currentPage every 3.5 seconds
 		lcdPageSwitchCounter--;
@@ -328,7 +329,7 @@ public:
 			show_Set();
 
 			lcd.setCursor(11, 0); // top right
-			lcd.print(F("H"));		  // draw droplet
+			lcd.print(F("H"));		// draw droplet
 			lcd.print(pump.state);
 			lcd.print(F(":"));
 			lcd.print(timeRemaining);
@@ -337,7 +338,8 @@ public:
 		{
 			// if going into a new page, clear it
 			bool isNewPageNext = lcdPageSwitchCounter == LCD_INTERVAL_QTR_SECS;
-			if (isNewPageNext) lcd.clear();
+			if (isNewPageNext)
+				lcd.clear();
 			// refresh the page, or print the new page if it switched
 			printCurrentPage();
 		}
@@ -379,8 +381,8 @@ public:
 		if (waterTank.filling)
 		{
 			lcd.setCursor(13, 0); // top right
-			lcd.write(5);		  // draw droplet
-			writeWaterLevel();	  // draw waterLevel
+			lcd.write(5);					// draw droplet
+			writeWaterLevel();		// draw waterLevel
 		}
 
 		if (waterTank.filling)
@@ -423,11 +425,13 @@ public:
 
 		regulateValve();
 
-		if (alarmCountdown > 0) checkBeep(2, alarmCountdown);
+		if (alarmCountdown > 0)
+			checkBeep(2, alarmCountdown);
 
 	} // end update (every 0.25 seconds)
 
-	void beepOnTime(uint8_t counter, uint16_t spacing) {
+	void beepOnTime(uint8_t counter, uint16_t spacing)
+	{
 		if (counter % spacing == 0)
 			tone(TONE_PIN, NOTE_C5, 250); // play our tone on pin for 250ms
 		else
@@ -458,17 +462,17 @@ public:
 		lcd.setCursor(0, 0);
 		lcd.write(8); // inside icon //1
 		lcd.print(Input, 1);
-		lcd.print(F(" "));					// 6
+		lcd.print(F(" "));									// 6
 		lcd.print(air[0].currentEMA[0], 1); // 5
-		lcd.print(F("/"));					// 6
+		lcd.print(F("/"));									// 6
 		lcd.print(air[1].currentEMA[0], 1); // 10
-		lcd.write(1);						// degrees F // 11
+		lcd.write(1);												// degrees F // 11
 
 		// second line
 		lcd.setCursor(0, 1);
-		lcd.write(6);			// thermometer
+		lcd.write(6);						// thermometer
 		lcd.print(Setpoint, 1); // 6
-		lcd.write(1);			// degrees F // 7
+		lcd.write(1);						// degrees F // 7
 		lcd.print(" ");
 		lcd.write(126); // pointing right
 		lcd.print(Output, 2);
@@ -502,14 +506,14 @@ public:
 	void show_PumpCycleInfo()
 	{ // heating cycle page
 		// display cycle info, time/cycleDuration
-		lcd.setCursor(0, 0);							   // line 1
-		lcd.print(pump.getStatus());					   // 3 chars
-		lcd.print(F(" "));								   // 4
+		lcd.setCursor(0, 0);															 // line 1
+		lcd.print(pump.getStatus());											 // 3 chars
+		lcd.print(F(" "));																 // 4
 		lcd.print(formatTimeToString(pump.cycleDuration)); // 8 chars (12)
 
-		lcd.setCursor(0, 1);								  // bot
-		lcd.print(F("RunTtl"));								  // 6
-		lcd.write(4);										  // small colon // 7
+		lcd.setCursor(0, 1);																	// bot
+		lcd.print(F("RunTtl"));																// 6
+		lcd.write(4);																					// small colon // 7
 		lcd.print(formatHoursWithTenths(currentTime / 1000)); // 15
 	}
 
@@ -533,39 +537,39 @@ public:
 	}
 
 	void show_AccumTime()
-	{						 // Total time and time spent with pump on/off
+	{											 // Total time and time spent with pump on/off
 		lcd.setCursor(0, 0); // top
-		lcd.write(6);		 // setpoint (thermometer)
-		lcd.write(4);		 // 8
+		lcd.write(6);				 // setpoint (thermometer)
+		lcd.write(4);				 // 8
 		const uint32_t totalSeconds = currentTime / 1000;
 		int32_t difference = pump.accumAbove - (totalSeconds - pump.accumAbove); // positive or negative
 		String hours = formatHoursWithTenths(difference);
 		lcd.print((" ") + ((difference < 0) ? hours : ("+") + hours));
 
-		lcd.setCursor(0, 1);   // bot
+		lcd.setCursor(0, 1);	 // bot
 		lcd.print(F("State")); // 7
-		lcd.write(4);		   // 8
+		lcd.write(4);					 // 8
 		lcd.print(pump.state); // 1
 		difference = pump.accumOn - (totalSeconds - pump.accumOn);
 		lcd.print((difference < 0) ? " Off" : "  On");
-		lcd.write(4);																	   // 8
+		lcd.write(4);																																			 // 8
 		lcd.print(formatHoursWithTenths((difference < 0) ? difference * -1 : difference)); // 16
 	}
 
 	void show_Set()
-	{							// Set Temperature page
-		lcd.setCursor(0, 0);	// top
-		lcd.print(F("Temp"));	// 6
-		lcd.write(4);			// sm colon  // 7
-		lcd.print(Input, 1);	// 11
-		lcd.write(1);			// Replaces "*F" // 12
+	{													// Set Temperature page
+		lcd.setCursor(0, 0);		// top
+		lcd.print(F("Temp"));		// 6
+		lcd.write(4);						// sm colon  // 7
+		lcd.print(Input, 1);		// 11
+		lcd.write(1);						// Replaces "*F" // 12
 		lcd.print(F("      ")); // 16
 
 		lcd.setCursor(0, 1); // bot
 		lcd.print(F("   ")); // 3
 		lcd.write(6);
 		lcd.print(Setpoint, 1); // 6
-		lcd.write(1);			// degrees F // 7
+		lcd.write(1);						// degrees F // 7
 		lcd.print(" ");
 		// lcd.write(127); //pointing left // 9 // 7
 		lcd.write(126); // pointing right
@@ -576,12 +580,12 @@ public:
 	{ // Show greenhouse and exterior sensor readings
 		lcd.setCursor(0, 0);
 		lcd.print(F("GH"));
-		lcd.write(4);						// sm colon
+		lcd.write(4);												// sm colon
 		lcd.print(air[3].currentEMA[0], 1); // 7
 		lcd.write(1);
-		lcd.print(F(" "));			// 9
+		lcd.print(F(" "));					// 9
 		lcd.print(air[3].humid, 1); // 13
-		lcd.print(F("%  "));		// 16
+		lcd.print(F("%  "));				// 16
 
 		lcd.setCursor(0, 1);
 		lcd.print(F(" "));
@@ -589,13 +593,13 @@ public:
 		lcd.print(F(" "));
 		lcd.print(air[2].currentEMA[0], 1); // 7
 		lcd.write(1);
-		lcd.print(F(" "));			// 9
+		lcd.print(F(" "));					// 9
 		lcd.print(air[2].humid, 1); // 13
-		lcd.print(F("%  "));		// 16
+		lcd.print(F("%  "));				// 16
 	}
 
 	void show_WaterFilling()
-	{						 // Water Filling Temp Page
+	{											 // Water Filling Temp Page
 		lcd.setCursor(0, 0); // top
 		lcd.write(5);
 		lcd.print(waterTank.ema); // 4
@@ -608,7 +612,7 @@ public:
 
 		lcd.setCursor(0, 1); // top
 		lcd.print(F("Flr"));
-		lcd.write(4);				   // sm colon // 4
+		lcd.write(4);									 // sm colon // 4
 		lcd.print(floorSensor[0].ema); // +3
 		lcd.print(F(":"));
 		lcd.print(floorSensor[1].ema);
@@ -644,12 +648,12 @@ public:
 		lcd.print(F(" "));
 		const uint8_t dayOfWeek = weekday(t); // number!
 		lcd.print(
-			(dayOfWeek == 1) ? "Sun" : (dayOfWeek == 2) ? "Mon"
-								   : (dayOfWeek == 3)	? "Tue"
-								   : (dayOfWeek == 4)	? "Wed"
-								   : (dayOfWeek == 5)	? "Thu"
-								   : (dayOfWeek == 6)	? "Fri"
-														: "Sat");
+				(dayOfWeek == 1) ? "Sun" : (dayOfWeek == 2) ? "Mon"
+															 : (dayOfWeek == 3)		? "Tue"
+															 : (dayOfWeek == 4)		? "Wed"
+															 : (dayOfWeek == 5)		? "Thu"
+															 : (dayOfWeek == 6)		? "Fri"
+																										: "Sat");
 
 		lcd.setCursor(0, 1);
 		lcd.print(day(t));

@@ -2,8 +2,8 @@
 #include <ArduPID.h>
 #include <TimeLib.h>
 
-void timeSetup() {
-
+void timeSetup()
+{
 	// get and display time works!
 	const String startTimeDate = __TIME__ " "__DATE__; // "hrs:mins:secs Jan 10 2022" example
 
@@ -101,19 +101,19 @@ void loop()
 	// ArduPID loop:
 	ArduPIDController.compute();
 
-	// 250ms Loop, which also regulates a 1000ms loop and a 2500ms loop 
+	// 250ms Loop, which also regulates a 1000ms loop and a 2500ms loop
 	if (currentTime - last250ms >= 250)
-	{ 
+	{
 		last250ms += 250;
-		Tstat.update(); 
+		Tstat.update();
 
 		// 1000ms Loop:
 		ms1000ctr++;
 		if (ms1000ctr > 4)
 		{
 			ms1000ctr = 0;
-      pump.update();
-      
+			pump.update();
+
 			// calc flowrate (not working)
 			// calcFlow();
 			// waterCalcFlow();

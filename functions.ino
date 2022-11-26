@@ -95,6 +95,7 @@ void updateTEMP()
 	for (uint8_t i = 0; i < AIR_SENSOR_COUNT; i++)
 		air[i].updateRecords();
 
+	// calculate weighted air temp
 	Input = (double)(air[0].getTempEma() * air[0].WEIGHT + air[1].getTempEma() * air[1].WEIGHT) / (air[0].WEIGHT + air[1].WEIGHT);
 
 	// DEBUG_airEmas();

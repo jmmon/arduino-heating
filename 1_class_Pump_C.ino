@@ -14,7 +14,7 @@ const uint8_t STARTING_PHASE_SECONDS = 11;
 const uint8_t STARTING_PHASE_STEP = 10; // start amt for startingPhaseStepAdjust
 uint8_t startingPhaseStepAdjust = 1;
 
-const uint16_t ON_CYCLE_MINIMUM_SECONDS = 600;	 // 10m
+const uint16_t ON_CYCLE_MINIMUM_SECONDS = 180;	 // 3m
 const uint16_t OFF_CYCLE_MINIMUM_SECONDS = 1800; // 30m
 const uint32_t END_OF_STARTUP_TIMER = ON_CYCLE_MINIMUM_SECONDS - STARTING_PHASE_SECONDS;
 
@@ -53,6 +53,10 @@ public:
 	void setPwm(uint16_t target)
 	{
 		pwm = target >= 255 ? 255 : target;
+	}
+
+	uint16_t basePwm() {
+		return (coldFloor) ? ON_PHASE_BASE_PWM + COLD_FLOOR_PWM_BOOST : ON_PHASE_BASE_PWM;
 	}
 
 	String getStatus()
@@ -107,15 +111,14 @@ public:
 		state = 1;
 		// turn off coldFloor if floor stays warm for a bit
 		coldFloor = isCold();
-		uint16_t nextPwm = (coldFloor) ? ON_PHASE_BASE_PWM + COLD_FLOOR_PWM_BOOST : ON_PHASE_BASE_PWM;
+		uint16_t nextPwm = basePwm();
 		setPwm(nextPwm);
 	}
 
 	void stepDownPwm()
 	{ // during startup phase
-
-		uint16_t basePwm = (coldFloor) ? ON_PHASE_BASE_PWM + COLD_FLOOR_PWM_BOOST : ON_PHASE_BASE_PWM;
-		uint16_t nextPwm = ((pwm - startingPhaseStepAdjust) >= (basePwm)) ? pwm - startingPhaseStepAdjust : basePwm;
+		uint16_t nextPwm = basePwm();
+		nextPwm = ((pwm - startingPhaseStepAdjust) >= (nextPwm)) ? pwm - startingPhaseStepAdjust : nextPwm;
 		setPwm(nextPwm);
 
 		if (startingPhaseStepAdjust - 1 >= 1)
@@ -195,11 +198,10 @@ public:
 		else
 		{
 			// NO timer restriction (extended phase)
+			bool shouldPumpBeOn = Output > MIDPOINT;
 			if (state == 0)
 			{ // offContinued() && check after delayedStart
-				bool shouldPumpBeOn = Output > MIDPOINT;
 				bool isPumpOn = pwm > 0;
-
 				if (shouldPumpBeOn)
 					if (isPumpOn)
 						runOn();
@@ -211,8 +213,7 @@ public:
 
 			else if (state == 1)
 			{ // onContinued();
-				bool shouldPumpBeOff = Output <= MIDPOINT;
-				if (shouldPumpBeOff)
+				if (!shouldPumpBeOn)
 					stop(); // most common stop trigger
 				else
 				{

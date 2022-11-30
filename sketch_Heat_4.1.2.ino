@@ -67,15 +67,12 @@ uint8_t ms2500ctr = 0;
 // SDA = A4 pin; SCL = A5 pin
 LiquidCrystal_I2C lcd(0x27, 16, 2); // set the LCD address to 0x27 for a 16 chars and 2 line display
 
+//  2 / (1 + n)   =>  where (n * TEMPERATURE_READ_INTERVAL) = milliseconds defining EMA calculation
 const uint16_t EMA_MULT_PERIODS[3] = {
 		12, 600, 1800};
-
-const float EMA_MULT[3] = {
-		//  2 / (1 + n)   =>  where (n * TEMPERATURE_READ_INTERVAL) = milliseconds defining EMA calculation
-		2. / (1 + 12),	 // 12 * 2.5s = 30s   EMA =   0.5m
-		2. / (1 + 600),	 // 600 * 2.5s = 1500s EMA =  25m
-		2. / (1 + 1800), // 1800 * 2.5s = 4500s EMA = 75m
-};
+// 12 * 2.5s = 30s   EMA =   0.5m
+// 600 * 2.5s = 1500s EMA =  25m
+// 1800 * 2.5s = 4500s EMA = 75m
 
 const float FLOOR_WARMUP_TEMPERATURE = 580; // 0-1023, NOTE: insulation (cardboard, rugs) will require higher value
 float floorEmaAvg;
@@ -124,19 +121,21 @@ time_t t = now();
  *
  * @brief KD // seconds or minutes, requires clean input signal (minimal noise)
  *  finally KD monitors ramp time, and increase this to reduce overshoot, or reduce to increase stability.
- *
+ *  Plans for the future, so a higher number will make the pump shut off sooner *before* the setpoint is reached.
+ *  I assume it will also turn *on* the pump *before* the temperature drops past the setpoint.
  */
 
 const double outputMin = -128;
 const double outputMax = 127;
 const double MIDPOINT = 0; // greater than this == on
 
+// might want the pump to kick on a little sooner, perhaps depending on the floor temperature. So it should basically increase slightly as the time rolls on;
 // Proportional
 double Kp = 8;
 // Integral (testing 0.05 [was 0.005] starting jan 21 2022)
 double Ki = 0.05; // 0.005
 // Derivative
-double Kd = 0; // 0.002
+double Kd = 0.0; // 0.002
 
 double Input;
 double Setpoint = 68;

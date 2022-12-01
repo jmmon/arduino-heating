@@ -108,25 +108,18 @@ void loop()
 		Tstat.update();
 
 		// 1000ms Loop:
-		//ms1000ctr++;
-		if (prevLoopStartTime % 1000 == 0)
-		//if (ms1000ctr > 4)
+		if (prevLoopStartTime % ms1000Interval == 0)
 		{
-			//ms1000ctr = 0;
 			pump.update();
 
-			// calc flowrate (not working)
+			// // calc flowrate (not working)
 			// calcFlow();
 			// waterCalcFlow();
 		}
 
 		// 2500ms Loop:
-		//ms2500ctr++;
-		if (prevLoopStartTime % 2500 == 0)
-		//if (ms2500ctr > 10)
+		if (prevLoopStartTime % ms1000Interval == 0)
 		{
-			//ms2500ctr = 0;
-
 			waterTank.update();
 			updateTEMP(); // read air temp
 		}

@@ -52,24 +52,6 @@ void setup()
 	Serial.begin(9600);
 	pump.stop(true);
 
-	for (uint8_t k = 0; k < AIR_SENSOR_COUNT; k++)
-	{
-		dht[k].begin();
-		//        dhtnew[k].setType(22);
-	}
-
-	timeSetup();
-	Tstat.initialize();
-	DEBUG_startup();
-	waterTank.init();
-	updateTEMP();
-
-	pinMode(WATER_FLOW_PIN, INPUT);
-	digitalWrite(WATER_FLOW_PIN, HIGH);
-
-	WATER_FLOW_INTERRUPT = digitalPinToInterrupt(WATER_FLOW_PIN); // set in setup
-																																//    attachInterrupt(WATER_FLOW_INTERRUPT, waterPulseCount, FALLING);
-
 	// // AutoPID setup:
 	// // if temperature is more than 4 degrees below or above Setpoint, OUTPUT will be set to min or max respectively
 	// //myPID.setBangBang(4);
@@ -86,9 +68,27 @@ void setup()
 	ArduPIDController.setWindUpLimits(windUpMin, windUpMax);
 	ArduPIDController.start();
 
+	pinMode(WATER_FLOW_PIN, INPUT);
+	digitalWrite(WATER_FLOW_PIN, HIGH);
+
+	WATER_FLOW_INTERRUPT = digitalPinToInterrupt(WATER_FLOW_PIN); // set in setup
+																																//    attachInterrupt(WATER_FLOW_INTERRUPT, waterPulseCount, FALLING);
+
+	for (uint8_t k = 0; k < AIR_SENSOR_COUNT; k++)
+	{
+		dht[k].begin();
+		//        dhtnew[k].setType(22);
+	}
+
+	timeSetup();
+	Tstat.initialize();
+	DEBUG_startup();
+	waterTank.init();
+	updateTEMP();
+
 	tone(TONE_PIN, NOTE_C5, 100); // quick beep at startup
 
-	last250ms = millis();
+	prevLoopStartTime = 0;
 }
 
 void loop()
@@ -102,16 +102,17 @@ void loop()
 	ArduPIDController.compute();
 
 	// 250ms Loop, which also regulates a 1000ms loop and a 2500ms loop
-	if (currentTime - last250ms >= 250)
+	if (currentTime - prevLoopStartTime >= 250)
 	{
-		last250ms += 250;
+		prevLoopStartTime += 250;
 		Tstat.update();
 
 		// 1000ms Loop:
-		ms1000ctr++;
-		if (ms1000ctr > 4)
+		//ms1000ctr++;
+		if (prevLoopStartTime % 1000 == 0)
+		//if (ms1000ctr > 4)
 		{
-			ms1000ctr = 0;
+			//ms1000ctr = 0;
 			pump.update();
 
 			// calc flowrate (not working)
@@ -120,10 +121,11 @@ void loop()
 		}
 
 		// 2500ms Loop:
-		ms2500ctr++;
-		if (ms2500ctr > 10)
+		//ms2500ctr++;
+		if (prevLoopStartTime % 2500 == 0)
+		//if (ms2500ctr > 10)
 		{
-			ms2500ctr = 0;
+			//ms2500ctr = 0;
 
 			waterTank.update();
 			updateTEMP(); // read air temp

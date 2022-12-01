@@ -64,3 +64,13 @@ press+hold => enable/disable page from the view cycle
 			-(beep will sound: a "do, mi" or "do fa" note frequencies)
 
 
+
+
+
+Dec 1 2022: BUGS:
+
+	cycle time works, but
+	RunTtl time does not display,
+
+	Accum On does not display (only shows a +)
+	State: 0 Off: [blank]

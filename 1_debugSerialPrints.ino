@@ -123,7 +123,7 @@ void DEBUG_highsLowsFloor()
 			Serial.print(floorSensor[1].ema);
 		}
 		Serial.print(F("                                       *Pump"));
-		Serial.print(pump.getStatus());
+		Serial.print(pump.getStatusString());
 		Serial.print(F("(HIGHS "));
 		Serial.print(air[0].highest);
 		if (air[0].highest != air[1].highest)

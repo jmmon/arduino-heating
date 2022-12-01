@@ -81,6 +81,29 @@ void airSensorOutlierCheck()
 
 void updateTEMP()
 {
+	// floor temp stuff
+	// update floor emas
+	for (uint8_t i = 0; i < FLOOR_SENSOR_COUNT; i++)
+		floorSensor[i].update();
+
+	// floor thermistor difference check, for outlier errors
+	uint16_t difference = uint16_t(abs(floorSensor[0].ema - floorSensor[1].ema));
+	if (difference > 80)
+	{
+		if (DEBUG)
+		{
+			Serial.print(F("Floor Read Error. Difference: "));
+			Serial.println(difference);
+		}
+
+		if (floorSensor[0].ema > floorSensor[1].ema)
+			floorSensor[1].ema = floorSensor[0].ema;
+		else
+			floorSensor[0].ema = floorSensor[1].ema;
+	}
+	floorEmaAvg = (floorSensor[0].ema + floorSensor[1].ema) / FLOOR_SENSOR_COUNT;							// avg two readings
+	floorEmaAvgSlow = (floorSensor[0].slowEma + floorSensor[1].slowEma) / FLOOR_SENSOR_COUNT; // avg two readings
+
 	// air temp stuff
 	for (uint8_t i = 0; i < AIR_SENSOR_COUNT; i++)
 		air[i].readTemp();
@@ -117,28 +140,6 @@ void updateTEMP()
 	}
 	tempDispCounter2++;
 
-	// floor temp stuff
-	// update floor emas
-	for (uint8_t i = 0; i < FLOOR_SENSOR_COUNT; i++)
-		floorSensor[i].update();
-
-	// floor thermistor difference check, for outlier errors
-	int difference = int(abs(floorSensor[0].ema - floorSensor[1].ema));
-	if (difference > 80)
-	{
-		if (DEBUG)
-		{
-			Serial.print(F("Floor Read Error. Difference: "));
-			Serial.println(difference);
-		}
-
-		if (floorSensor[0].ema > floorSensor[1].ema)
-			floorSensor[1].ema = floorSensor[0].ema;
-		else
-			floorSensor[0].ema = floorSensor[1].ema;
-	}
-	floorEmaAvg = (floorSensor[0].ema + floorSensor[1].ema) / FLOOR_SENSOR_COUNT;							// avg two readings
-	floorEmaAvgSlow = (floorSensor[0].slowEma + floorSensor[1].slowEma) / FLOOR_SENSOR_COUNT; // avg two readings
 }
 
 void countWater()
@@ -153,7 +154,7 @@ void waterResetTotal()
 
 // void calcFlow() {
 //     if (waterPulseCounter != 0) {
-//         float thisDuration = (currentTime - (last250ms + 750)) / 1000;
+//         float thisDuration = (currentTime - (prevLoopStartTime + 750)) / 1000;
 //         // this cycle's cycleDuration in seconds
 //         // Pulse frequency (Hz) = 7.5Q, Q is flow rate in L/min.    (Pulse frequency x 60 min) / 7.5Q = flowrate in L/hour
 //         l_minute = (waterPulseCounter / 7.5) / thisDuration; // divide by 2.5 because this is on a 2.5s timer  // returns vol per minute extrapolated from 2.5s

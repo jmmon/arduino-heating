@@ -173,9 +173,9 @@ public:
 		lcd.createChar(8, customCharDotInsideHouse);
 	}
 
-	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	// Helper functions:
-	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	String formatTimeToString(uint32_t _t)
 	{ // takes seconds
@@ -198,19 +198,23 @@ public:
 			minutes -= 60;
 		}
 
-		return (((hours < 10) ? "0" : "") + String(hours) +
-						((minutes < 10) ? ":0" : ":") + (String(minutes)) +
-						((seconds < 10) ? ":0" : ":") + String(seconds));
+		return (((hours < 10) ? ("0") : ("")) + String(hours) +
+						((minutes < 10) ? (":0") : (":")) + (String(minutes)) +
+						((seconds < 10) ? (":0") : (":")) + String(seconds));
 	}
 
 	String formatHoursWithTenths(int32_t _t)
 	{
-		return String((_t / 3600), 1);
+		return String((_t / 3600.), 1);
 	}
 
-	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	uint32_t getTotalSeconds()
+	{
+		return uint32_t(currentTime / 1000.);
+	}
+	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	// Utility functions:
-	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	void detectButtons()
 	{
@@ -360,9 +364,9 @@ public:
 		digitalWrite(WATER_VALVE_PIN, (isValveClosed) ? HIGH : LOW);
 	}
 
-	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	// Update function:
-	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	// runs every 0.25s
 	void update()
@@ -452,9 +456,9 @@ public:
 		beepOnTime(counter, spacing);
 	}
 
-	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	// Pages:
-	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	void show_Temperature()
 	{
@@ -487,19 +491,19 @@ public:
 		switch (waterTank.displayPercent)
 		{
 		case (100):
-			lcd.print("FF");
+			lcd.print(F("FF"));
 			break;
 		case (0):
-			lcd.print("EE");
+			lcd.print(F("EE"));
 			break;
 		case (101):
-			lcd.print("ER");
+			lcd.print(F("ER"));
 			break;
 		case (255):
-			lcd.print("--");
+			lcd.print(F("--"));
 			break;
 		default:
-			lcd.print((waterTank.displayPercent < 10) ? " " + String(waterTank.displayPercent) : String(waterTank.displayPercent));
+			lcd.print((waterTank.displayPercent < 10) ? (" ") + String(waterTank.displayPercent) : String(waterTank.displayPercent));
 		}
 	}
 
@@ -507,14 +511,15 @@ public:
 	{ // heating cycle page
 		// display cycle info, time/cycleDuration
 		lcd.setCursor(0, 0);															 // line 1
-		lcd.print(pump.getStatus());											 // 3 chars
+		lcd.print(pump.getStatusString());								 // 3 chars
 		lcd.print(F(" "));																 // 4
 		lcd.print(formatTimeToString(pump.cycleDuration)); // 8 chars (12)
 
-		lcd.setCursor(0, 1);																	// bot
-		lcd.print(F("RunTtl"));																// 6
-		lcd.write(4);																					// small colon // 7
-		lcd.print(formatHoursWithTenths(currentTime / 1000)); // 15
+		lcd.setCursor(0, 1);		// bot
+		lcd.print(F("RunTtl")); // 6
+		lcd.write(4);						// small colon // 7
+		const uint32_t totalSeconds = getTotalSeconds();
+		lcd.print(formatHoursWithTenths(int32_t(totalSeconds))); // 15
 	}
 
 	void pagePidInfo()
@@ -541,19 +546,22 @@ public:
 		lcd.setCursor(0, 0); // top
 		lcd.write(6);				 // setpoint (thermometer)
 		lcd.write(4);				 // 8
-		const uint32_t totalSeconds = currentTime / 1000;
-		int32_t difference = pump.accumAbove - (totalSeconds - pump.accumAbove); // positive or negative
-		String hours = formatHoursWithTenths(difference);
-		lcd.print((" ") + ((difference < 0) ? hours : ("+") + hours));
+		const uint32_t totalSeconds = getTotalSeconds();
+		const uint32_t accumBelow = (totalSeconds - pump.accumAbove);
+		const int32_t netAccumAboveTarget = pump.accumAbove - accumBelow; // positive or negative
+		String hours = formatHoursWithTenths(netAccumAboveTarget);
+		lcd.print(F(" "));																							 // TODO: Not working!!
+		lcd.print(((netAccumAboveTarget < 0) ? hours : ("+") + hours)); // TODO: Not working!!
 
 		lcd.setCursor(0, 1);	 // bot
 		lcd.print(F("State")); // 7
 		lcd.write(4);					 // 8
 		lcd.print(pump.state); // 1
-		difference = pump.accumOn - (totalSeconds - pump.accumOn);
-		lcd.print((difference < 0) ? " Off" : "  On");
+		const uint32_t accumOff = (totalSeconds - pump.accumOn);
+		const int32_t netAccumOn = pump.accumOn - accumOff;
+		lcd.print((netAccumOn < 0) ? F(" Off") : F("  On"));
 		lcd.write(4);																																			 // 8
-		lcd.print(formatHoursWithTenths((difference < 0) ? difference * -1 : difference)); // 16
+		lcd.print(formatHoursWithTenths((netAccumOn < 0) ? netAccumOn * -1 : netAccumOn)); // 16
 	}
 
 	void show_Set()
@@ -631,7 +639,7 @@ public:
 		lcd.setCursor(0, 1);
 		lcd.print(F("WtrTtl"));
 		lcd.write(4);
-		lcd.print(totalMilliLitres / 1000, 3);
+		lcd.print(totalMilliLitres / 1000., 3);
 		lcd.print(F(" l"));
 	}
 
@@ -648,12 +656,12 @@ public:
 		lcd.print(F(" "));
 		const uint8_t dayOfWeek = weekday(t); // number!
 		lcd.print(
-				(dayOfWeek == 1) ? "Sun" : (dayOfWeek == 2) ? "Mon"
-															 : (dayOfWeek == 3)		? "Tue"
-															 : (dayOfWeek == 4)		? "Wed"
-															 : (dayOfWeek == 5)		? "Thu"
-															 : (dayOfWeek == 6)		? "Fri"
-																										: "Sat");
+				(dayOfWeek == 1) ? F("Sun") : (dayOfWeek == 2) ? F("Mon")
+																	: (dayOfWeek == 3)	 ? F("Tue")
+																	: (dayOfWeek == 4)	 ? F("Wed")
+																	: (dayOfWeek == 5)	 ? F("Thu")
+																	: (dayOfWeek == 6)	 ? F("Fri")
+																											 : F("Sat"));
 
 		lcd.setCursor(0, 1);
 		lcd.print(day(t));

@@ -57,7 +57,7 @@ DHT dht[4] = {
 // DHTNEW  dhtnew[4] = {downstairs, upstairs, outside, greenhouse};
 
 uint32_t currentTime = 0; // timer
-uint32_t last250ms = 0;		// counters
+uint32_t prevLoopStartTime = 0;		// counters
 uint8_t ms1000ctr = 0;		// or use %????
 uint8_t ms2500ctr = 0;
 

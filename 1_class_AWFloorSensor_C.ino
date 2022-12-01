@@ -9,8 +9,8 @@ private:
 	uint8_t PIN;
 
 public:
-	uint16_t ema = 0;
-	uint16_t lastEma = 0;
+	uint16_t ema = 480; // approximate cold floor reading
+	uint16_t lastEma = 480;
 
 	uint16_t slowEma = 0;
 	uint16_t lastSlowEma = 0;

@@ -623,7 +623,8 @@ public:
 		lcd.write(4);									 // sm colon // 4
 		lcd.print(floorSensor[0].ema); // +3
 		lcd.print(F(":"));
-		lcd.print(floorSensor[1].ema);
+		lcd.print(floorSensor[1].ema); // 11
+		lcd.print(F("     "));
 	}
 
 	void show_WaterFlowCounter()

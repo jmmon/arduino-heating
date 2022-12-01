@@ -1,5 +1,5 @@
-#include <Arduino.h>
-#include <DHT.h>
+//#include <Arduino.h>
+//#include <DHT.h>
 
 class Air_C
 {

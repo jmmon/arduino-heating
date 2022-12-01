@@ -74,13 +74,20 @@ const uint16_t EMA_MULT_PERIODS[3] = {
 // 600 * 2.5s = 1500s EMA =  25m
 // 1800 * 2.5s = 4500s EMA = 75m
 
-const float FLOOR_WARMUP_TEMPERATURE = 580; // 0-1023, NOTE: insulation (cardboard, rugs) will require higher value
-float floorEmaAvg;
-float floorEmaAvgSlow;
+const uint16_t FLOOR_WARMUP_TEMPERATURE = 550; // 0-1023, NOTE: insulation (cardboard, rugs) will require higher value
+float floorEmaAvg = 0;
+float floorEmaAvgSlow = 0;
 bool coldFloor = false;
 
-int tempDispCounter = 5;
-int tempDispCounter2 = 0;
+// for tweaking the setpoint based on the floor reading
+const uint16_t minFloorRead = 550; // the 0 point for this calculation
+const uint8_t maxFloorOffset = 100; // added to above, the maximum for this calculation
+const uint8_t maxTempAdjust100x = 200; // degrees F * 100 to subtract from target temp, scaled by the floor read range
+double floorOffset = 0;
+
+// for the lcd? or for debug?
+uint8_t tempDispCounter = 5;
+uint8_t tempDispCounter2 = 0;
 uint8_t errorCounter1 = 5;
 uint8_t errorCounter2 = 5;
 
@@ -146,7 +153,7 @@ double Output;
 ArduPID ArduPIDController;
 
 // move this to functions?
-uint16_t calcEma(uint16_t reading, uint16_t lastEma, uint16_t days)
+float calcEma(uint16_t reading, uint16_t lastEma, uint16_t days)
 {
 	// ema = (floatSensorReadValue * (2. / (1 + EMA_PERIODS_SHORT)) + lastEma * (1 - (2. / (1 + EMA_PERIODS_SHORT))));
 	return (reading * (2. / (1 + days)) + lastEma * (1 - (2. / (1 + days))));

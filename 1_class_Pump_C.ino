@@ -1,4 +1,4 @@
-#include <Arduino.h>
+//#include <Arduino.h>
 
 // Floor Sensor approximate readings examples
 // ~489/ 518 cold floor
@@ -13,9 +13,9 @@ const uint8_t COLD_FLOOR_PWM_BOOST = 75;
 // const uint8_t STARTING_PHASE_PWM_BOOST = 56; // ({sum(1-10)} == 55) + {1*remaining seconds}
 // const uint8_t STARTING_PHASE_SECONDS = 11; // time allotted for the starting boost
 // const uint8_t STARTING_PHASE_STEP = 10; // starting reduction amount for startingPhaseStepAdjust
-const uint8_t STARTING_PHASE_PWM_BOOST = 36; // ({sum(1-10)} == 55) + {1*remaining seconds}
+const uint8_t STARTING_PHASE_PWM_BOOST = 28; // ({sum(1-10)} == 55) + {1*remaining seconds}
 const uint8_t STARTING_PHASE_SECONDS = 8;		 // time allotted for the starting boost
-const uint8_t STARTING_PHASE_STEP = 8;			 // starting reduction amount for startingPhaseStepAdjust
+const uint8_t STARTING_PHASE_STEP = 7;			 // starting reduction amount for startingPhaseStepAdjust
 uint8_t startingPhaseStepAdjust = 1;
 
 const uint16_t ON_CYCLE_MINIMUM_SECONDS = 180;	 // 3m
@@ -31,6 +31,7 @@ static const uint8_t DELAY_SECONDS = 3;				 // default cycleDuration for delay-s
 const uint8_t EMERGENCY_ON_TRIGGER_OFFSET = 5; // if in 30-min off cycle, if temp drops by this amount off target, start the pump
 
 uint32_t timeRemaining = 0; // Counter for minimum cycle times
+
 
 class Pump_C
 {
@@ -54,14 +55,19 @@ public:
 		return (floorEmaAvg < FLOOR_WARMUP_TEMPERATURE || floorEmaAvgSlow < FLOOR_WARMUP_TEMPERATURE);
 	}
 
-	void setPwm(uint16_t target)
+	// void setPwm(uint16_t target)
+	// {
+	// 	pwm = target >= 255 ? 255 : target;
+	// }
+
+	uint8_t limitPwm(int16_t target)
 	{
-		pwm = target >= 255 ? 255 : target;
+		return target >= 255 ? 255 : target;
 	}
 
-	uint16_t basePwm()
+	uint8_t limitedBasePwm()
 	{
-		return (coldFloor) ? ON_PHASE_BASE_PWM + COLD_FLOOR_PWM_BOOST : ON_PHASE_BASE_PWM;
+		return limitPwm((coldFloor) ? ON_PHASE_BASE_PWM + COLD_FLOOR_PWM_BOOST : ON_PHASE_BASE_PWM);
 	}
 
 	String getStatusString()
@@ -89,10 +95,11 @@ public:
 		// check if floor is cold
 		coldFloor = isCold();
 		// calculate pwm
-		uint16_t nextPwm = ON_PHASE_BASE_PWM + STARTING_PHASE_PWM_BOOST; // 181
+		uint8_t nextPwm = limitPwm(ON_PHASE_BASE_PWM + STARTING_PHASE_PWM_BOOST); // 181
 		// add on COLD_FLOOR_PWM_BOOST if coldFloor
-		nextPwm += (coldFloor && (COLD_FLOOR_PWM_BOOST + nextPwm) > nextPwm) ? COLD_FLOOR_PWM_BOOST : 0;
-		setPwm(nextPwm);
+		nextPwm = limitPwm((coldFloor && (COLD_FLOOR_PWM_BOOST + nextPwm) > nextPwm) ? nextPwm + COLD_FLOOR_PWM_BOOST : nextPwm);
+		//setPwm(nextPwm);
+		pwm = nextPwm;
 	}
 
 	void stop(bool skipTimer = false)
@@ -101,7 +108,8 @@ public:
 		coldFloor = isCold();
 		state = 0;
 		resetDuration();
-		setPwm(0);
+		pwm = 0;
+		//setPwm(0);
 		timeRemaining = (skipTimer) ? 0 : OFF_CYCLE_MINIMUM_SECONDS; // 30 minute wait (except on init)
 	}
 
@@ -116,15 +124,19 @@ public:
 		state = 1;
 		// turn off coldFloor if floor stays warm for a bit
 		coldFloor = isCold();
-		uint16_t nextPwm = basePwm();
-		setPwm(nextPwm);
+		// uint16_t nextPwm = limitedBasePwm();
+		// setPwm(nextPwm);
+		pwm = limitedBasePwm();
 	}
 
 	void stepDownPwm()
 	{ // during startup phase
-		uint16_t nextPwm = basePwm();
-		nextPwm = ((pwm - startingPhaseStepAdjust) >= (nextPwm)) ? pwm - startingPhaseStepAdjust : nextPwm;
-		setPwm(nextPwm);
+		uint8_t nextPwm = limitedBasePwm();
+
+		nextPwm = limitPwm(((pwm - startingPhaseStepAdjust) >= (nextPwm)) ? pwm - startingPhaseStepAdjust : nextPwm);
+
+		pwm = nextPwm;
+		//setPwm(nextPwm);
 
 		if (startingPhaseStepAdjust - 1 >= 1)
 			startingPhaseStepAdjust -= 1;
@@ -138,10 +150,15 @@ public:
 		{
 			pulsePwmCounter = 0;
 
-			uint16_t pulsePwm = ON_PHASE_BASE_PWM + PULSE_PWM_AMOUNT;
-			uint16_t nextPwm = pulsePwm >= pwm ? pulsePwm : pwm;
-			setPwm(nextPwm);
+			uint8_t pulsePwm = limitPwm(ON_PHASE_BASE_PWM + PULSE_PWM_AMOUNT);
+			uint8_t nextPwm = limitPwm(pulsePwm >= pwm ? pulsePwm : pwm);
+			pwm = nextPwm;
+			//setPwm(nextPwm);
 		}
+	}
+
+	bool isAboveAdjustedSetpoint() {
+		return Input >= Setpoint - floorOffset;
 	}
 
 	void update()
@@ -155,8 +172,8 @@ public:
 			accumOn++;
 
 		// time spent above setpoint
-		bool isAboveTargetTemperature = Input >= Setpoint;
-		if (isAboveTargetTemperature)
+		//bool isAboveTargetTemperature = Input >= Setpoint;
+		if (isAboveAdjustedSetpoint())
 			accumAbove++;
 
 		bool pwmHasChanged = checkCycle();
@@ -203,22 +220,17 @@ public:
 		else
 		{
 			// NO timer restriction (extended phase)
-
-			// taking into account the floor stored heawt
-			int16_t floorRange = (floorEmaAvg - 500);
-			// limit the range
-			floorRange = (floorRange < 0) ? 0 : (floorRange > 150) ? 150
-																														 : floorRange;
-			double floorOffset = floorRange * 2 / 100; // so range is 0-3 degrees
-			bool shouldPumpBeOn = Input < (Setpoint - floorOffset);
+			// if floor is warm, floorOffset increases, so target temperature decreases
+			//bool shouldPumpBeOn = Input < adjustedSetpoint;
 
 			// bool shouldPumpBeOn = Output > MIDPOINT;
 
+// 23952 : 1221
 			if (state == 0)
 			{ // offContinued() && check after delayedStart
 				bool isPumpOn = pwm > 0;
 
-				if (shouldPumpBeOn)
+				if (!isAboveAdjustedSetpoint())
 					if (isPumpOn)
 						runOn();
 					else
@@ -229,7 +241,7 @@ public:
 
 			else if (state == 1)
 			{ // onContinued();
-				if (!shouldPumpBeOn)
+				if (isAboveAdjustedSetpoint())
 					stop(); // most common stop trigger
 				else
 				{
@@ -245,7 +257,7 @@ public:
 		}
 
 		// return true if changed
-		return !(pwm == lastPwm);
+		return (pwm != lastPwm);
 	}
 
 } pump = Pump_C();

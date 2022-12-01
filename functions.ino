@@ -1,4 +1,4 @@
-#include <Arduino.h>
+//#include <Arduino.h>
 
 void airSensorNanCheck()
 {
@@ -79,6 +79,19 @@ void airSensorOutlierCheck()
 	}
 }
 
+double calcFloorBatteryCapacity() {
+// calculate temperature offset to account for stored floor heat
+	// taking into account the floor stored heat
+	int16_t floorRange = floorEmaAvg - minFloorRead;
+	// limit the range 0-150
+	floorRange = (floorRange < 0) ? 0 : (floorRange > maxFloorOffset) ? maxFloorOffset
+																													: floorRange;
+	// range 0-150 * 100 / max offset of 150 == percentage of 0~100
+	uint8_t floorRangePercent = uint8_t(floorRange * 100. / maxFloorOffset);
+	// multiply ratio by maxTempAdjust to get the total offset
+	return floorRangePercent * maxTempAdjust100x / 10000.; 
+}
+
 void updateTEMP()
 {
 	// floor temp stuff
@@ -103,6 +116,9 @@ void updateTEMP()
 	}
 	floorEmaAvg = (floorSensor[0].ema + floorSensor[1].ema) / FLOOR_SENSOR_COUNT;							// avg two readings
 	floorEmaAvgSlow = (floorSensor[0].slowEma + floorSensor[1].slowEma) / FLOOR_SENSOR_COUNT; // avg two readings
+
+	// the warmer the floor, the higher this will be. Setpoint - floorOffset == target temperature
+	floorOffset = calcFloorBatteryCapacity();
 
 	// air temp stuff
 	for (uint8_t i = 0; i < AIR_SENSOR_COUNT; i++)

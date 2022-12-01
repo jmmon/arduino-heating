@@ -1,6 +1,6 @@
-#include <Arduino.h>
-#include <LiquidCrystal_I2C.h>
-#include <TimeLib.h>
+//#include <Arduino.h>
+//#include <LiquidCrystal_I2C.h>
+//#include <TimeLib.h>
 
 const byte customCharInside[8] = { // "inside"
 		B00000,
@@ -182,17 +182,17 @@ public:
 		// get base time from seconds count
 		uint16_t hours = _t / 3600;
 		_t -= (hours * 3600);
-		uint16_t minutes = _t / 60;
-		_t -= (minutes * 60);
-		uint16_t seconds = _t;
+		uint8_t minutes = _t / 60;
+		//_t -= (minutes * 60);
+		uint8_t seconds = _t % 60;
 
 		// rollover if necessary
-		while (seconds >= 60)
+		if (seconds >= 60)
 		{
 			minutes += 1;
 			seconds -= 60;
 		}
-		while (minutes >= 60)
+		if (minutes >= 60)
 		{
 			hours += 1;
 			minutes -= 60;
@@ -518,8 +518,7 @@ public:
 		lcd.setCursor(0, 1);		// bot
 		lcd.print(F("RunTtl")); // 6
 		lcd.write(4);						// small colon // 7
-		const uint32_t totalSeconds = getTotalSeconds();
-		lcd.print(formatHoursWithTenths(int32_t(totalSeconds))); // 15
+		lcd.print(formatHoursWithTenths(getTotalSeconds())); // 15
 	}
 
 	void pagePidInfo()

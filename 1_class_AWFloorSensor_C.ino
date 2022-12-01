@@ -1,6 +1,6 @@
-#include <Arduino.h>
+//#include <Arduino.h>
 
-const uint16_t FLOOR_EMA_DAYS = 10;				// 10 readings EMA (20s)
+const uint8_t FLOOR_EMA_DAYS = 10;				// 10 readings EMA (20s)
 const uint16_t FLOOR_EMA_DAYS_SLOW = 300; // 300 readings EMA (600s)
 
 class FloorSensor_C
@@ -23,7 +23,7 @@ public:
 
 	uint16_t readTemp(uint8_t loops = 10)
 	{
-		uint32_t val = 0;
+		uint16_t val = 0;
 
 		for (uint8_t z = 0; z < loops; z++)
 			val += analogRead(PIN);

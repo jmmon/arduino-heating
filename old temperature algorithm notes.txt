@@ -82,3 +82,21 @@ Or another way:
 	Else if it's a little lower than previous, it's decreasing slowly
 	    So if moving towards 0, move trend 8x?
 	    else if moving away from 0, move trend 1x
+
+
+
+
+
+So: I need to take into account the heat of the floor (the heat releasing over time).
+It should also depend on the temperature trend: if the trend is slow, the floor 'battery' should be considered to not last as long (or not give enough 'push' up on the temperature)
+
+ i.e. if floor is warm, and temp rises really quickly, that means we need to cut the pump off early.
+    But if temp rose slowly, we might need to cut the pump off only a little before.
+
+    And/or maybe some ratio of floor reading : reduction in target temperature
+    maybe range ?? 500-650 => 0-3 deg F? Linear relationship, if floor is 650+ then we need to only reach setpoint - 3 and then the pump switches to off. This means that 
+        1. I need to make sure the pump doesn't turn on if dropping 3 deg; I think I have a setting there for emergency on temperature drop
+	2. as the floor cools, the "feels like" temperature will drop so the pump will want to turn back on after the off cycle timer ends.
+	    Need to see how it goes and adjust if it just cycles on and off (3m and 30m) repeatedly
+
+	

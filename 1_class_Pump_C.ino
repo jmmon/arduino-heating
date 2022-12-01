@@ -5,13 +5,17 @@
 // 590/632 - 32m in to on-cycle
 // 622/649 floor (warm but not hot)
 
-const uint8_t ON_PHASE_BASE_PWM = 255;
+//const uint8_t ON_PHASE_BASE_PWM = 255;
+const uint8_t ON_PHASE_BASE_PWM = 155;
 const uint8_t COLD_FLOOR_PWM_BOOST = 75;
 
 // PWM boost during motor start
-const uint8_t STARTING_PHASE_PWM_BOOST = 56; // ({sum(1-10)} == 55) + {1*remaining seconds}
-const uint8_t STARTING_PHASE_SECONDS = 11;
-const uint8_t STARTING_PHASE_STEP = 10; // start amt for startingPhaseStepAdjust
+// const uint8_t STARTING_PHASE_PWM_BOOST = 56; // ({sum(1-10)} == 55) + {1*remaining seconds}
+// const uint8_t STARTING_PHASE_SECONDS = 11; // time allotted for the starting boost
+// const uint8_t STARTING_PHASE_STEP = 10; // starting reduction amount for startingPhaseStepAdjust
+const uint8_t STARTING_PHASE_PWM_BOOST = 36; // ({sum(1-10)} == 55) + {1*remaining seconds}
+const uint8_t STARTING_PHASE_SECONDS = 8; // time allotted for the starting boost
+const uint8_t STARTING_PHASE_STEP = 8; // starting reduction amount for startingPhaseStepAdjust
 uint8_t startingPhaseStepAdjust = 1;
 
 const uint16_t ON_CYCLE_MINIMUM_SECONDS = 180;	 // 3m
@@ -176,7 +180,7 @@ public:
 				bool shouldNeedMaxOutput = Output == outputMax;
 				bool isTempBelowMaximumOffset = Input <= Setpoint - EMERGENCY_ON_TRIGGER_OFFSET;
 
-				if (isTempBelowMaximumOffset || shouldNeedMaxOutput)
+				if (isTempBelowMaximumOffset || shouldNeedMaxOutput )
 					start();
 			}
 
@@ -198,10 +202,20 @@ public:
 		else
 		{
 			// NO timer restriction (extended phase)
-			bool shouldPumpBeOn = Output > MIDPOINT;
+
+			// taking into account the floor stored heawt
+			int16_t floorRange = (floorEmaAvg - 500);
+			// limit the range
+			floorRange = (floorRange < 0) ? 0 : (floorRange > 150) ? 150 : floorRange;
+			double floorOffset = floorRange * 2 / 100; // so range is 0-3 degrees
+			bool shouldPumpBeOn = Input < (Setpoint - floorOffset); 
+
+			//bool shouldPumpBeOn = Output > MIDPOINT;
+
 			if (state == 0)
 			{ // offContinued() && check after delayedStart
 				bool isPumpOn = pwm > 0;
+
 				if (shouldPumpBeOn)
 					if (isPumpOn)
 						runOn();

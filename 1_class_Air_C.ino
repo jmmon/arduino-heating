@@ -56,6 +56,7 @@ public:
 		return (weighted) ? (WEIGHT * currentEMA[0]) : currentEMA[0];
 	}
 
+	// update runs every 2.5s
 	updateRecords()
 	{
 		// update highest / lowest

@@ -151,12 +151,14 @@ private:
 	uint8_t alarmCounter = 0; // constantly counts up, so it's okay for it to cycle back to 0
 	uint16_t alarmCountdown = 0;
 
-	String lastLine1 = '';
-	String lastLine2 = '';
+	// char *lastLine1[16] = {'', '','', '','', '','', '','', '','', '','', '','', ''};
+	// char *lastLine2[16] = {'', '','', '','', '','', '','', '','', '','', '','', ''};
 
-	String currentLine1 = '';
-	String currentLine2 = '';
+	// char *currentLine1[16] = {'\x01', '\x02','\x03', '\x04','\x05', '\x06','\x07', '\x08','', '','', '','', '','', ''};
+	// char *currentLine2[16] = {'', '','', '','', '','', '','', '','', '','', '','', ''};
 
+	//String curLine = '\x01\x02\x03\x04\x05\x06\x07\x08';
+	String test = "Test\004\001\008";
 public:
 	Display_c()
 	{ // constructor
@@ -177,6 +179,7 @@ public:
 		lcd.createChar(6, customCharSetpoint);
 		lcd.createChar(7, customCharSunAndHouse);
 		lcd.createChar(8, customCharDotInsideHouse);
+
 	}
 
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -276,12 +279,20 @@ public:
 		// show (and hold onto) our set page
 		lcd.clear();
 		show_Set();
+		//show_Test();
 		holdSetPage = true;
 		// check if needs to run
 		pump.checkAfter(); // default 3 seconds
 
 		// save for next time
 		lastButtonRead = buttonRead;
+	}
+
+	void show_Test() {
+		lcd.setCursor(0, 0); // top
+		//lcd.print('\x01' + '\x02' + '\x03' + '\x04' + '\x05' + '\x06' + '\x07' + '\x08');
+		test = "testing";
+		lcd.print(test);
 	}
 
 	void printCurrentPage()
@@ -336,7 +347,8 @@ public:
 		// render lcdPageSet if locked to that page; else refresh the page
 		if (holdSetPage)
 		{
-			show_Set();
+			//show_Set();
+			show_Test();
 
 			lcd.setCursor(11, 0); // top right
 			lcd.print(F("H"));		// draw droplet

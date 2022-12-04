@@ -151,6 +151,12 @@ private:
 	uint8_t alarmCounter = 0; // constantly counts up, so it's okay for it to cycle back to 0
 	uint16_t alarmCountdown = 0;
 
+	String lastLine1 = '';
+	String lastLine2 = '';
+
+	String currentLine1 = '';
+	String currentLine2 = '';
+
 public:
 	Display_c()
 	{ // constructor
@@ -467,9 +473,9 @@ public:
 		lcd.write(8); // inside icon //1
 		lcd.print(Input, 1);
 		lcd.print(F(" "));									// 6
-		lcd.print(air[0].currentEMA[0], 1); // 5
+		lcd.print(air[0].getTempEma(), 1); // 5
 		lcd.print(F("/"));									// 6
-		lcd.print(air[1].currentEMA[0], 1); // 10
+		lcd.print(air[1].getTempEma(), 1); // 10
 		lcd.write(1);												// degrees F // 11
 
 		// second line

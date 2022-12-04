@@ -67,10 +67,16 @@ press+hold => enable/disable page from the view cycle
 
 
 
-Dec 1 2022: BUGS:
+Dec 4th:
 
-	cycle time works, but
-	RunTtl time does not display,
+	Idea: could change the LCD pages so it compiles a string and then prints it
+		That may reduce size and could diff check on last vs next strings and only print when changed?\
+	Can't do this with custom icons probably..?
+	\xhh
+	where hh == hexadecimal value of special character
+	
 
-	Accum On does not display (only shows a +)
-	State: 0 Off: [blank]
+	Water level is a bit behind where it should be, wonder if I could tweak the numbers better. 
+		Seems to be behind by ~7+%!!!
+
+	Water level does not beep once hitting full!!!

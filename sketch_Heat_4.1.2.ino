@@ -1,4 +1,4 @@
-#include <Arduino.h>
+ #include <Arduino.h>
 #include <TimeLib.h>
 
 #include <Wire.h>
@@ -80,8 +80,8 @@ float floorEmaAvgSlow = 0;
 bool coldFloor = false;
 
 // for tweaking the setpoint based on the floor reading
-const uint16_t minFloorRead = 550; // the 0 point for this calculation
-const uint8_t maxFloorOffset = 100; // added to above, the maximum for this calculation
+const uint16_t minFloorRead = 525; // the 0 point for this calculation
+const uint8_t maxFloorOffset = 150; // added to above, the maximum for this calculation
 const uint8_t maxTempAdjust100x = 200; // degrees F * 100 to subtract from target temp, scaled by the floor read range
 double floorOffset = 0;
 

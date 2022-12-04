@@ -32,7 +32,7 @@ public:
 	//            WEIGHT = w;
 	//        }
 
-	readTemp()
+	void readTemp()
 	{
 		// read temp/humid
 		tempC = sensor->readTemperature();
@@ -70,8 +70,6 @@ public:
 		for (uint8_t i = 0; i < 3; i++)
 		{ // save as lastEMA before updating the currentEMA
 			lastEMA[i] = lastEMA[i] == 0 ? tempF : currentEMA[i];
-
-			// currentEMA[i] = tempF * EMA_MULT[i] + lastEMA[i] * (1 - EMA_MULT[i]);
 			currentEMA[i] = calcEma(tempF, lastEMA[i], EMA_MULT_PERIODS[i]);
 		}
 	};

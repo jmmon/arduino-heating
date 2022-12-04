@@ -178,7 +178,7 @@ public:
 
 		bool pwmHasChanged = checkCycle();
 
-		if (pwmHasChanged)
+		//if (pwmHasChanged)
 			analogWrite(HEAT_PUMP_PIN, pwm);
 	}
 
@@ -257,7 +257,7 @@ public:
 		}
 
 		// return true if changed
-		return (pwm != lastPwm);
+		return pwm != lastPwm;
 	}
 
 } pump = Pump_C();

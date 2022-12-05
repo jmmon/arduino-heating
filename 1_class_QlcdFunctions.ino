@@ -525,12 +525,14 @@ public:
 		// first line
 		currentLine1 = "\008" + limitDecimals(Input, 1) + " " + limitDecimals(air[0].getTempEma(), 1) + "/" + limitDecimals(air[1].getTempEma(), 1) + "\001";
 		currentLine2 = "\006" + limitDecimals(Setpoint, 1) + "\001 " + "\x7e" + limitDecimals(Output, 2);
-		print_lines(currentLine1, currentLine2);
+
+		//if (previousLine1 != currentLine1 || previousLine2 != currentLine2) // for after all pages are switched over...
+			print_lines(currentLine1, currentLine2);
 
 		writeWaterLevel(); // prints on bottom right
+		previousLine1 = currentLine1;
+		previousLine2 = currentLine2;
 	}
-
-
 
 	void writeWaterLevel( uint8_t lineNum = 1)
 	{

@@ -88,8 +88,8 @@ double calcFloorBatteryCapacity() {
 																													: floorRange;
 	// range 0-150 * 100 / max offset of 150 == percentage of 0~100
 	uint8_t floorRangePercent = uint8_t(floorRange * 100. / maxFloorOffset);
-	// multiply ratio by maxTempAdjust to get the total offset
-	return floorRangePercent * maxTempAdjust100x / 10000.; 
+	// multiply ratio by maxTempAdjust to get the total offset, subtract 1  for funsies, so cold floor feels like lower temp
+	return (floorRangePercent * maxTempAdjust100x / 10000.) - 1; 
 }
 
 void updateTEMP()

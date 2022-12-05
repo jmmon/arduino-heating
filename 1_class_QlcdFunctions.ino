@@ -52,7 +52,7 @@ const byte customCharDroplet[8] = { // water droplet
 		B11111,
 		B01110};
 
-const byte customCharSetpoint[8] = { // thermometer with indicator
+const byte customCharsetPoint[8] = { // thermometer with indicator
 		B00000,
 		B01000,
 		B11001,
@@ -151,18 +151,12 @@ private:
 	uint8_t alarmCounter = 0; // constantly counts up, so it's okay for it to cycle back to 0
 	uint16_t alarmCountdown = 0;
 
-	// char *lastLine1[16] = {'', '','', '','', '','', '','', '','', '','', '','', ''};
-	// char *lastLine2[16] = {'', '','', '','', '','', '','', '','', '','', '','', ''};
-
-	// char *currentLine1[16] = {'\x01', '\x02','\x03', '\x04','\x05', '\x06','\x07', '\x08','', '','', '','', '','', ''};
-	// char *currentLine2[16] = {'', '','', '','', '','', '','', '','', '','', '','', ''};
-
-	//String curLine = '\x01\x02\x03\x04\x05\x06\x07\x08';
-	String test = "Test\004\001\008";
 	String currentLine1 = "";
 	String currentLine2 = "";
 	String previousLine1 = "";
 	String previousLine2 = "";
+	// char charLine1[16] = {"1", "1", "1", "1","1", "1", "1", "1","1", "1", "1", "1","1", "1", "1", "1",};
+	// char charLine2[16] = {"1", "1", "1", "1","1", "1", "1", "1","1", "1", "1", "1","1", "1", "1", "1",};
 
 public:
 	Display_c()
@@ -181,7 +175,7 @@ public:
 		lcd.createChar(3, customCharOutside);
 		lcd.createChar(4, customCharSmColon);
 		lcd.createChar(5, customCharDroplet);
-		lcd.createChar(6, customCharSetpoint);
+		lcd.createChar(6, customCharsetPoint);
 		lcd.createChar(7, customCharSunAndHouse);
 		lcd.createChar(8, customCharDotInsideHouse);
 
@@ -279,11 +273,11 @@ public:
 		}
 
 		// apply the changes to setpoint
-		Setpoint += double(SETPOINT_ADJ_PER_TICK * changeTstatByAmount);
+		setPoint += double(SETPOINT_ADJ_PER_TICK * changeTstatByAmount);
 
 		// show (and hold onto) our set page
 		lcd.clear();
-		show_Set();
+		drawSetPage();
 		holdSetPage = true;
 		// check if needs to run
 		pump.checkAfter(); // default 3 seconds
@@ -306,23 +300,23 @@ public:
 		switch (currentPage)
 		{
 		case (0):
-			show_Temperature();
+			drawTemperaturePage();
 			break;
 
 		case (1):
-			show_PumpCycleInfo();
+			drawPumpCycleInfoPage();
 			break;
 
 		case (2):
-			show_Temperature();
+			drawTemperaturePage();
 			break;
 
 		case (3):
-			show_AccumTime();
+			drawAccumTimePage();
 			break;
 
 		case (4):
-			show_WaterFilling();
+			drawWaterFillingPage();
 			break;
 
 		// currentPage > highest ? rollover to 0 and rerun
@@ -351,11 +345,11 @@ public:
 		// render lcdPageSet if locked to that page; else refresh the page
 		if (holdSetPage)
 		{
-			show_Set();
+			drawSetPage();
 			//show_Test();
 
 			lcd.setCursor(11, 0); // top right
-			lcd.print(F("H"));		// draw droplet
+			lcd.print(F("H"));		// countdown after tstat change
 			lcd.print(pump.state);
 			lcd.print(F(":"));
 			lcd.print(timeRemaining);
@@ -408,7 +402,7 @@ public:
 		{
 			// lcd.setCursor(13, 0); // top right
 			// lcd.write(5);					// draw droplet
-			writeWaterLevel();		// draw waterLevel
+			drawWaterLevel();		// draw waterLevel
 		}
 
 		if (waterTank.filling)
@@ -482,14 +476,21 @@ public:
 	// Pages:
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-	void print_lines(String line1, String line2) {
+	void drawLines(String line1, String line2) {
 		lcd.setCursor(0,0);
 		lcd.print(line1);
 		lcd.setCursor(0, 1);
 		lcd.print(line2);
 	}
 
-	void print_extra(String string, uint8_t slot, uint8_t lineNum) {
+	// void drawChars(char line1[], char line2[]) {
+	// 	lcd.setCursor(0,0);
+	// 	lcd.print(line1);
+	// 	lcd.setCursor(0, 1);
+	// 	lcd.print(line2);
+	// }
+
+	void drawExtra(String string, uint8_t slot, uint8_t lineNum) {
 		lcd.setCursor(slot, lineNum);
 		lcd.print(string);
 	}
@@ -520,189 +521,182 @@ public:
 		return (negative ? "-" : "") + String(mainInteger) + "." + decimal;
 	}
 
-	void show_Temperature()
+	void drawTemperaturePage()
 	{
-		// first line
-		currentLine1 = "\008" + limitDecimals(Input, 1) + " " + limitDecimals(air[0].getTempEma(), 1) + "/" + limitDecimals(air[1].getTempEma(), 1) + "\001";
-		currentLine2 = "\006" + limitDecimals(Setpoint, 1) + "\001 " + "\x7e" + limitDecimals(Output, 2);
-
-		//if (previousLine1 != currentLine1 || previousLine2 != currentLine2) // for after all pages are switched over...
-			print_lines(currentLine1, currentLine2);
-
-		writeWaterLevel(); // prints on bottom right
 		previousLine1 = currentLine1;
 		previousLine2 = currentLine2;
+		
+		currentLine1 = "\008" + limitDecimals(weightedAirTemp, 1) + " " + limitDecimals(air[0].getTempEma(), 1) + "/" + limitDecimals(air[1].getTempEma(), 1) + "\001";
+		currentLine2 = "\006" + limitDecimals(setPoint, 1) + "\001       ";
+		// currentLine2 = "\006" + limitDecimals(setPoint, 1) + "\001 " + "\x7e" + limitDecimals(Output, 2);
+
+		if (previousLine1 != currentLine1 || previousLine2 != currentLine2) // for after all pages are switched over...
+			drawLines(currentLine1, currentLine2);
+
+		drawWaterLevel(); // prints on bottom right
 	}
 
-	void writeWaterLevel( uint8_t lineNum = 1)
+	void drawWaterLevel( uint8_t lineNum = 1)
 	{
 		String extra = "\005" + waterTank.getDisplayString();
-		print_extra(extra, 13, lineNum);
+		drawExtra(extra, 13, lineNum);
 	}
 
-	void show_PumpCycleInfo()
-	{ // heating cycle page
-		// display cycle info, time/cycleDuration
-		lcd.setCursor(0, 0);															 // line 1
-		lcd.print(pump.getStatusString());								 // 3 chars
-		lcd.print(F(" "));																 // 4
-		lcd.print(formatTimeToString(pump.cycleDuration)); // 8 chars (12)
-
-		lcd.setCursor(0, 1);		// bot
-		lcd.print(F("RunTtl")); // 6
-		lcd.write(4);						// small colon // 7
-		lcd.print(formatHoursWithTenths(getTotalSeconds())); // 15
-	}
-
-	void pagePidInfo()
+	// display cycle info, time/cycleDuration
+	void drawPumpCycleInfoPage()
 	{
-		lcd.setCursor(0, 0);
-		lcd.print(F("Kp"));
-		lcd.write(4);
-		lcd.print(Kp, 0);
-		lcd.print(F(" Ki"));
-		lcd.write(4);
-		lcd.print(Ki, 4); // space for 8
+		previousLine1 = currentLine1;
+		previousLine2 = currentLine2;
 
-		lcd.setCursor(0, 1);
-		lcd.print(F("Kd"));
-		lcd.write(4);
-		lcd.print(Kd, 0);
-		lcd.print(F(" Outpt"));
-		lcd.write(4);
-		lcd.print(Output);
+		currentLine1 = pump.getStatusString() + " " + formatTimeToString(pump.cycleDuration);
+		currentLine2 = "RunTtl\004" + formatHoursWithTenths(getTotalSeconds());
+
+		if (previousLine1 != currentLine1 || previousLine2 != currentLine2) // for after all pages are switched over...
+			drawLines(currentLine1, currentLine2);
+
+		// drawWaterLevel(); // prints on bottom right
 	}
 
-	void show_AccumTime()
+
+	void drawAccumTimePage()
 	{											 // Total time and time spent with pump on/off
-		lcd.setCursor(0, 0); // top
-		lcd.write(6);				 // setpoint (thermometer)
-		lcd.write(4);				 // 8
 		const uint32_t totalSeconds = getTotalSeconds();
 		const uint32_t accumBelow = (totalSeconds - pump.accumAbove);
 		const int32_t netAccumAboveTarget = pump.accumAbove - accumBelow; // positive or negative
-		String hours = formatHoursWithTenths(netAccumAboveTarget);
-		lcd.print(F(" "));																							 // TODO: Not working!!
-		lcd.print(((netAccumAboveTarget < 0) ? hours : ("+") + hours)); // TODO: Not working!!
+		const String hours = formatHoursWithTenths(netAccumAboveTarget);
 
-		lcd.setCursor(0, 1);	 // bot
-		lcd.print(F("State")); // 7
-		lcd.write(4);					 // 8
-		lcd.print(pump.state); // 1
 		const uint32_t accumOff = (totalSeconds - pump.accumOn);
 		const int32_t netAccumOn = pump.accumOn - accumOff;
-		lcd.print((netAccumOn < 0) ? F(" Off") : F("  On"));
-		lcd.write(4);																																			 // 8
-		lcd.print(formatHoursWithTenths((netAccumOn < 0) ? netAccumOn * -1 : netAccumOn)); // 16
+
+		previousLine1 = currentLine1;
+		previousLine2 = currentLine2;
+
+		currentLine1 = "\006\004 " + String((netAccumAboveTarget < 0) ? hours : "+" + hours);
+		currentLine2 = "State\004" + String(pump.state) + (netAccumOn < 0 ? " Off" : "  On") + "\004" + formatHoursWithTenths((netAccumOn < 0) ? netAccumOn * -1 : netAccumOn);
+
+		if (previousLine1 != currentLine1 || previousLine2 != currentLine2) // for after all pages are switched over...
+			drawLines(currentLine1, currentLine2);
+
+		// drawWaterLevel(); // prints on bottom right
+
 	}
 
-	void show_Set()
+	void drawSetPage()
 	{													// Set Temperature page
-		lcd.setCursor(0, 0);		// top
-		lcd.print(F("Temp"));		// 6
-		lcd.write(4);						// sm colon  // 7
-		lcd.print(Input, 1);		// 11
-		lcd.write(1);						// Replaces "*F" // 12
-		lcd.print(F("      ")); // 16
+		previousLine1 = currentLine1;
+		previousLine2 = currentLine2;
 
-		lcd.setCursor(0, 1); // bot
-		lcd.print(F("   ")); // 3
-		lcd.write(6);
-		lcd.print(Setpoint, 1); // 6
-		lcd.write(1);						// degrees F // 7
-		lcd.print(" ");
-		// lcd.write(127); //pointing left // 9 // 7
-		lcd.write(126); // pointing right
-		lcd.print(Output, 2);
+		currentLine1 = "Temp\004" + limitDecimals(weightedAirTemp, 1) + "\001      ";
+		currentLine2 = "   \006" + limitDecimals(setPoint, 1) + "        "; 
+		// currentLine2 = "   \006" + limitDecimals(setPoint, 1) + "\001\x7e" + String(Output); 
+
+		if (previousLine1 != currentLine1 || previousLine2 != currentLine2) // for after all pages are switched over...
+			drawLines(currentLine1, currentLine2);
+
+		// drawWaterLevel(); // prints on bottom right
+
 	}
 
 	void show_Greenhouse()
 	{ // Show greenhouse and exterior sensor readings
-		lcd.setCursor(0, 0);
-		lcd.print(F("GH"));
-		lcd.write(4);												// sm colon
-		lcd.print(air[3].currentEMA[0], 1); // 7
-		lcd.write(1);
-		lcd.print(F(" "));					// 9
-		lcd.print(air[3].humid, 1); // 13
-		lcd.print(F("%  "));				// 16
+		previousLine1 = currentLine1;
+		previousLine2 = currentLine2;
 
-		lcd.setCursor(0, 1);
-		lcd.print(F(" "));
-		lcd.write(7); // outside
-		lcd.print(F(" "));
-		lcd.print(air[2].currentEMA[0], 1); // 7
-		lcd.write(1);
-		lcd.print(F(" "));					// 9
-		lcd.print(air[2].humid, 1); // 13
-		lcd.print(F("%  "));				// 16
+		currentLine1 = "GH\004" + limitDecimals(air[3].currentEMA[0], 1) + "\001 " + limitDecimals(air[3].humid, 1) + "%  ";
+		currentLine2 = " \007 " + limitDecimals(air[2].currentEMA[0], 1) + "\001 " + limitDecimals(air[2].humid, 1) + "%  ";
+
+		if (previousLine1 != currentLine1 || previousLine2 != currentLine2) // for after all pages are switched over...
+			drawLines(currentLine1, currentLine2);
+
+		// drawWaterLevel(); // prints on bottom right
+
 	}
 
-	void show_WaterFilling()
+	void drawWaterFillingPage()
 	{											 // Water Filling Temp Page
-		lcd.setCursor(0, 0); // top
-		lcd.write(5);
-		lcd.print(waterTank.ema); // 4
-		lcd.print(F(":"));
-		lcd.print(waterTank.slowEma); // 8
-		lcd.print(F(" "));
-		lcd.write(126); // pointing right
-		lcd.print((waterTank.diffEma < 10) ? F("  ") : F(" "));
-		lcd.print(waterTank.diffEma); // 13
+		previousLine1 = currentLine1;
+		previousLine2 = currentLine2;
 
-		lcd.setCursor(0, 1); // top
-		lcd.print(F("Flr"));
-		lcd.write(4);									 // sm colon // 4
-		lcd.print(floorSensor[0].ema); // +3
-		lcd.print(F(":"));
-		lcd.print(floorSensor[1].ema); // 11
-		lcd.print(F("     "));
+		currentLine1 = "\005" + String(waterTank.ema) + ":\x7e" + (waterTank.diffEma < 10 ? "  " : " ") + String(waterTank.diffEma);
+		currentLine2 = "Flr\004" + String(floorSensor[0].ema) + ":" + String(floorSensor[1].ema) + "     ";
+
+		if (previousLine1 != currentLine1 || previousLine2 != currentLine2) // for after all pages are switched over...
+			drawLines(currentLine1, currentLine2);
+
+		// drawWaterLevel(); // prints on bottom right
+
 	}
 
-	void show_WaterFlowCounter()
-	{
-		// flow rate
-		lcd.setCursor(0, 0);
-		lcd.print(F("WtrRate"));
-		lcd.write(4);
-		lcd.print(flowRate, 2);
-		lcd.print(F(" l/m"));
+	// void show_WaterFlowCounter()
+	// {
+	// 	// flow rate
 
-		// total water use
-		lcd.setCursor(0, 1);
-		lcd.print(F("WtrTtl"));
-		lcd.write(4);
-		lcd.print(totalMilliLitres / 1000., 3);
-		lcd.print(F(" l"));
-	}
+		// previousLine1 = currentLine1;
+		// previousLine2 = currentLine2;
 
-	void show_Time()
-	{
-		t = now(); // update time when this is called!!
-		lcd.setCursor(0, 0);
-		lcd.print((int(hour(t)) < 10) ? F("0") : F(""));
-		lcd.print(hour(t));
-		lcd.print((int(minute(t)) < 10) ? F(":0") : F(":"));
-		lcd.print(minute(t));
-		lcd.print((int(second(t)) < 10) ? F(":0") : F(":"));
-		lcd.print(second(t)); // takes 8 chars
-		lcd.print(F(" "));
-		const uint8_t dayOfWeek = weekday(t); // number!
-		lcd.print(
-				(dayOfWeek == 1) ? F("Sun") : (dayOfWeek == 2) ? F("Mon")
-																	: (dayOfWeek == 3)	 ? F("Tue")
-																	: (dayOfWeek == 4)	 ? F("Wed")
-																	: (dayOfWeek == 5)	 ? F("Thu")
-																	: (dayOfWeek == 6)	 ? F("Fri")
-																											 : F("Sat"));
+		// currentLine1 = "WtrRate\004" + String(flowRate) + " l/m";
+		// currentLine2 = "WtrTtl\004" + String(totalMillilitres / 1000.) + " L";
 
-		lcd.setCursor(0, 1);
-		lcd.print(day(t));
-		lcd.print(F(" "));
-		lcd.print(month(t));
-		lcd.print(F(" "));
-		lcd.print(year(t));
-	}
+		// if (previousLine1 != currentLine1 || previousLine2 != currentLine2) // for after all pages are switched over...
+		// 	drawLines(currentLine1, currentLine2);
+
+		// // drawWaterLevel(); // prints on bottom right
+	// }
+
+	// void show_Time()
+	// {
+		// t = now(); // update time when this is called!!
+		// const uint8_t dayOfWeek = weekday(t); // number!
+
+		// String theDay = String((dayOfWeek == 1) ? ("Sun") : (dayOfWeek == 2) ? ("Mon")
+		// 															: (dayOfWeek == 3)	 ? ("Tue")
+		// 															: (dayOfWeek == 4)	 ? ("Wed")
+		// 															: (dayOfWeek == 5)	 ? ("Thu")
+		// 															: (dayOfWeek == 6)	 ? ("Fri")
+		// 																									 : ("Sat"));
+
+		// previousLine1 = currentLine1;
+		// previousLine2 = currentLine2;
+
+		// currentLine1 = String(int(hour(t)) < 10 ? F("0") : F("")) + String(hour(t)) + String(int(minute(t)) < 10 ? F("0") : F("")) + String(minute(t)) + String(int(second(t)) < 10 ? F("0") : F("")) + String(second(t)) + " " + theDay;
+		// currentLine2 = String(day(t)) + " " + String(month(t)) + " " + String(year(t));
+
+		// if (previousLine1 != currentLine1 || previousLine2 != currentLine2) // for after all pages are switched over...
+		// 	drawLines(currentLine1, currentLine2);
+
+		// // drawWaterLevel(); // prints on bottom right
+	// }
+
+	// // void pagePidInfo()
+	// // {
+
+	// 	previousLine1 = currentLine1;
+	// 	previousLine2 = currentLine2;
+
+	// 	currentLine1 = "Kp"
+	// 	currentLine2 = "RunTtl\004" + formatHoursWithTenths(getTotalSeconds());
+
+	// 	if (previousLine1 != currentLine1 || previousLine2 != currentLine2) // for after all pages are switched over...
+	// 		drawLines(currentLine1, currentLine2);
+
+	// 	// drawWaterLevel(); // prints on bottom right
+
+	// // 	lcd.setCursor(0, 0);
+	// // 	lcd.print(F("Kp"));
+	// // 	lcd.write(4);
+	// // 	lcd.print(Kp, 0);
+	// // 	lcd.print(F(" Ki"));
+	// // 	lcd.write(4);
+	// // 	lcd.print(Ki, 4); // space for 8
+
+	// // 	lcd.setCursor(0, 1);
+	// // 	lcd.print(F("Kd"));
+	// // 	lcd.write(4);
+	// // 	lcd.print(Kd, 0);
+	// // 	lcd.print(F(" Outpt"));
+	// // 	lcd.write(4);
+	// // 	lcd.print(Output);
+	// // }
 
 } Tstat = Display_c();
 

@@ -53,20 +53,20 @@ void setup()
 	pump.stop(true);
 
 	// // AutoPID setup:
-	// // if temperature is more than 4 degrees below or above Setpoint, OUTPUT will be set to min or max respectively
+	// // if temperature is more than 4 degrees below or above setPoint, OUTPUT will be set to min or max respectively
 	// //myPID.setBangBang(4);
 	// myPID.setBangBang(100); // so high that it disables the feature; setpoint +- 100
 	// myPID.setTimeStep(1000);// set PID update interval
 
 	// ArduPID setup:
-	ArduPIDController.begin(&Input, &Output, &Setpoint, Kp, Ki, Kd);
-	const unsigned int _minSamplePeriodMs = 1000;
-	ArduPIDController.setSampleTime(_minSamplePeriodMs);
-	ArduPIDController.setOutputLimits(outputMin, outputMax);
-	const double windUpMin = -10;
-	const double windUpMax = 10;
-	ArduPIDController.setWindUpLimits(windUpMin, windUpMax);
-	ArduPIDController.start();
+	// ArduPIDController.begin(&weightedAirTemp, &Output, &setPoint, Kp, Ki, Kd);
+	// const unsigned int _minSamplePeriodMs = 1000;
+	// ArduPIDController.setSampleTime(_minSamplePeriodMs);
+	// ArduPIDController.setOutputLimits(outputMin, outputMax);
+	// const double windUpMin = -10;
+	// const double windUpMax = 10;
+	// ArduPIDController.setWindUpLimits(windUpMin, windUpMax);
+	// ArduPIDController.start();
 
 	pinMode(WATER_FLOW_PIN, INPUT);
 	digitalWrite(WATER_FLOW_PIN, HIGH);
@@ -99,7 +99,7 @@ void loop()
 	// myPID.run(); // every second
 
 	// ArduPID loop:
-	ArduPIDController.compute();
+	// ArduPIDController.compute();
 
 	// 250ms Loop, which also regulates a 1000ms loop and a 2500ms loop
 	if (currentTime - prevLoopStartTime >= 250)

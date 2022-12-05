@@ -134,25 +134,25 @@ time_t t = now();
  *  I assume it will also turn *on* the pump *before* the temperature drops past the setpoint.
  */
 
-const double outputMin = -128;
-const double outputMax = 127;
-const double MIDPOINT = 0; // greater than this == on
+// const double outputMin = -128;
+// const double outputMax = 127;
+// const double MIDPOINT = 0; // greater than this == on
 
 // might want the pump to kick on a little sooner, perhaps depending on the floor temperature. So it should basically increase slightly as the time rolls on;
 // Proportional
-double Kp = 8;
+// double Kp = 8;
 // Integral (testing 0.05 [was 0.005] starting jan 21 2022)
-double Ki = 0.05; // 0.005
+// double Ki = 0.05; // 0.005
 // Derivative
-double Kd = 0.0; // 0.002
+// double Kd = 0.0; // 0.002
 
-double Input;
-double Setpoint = 68;
-double Output;
+double weightedAirTemp;
+double setPoint = 68;
+// double Output;
 
-// AutoPID myPID(&Input, &Setpoint, &Output, outputMin, outputMax, Kp, Ki, Kd);
+// AutoPID myPID(&weightedAirTemp, &setPoint, &Output, outputMin, outputMax, Kp, Ki, Kd);
 
-ArduPID ArduPIDController;
+// ArduPID ArduPIDController;
 
 // move this to functions?
 float calcEma(uint16_t reading, uint16_t lastEma, uint16_t days)

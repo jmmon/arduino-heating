@@ -117,7 +117,7 @@ void updateTEMP()
 	floorEmaAvg = (floorSensor[0].ema + floorSensor[1].ema) / FLOOR_SENSOR_COUNT;							// avg two readings
 	floorEmaAvgSlow = (floorSensor[0].slowEma + floorSensor[1].slowEma) / FLOOR_SENSOR_COUNT; // avg two readings
 
-	// the warmer the floor, the higher this will be. Setpoint - floorOffset == target temperature
+	// the warmer the floor, the higher this will be. setPoint - floorOffset == target temperature
 	floorOffset = calcFloorBatteryCapacity();
 
 	// air temp stuff
@@ -135,7 +135,7 @@ void updateTEMP()
 		air[i].updateRecords();
 
 	// calculate weighted air temp
-	Input = (double)(air[0].getTempEma(true) + air[1].getTempEma(true)) / (air[0].WEIGHT + air[1].WEIGHT);
+	weightedAirTemp = (double)(air[0].getTempEma(true) + air[1].getTempEma(true)) / (air[0].WEIGHT + air[1].WEIGHT);
 
 	// DEBUG_airEmas();
 
@@ -195,7 +195,7 @@ void waterResetTotal()
 //     {
 //       switch (_myPID.autoTune->autoTuneLoop()) {
 //         case _myPID.autoTune->AUTOTUNE:
-//           Input = Input;
+//           weightedAirTemp = weightedAirTemp;
 //           analogWrite(5, Output);
 //           break;
 
@@ -204,7 +204,7 @@ void waterResetTotal()
 //           _myPID.SetMode(QuickPID::AUTOMATIC); // setup PID
 //           _myPID.SetSampleTimeUs(sampleTimeUs);
 //           _myPID.SetTunings(Kp, Ki, Kd, POn, DOn); // apply new tunings to PID
-//           Setpoint = 500;
+//           setPoint = 500;
 //           break;
 
 //         case _myPID.autoTune->CLR:

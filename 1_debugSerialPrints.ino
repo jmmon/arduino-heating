@@ -113,7 +113,7 @@ void DEBUG_highsLowsFloor()
 
 		Serial.println();
 		Serial.print(F(" Set: "));
-		Serial.print(Setpoint, 1);
+		Serial.print(setPoint, 1);
 		Serial.print(F("°F"));
 		Serial.print(F("   Floor: "));
 		Serial.print(floorSensor[0].ema);

@@ -157,8 +157,8 @@ public:
 		}
 	}
 
-	bool isAboveAdjustedSetpoint() {
-		return Input >= Setpoint - floorOffset;
+	bool isAboveAdjustedsetPoint() {
+		return weightedAirTemp >= setPoint - floorOffset;
 	}
 
 	void update()
@@ -172,8 +172,8 @@ public:
 			accumOn++;
 
 		// time spent above setpoint
-		//bool isAboveTargetTemperature = Input >= Setpoint;
-		if (isAboveAdjustedSetpoint())
+		//bool isAboveTargetTemperature = weightedAirTemp >= setPoint;
+		if (isAboveAdjustedsetPoint())
 			accumAbove++;
 
 		bool pwmHasChanged = checkCycle();
@@ -195,10 +195,9 @@ public:
 			if (state == 0)
 			{ // offWithTimer();
 				// special cases in extreme change
-				bool shouldNeedMaxOutput = Output == outputMax;
-				bool isTempBelowMaximumOffset = Input <= Setpoint - EMERGENCY_ON_TRIGGER_OFFSET;
+				bool isTempBelowMaximumOffset = weightedAirTemp <= setPoint - EMERGENCY_ON_TRIGGER_OFFSET;
 
-				if (isTempBelowMaximumOffset || shouldNeedMaxOutput)
+				if (isTempBelowMaximumOffset)
 					start();
 			}
 
@@ -221,7 +220,7 @@ public:
 		{
 			// NO timer restriction (extended phase)
 			// if floor is warm, floorOffset increases, so target temperature decreases
-			//bool shouldPumpBeOn = Input < adjustedSetpoint;
+			//bool shouldPumpBeOn = weightedAirTemp < adjustedsetPoint;
 
 			// bool shouldPumpBeOn = Output > MIDPOINT;
 
@@ -230,7 +229,7 @@ public:
 			{ // offContinued() && check after delayedStart
 				bool isPumpOn = pwm > 0;
 
-				if (!isAboveAdjustedSetpoint())
+				if (!isAboveAdjustedsetPoint())
 					if (isPumpOn)
 						runOn();
 					else
@@ -241,7 +240,7 @@ public:
 
 			else if (state == 1)
 			{ // onContinued();
-				if (isAboveAdjustedSetpoint())
+				if (isAboveAdjustedsetPoint())
 					stop(); // most common stop trigger
 				else
 				{

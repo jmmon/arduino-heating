@@ -91,6 +91,25 @@ public:
 		ema = lastEma = slowEma = lastSlowEma = analogRead(WATER_FLOAT_SENSOR_PIN);
 	}
 
+	
+	String getDisplayString()
+	{
+		// handle conversion / formatting:
+		switch (displayPercent)
+		{
+		case (100):
+			return F("FF");
+		case (0):
+		  return F("EE");
+		case (101):
+			return F("ER");
+		case (255):
+			return F("--");
+		default:
+			return (displayPercent < 10) ? (" ") + String(displayPercent) : String(displayPercent);
+		}
+	}
+
 	uint8_t calculateTankPercent()
 	{
 		return ((ema <= ERROR_HIGH_BOUND) ? 101 : // error (lowest)

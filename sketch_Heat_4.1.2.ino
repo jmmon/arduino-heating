@@ -12,6 +12,8 @@
 #define TONE_PITCH 432
 #include <TonePitch.h>
 
+#include <math.h>
+
 
 const String VERSION_NUMBER = "4.1.2";
 const bool DEBUG = false;

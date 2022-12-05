@@ -159,6 +159,11 @@ private:
 
 	//String curLine = '\x01\x02\x03\x04\x05\x06\x07\x08';
 	String test = "Test\004\001\008";
+	String currentLine1 = "";
+	String currentLine2 = "";
+	String previousLine1 = "";
+	String previousLine2 = "";
+
 public:
 	Display_c()
 	{ // constructor
@@ -279,7 +284,6 @@ public:
 		// show (and hold onto) our set page
 		lcd.clear();
 		show_Set();
-		//show_Test();
 		holdSetPage = true;
 		// check if needs to run
 		pump.checkAfter(); // default 3 seconds
@@ -288,12 +292,12 @@ public:
 		lastButtonRead = buttonRead;
 	}
 
-	void show_Test() {
-		lcd.setCursor(0, 0); // top
-		//lcd.print('\x01' + '\x02' + '\x03' + '\x04' + '\x05' + '\x06' + '\x07' + '\x08');
-		test = "testing";
-		lcd.print(test);
-	}
+	// void show_Test() {
+	// 	lcd.setCursor(0, 0); // top
+	// 	//lcd.print('\x01' + '\x02' + '\x03' + '\x04' + '\x05' + '\x06' + '\x07' + '\x08');
+	// 	test = "testing";
+	// 	lcd.print(test);
+	// }
 
 	void printCurrentPage()
 	{
@@ -347,8 +351,8 @@ public:
 		// render lcdPageSet if locked to that page; else refresh the page
 		if (holdSetPage)
 		{
-			//show_Set();
-			show_Test();
+			show_Set();
+			//show_Test();
 
 			lcd.setCursor(11, 0); // top right
 			lcd.print(F("H"));		// draw droplet
@@ -402,8 +406,8 @@ public:
 
 		if (waterTank.filling)
 		{
-			lcd.setCursor(13, 0); // top right
-			lcd.write(5);					// draw droplet
+			// lcd.setCursor(13, 0); // top right
+			// lcd.write(5);					// draw droplet
 			writeWaterLevel();		// draw waterLevel
 		}
 
@@ -478,51 +482,60 @@ public:
 	// Pages:
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+	void print_lines(String line1, String line2) {
+		lcd.setCursor(0,0);
+		lcd.print(line1);
+		lcd.setCursor(0, 1);
+		lcd.print(line2);
+	}
+
+	void print_extra(String string, uint8_t slot, uint8_t lineNum) {
+		lcd.setCursor(slot, lineNum);
+		lcd.print(string);
+	}
+
+	String limitDecimals(float num, uint8_t decimals) { // Does not work for negative numbers!
+		bool negative = num < 0; // save for the end
+		num = (negative) ? 0 - num : num; // convert to positive
+		uint32_t mult = pow(10.0, decimals); // get our multiplier/divisor
+		// have to do it even more manually!
+		// need to build a string with "nn" + "." + "n" to get 1 decimal place
+		// e.g. num == 65.55, decimals == 1:
+		uint16_t mainInteger = uint16_t(num); // 65.55 => 65
+		// int num_mult = int(num * mult); // gets 10x, so 65.55 => 655  (removes the decimal)
+		// int main_mult = int(mainInteger * mult); // mainInteger * 10, so 65 * 10 => 650
+		// int decimal = num_mult - main_mult;
+		
+		String decimal = String(
+			uint32_t(
+				uint32_t(num * mult) // gets 10x, so 65.55 => 655.5
+				- (mainInteger * mult) // mainInteger * 10, so 65 * 10 => 650
+				) // 655 - 650 == 5
+			); 
+
+		// was 25898 | 1275
+		// now 26018 | 1275
+
+		// return (negative ? "-" : "") + String(mainInteger) + "." + String(decimal);
+		return (negative ? "-" : "") + String(mainInteger) + "." + decimal;
+	}
+
 	void show_Temperature()
 	{
 		// first line
-		lcd.setCursor(0, 0);
-		lcd.write(8); // inside icon //1
-		lcd.print(Input, 1);
-		lcd.print(F(" "));									// 6
-		lcd.print(air[0].getTempEma(), 1); // 5
-		lcd.print(F("/"));									// 6
-		lcd.print(air[1].getTempEma(), 1); // 10
-		lcd.write(1);												// degrees F // 11
+		currentLine1 = "\008" + limitDecimals(Input, 1) + " " + limitDecimals(air[0].getTempEma(), 1) + "/" + limitDecimals(air[1].getTempEma(), 1) + "\001";
+		currentLine2 = "\006" + limitDecimals(Setpoint, 1) + "\001 " + "\x7e" + limitDecimals(Output, 2);
+		print_lines(currentLine1, currentLine2);
 
-		// second line
-		lcd.setCursor(0, 1);
-		lcd.write(6);						// thermometer
-		lcd.print(Setpoint, 1); // 6
-		lcd.write(1);						// degrees F // 7
-		lcd.print(" ");
-		lcd.write(126); // pointing right
-		lcd.print(Output, 2);
-		lcd.setCursor(13, 1);
-		lcd.write(5); // water droplet // 14
-		writeWaterLevel();
+		writeWaterLevel(); // prints on bottom right
 	}
 
-	void writeWaterLevel()
+
+
+	void writeWaterLevel( uint8_t lineNum = 1)
 	{
-		// handle conversion / formatting:
-		switch (waterTank.displayPercent)
-		{
-		case (100):
-			lcd.print(F("FF"));
-			break;
-		case (0):
-			lcd.print(F("EE"));
-			break;
-		case (101):
-			lcd.print(F("ER"));
-			break;
-		case (255):
-			lcd.print(F("--"));
-			break;
-		default:
-			lcd.print((waterTank.displayPercent < 10) ? (" ") + String(waterTank.displayPercent) : String(waterTank.displayPercent));
-		}
+		String extra = "\005" + waterTank.getDisplayString();
+		print_extra(extra, 13, lineNum);
 	}
 
 	void show_PumpCycleInfo()

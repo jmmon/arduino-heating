@@ -82,6 +82,15 @@ const byte customCharDotInsideHouse[8] = {
 		B10001,
 		B10001};
 
+// const String chars[10] = {" ", "\001", "\002", "\003", "\004", "\005", "\006", "\007", "\008", "\x7e"}; 
+// const String pumpCycleInfoChar = "RunTtl";
+// const String symbols[4] = {"/", "+", "%", ":"};
+// const String accumTime[3] = {"State", "Off", "On"};
+// const String setPage = "Temp";
+
+// const String greenhouse = "GH";
+// const String waterFilling = "Flr";
+
 /* struct consts:
 Sketch uses 26416 bytes (85%) of program storage space. Maximum is 30720 bytes.
 Global variables use 1389 bytes (67%) of dynamic memory, leaving 659 bytes for local variables. Maximum is 2048 bytes.
@@ -286,17 +295,12 @@ public:
 		lastButtonRead = buttonRead;
 	}
 
-	// void show_Test() {
-	// 	lcd.setCursor(0, 0); // top
-	// 	//lcd.print('\x01' + '\x02' + '\x03' + '\x04' + '\x05' + '\x06' + '\x07' + '\x08');
-	// 	test = "testing";
-	// 	lcd.print(test);
-	// }
-
+	// render current page every call, and rollover currentPage when needed
 	void printCurrentPage()
 	{
+		previousLine1 = currentLine1;
+		previousLine2 = currentLine2;
 
-		// render current page every call, and rollover currentPage when needed
 		switch (currentPage)
 		{
 		case (0):
@@ -346,13 +350,10 @@ public:
 		if (holdSetPage)
 		{
 			drawSetPage();
-			//show_Test();
 
-			lcd.setCursor(11, 0); // top right
-			lcd.print(F("H"));		// countdown after tstat change
-			lcd.print(pump.state);
-			lcd.print(F(":"));
-			lcd.print(timeRemaining);
+			// String str = "H" + String(pump.state) + symbols[3] + String(timeRemaining);
+			String str = "H" + String(pump.state) + ":" + String(timeRemaining);
+			drawLine(str, 11, 0);
 		}
 		else
 		{
@@ -400,8 +401,6 @@ public:
 
 		if (waterTank.filling)
 		{
-			// lcd.setCursor(13, 0); // top right
-			// lcd.write(5);					// draw droplet
 			drawWaterLevel();		// draw waterLevel
 		}
 
@@ -477,22 +476,23 @@ public:
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	void drawLines(String line1, String line2) {
-		lcd.setCursor(0,0);
-		lcd.print(line1);
-		lcd.setCursor(0, 1);
-		lcd.print(line2);
+		drawLine(line1, 0, 0);
+		// lcd.setCursor(0,0);
+		// lcd.print(line1);
+		drawLine(line2, 0, 1);
+		// lcd.setCursor(0, 1);
+		// lcd.print(line2);
 	}
 
-	// void drawChars(char line1[], char line2[]) {
-	// 	lcd.setCursor(0,0);
-	// 	lcd.print(line1);
-	// 	lcd.setCursor(0, 1);
-	// 	lcd.print(line2);
-	// }
-
-	void drawExtra(String string, uint8_t slot, uint8_t lineNum) {
+	void drawLine(String string, uint8_t slot, uint8_t lineNum) {
 		lcd.setCursor(slot, lineNum);
 		lcd.print(string);
+	}
+
+	void drawWaterLevel( uint8_t lineNum = 1)
+	{
+		String extra = "\005" + waterTank.getDisplayString();
+		drawLine(extra, 13, lineNum);
 	}
 
 	String limitDecimals(float num, uint8_t decimals) { // Does not work for negative numbers!
@@ -508,27 +508,19 @@ public:
 		// int decimal = num_mult - main_mult;
 		
 		String decimal = String(
-			uint32_t(
-				uint32_t(num * mult) // gets 10x, so 65.55 => 655.5
-				- (mainInteger * mult) // mainInteger * 10, so 65 * 10 => 650
-				) // 655 - 650 == 5
-			); 
+				uint32_t(num * mult) // gets 10x, so 65.55 => 655.5 => 655
+				- uint32_t(mainInteger * mult) // mainInteger * 10, so 65 * 10 => 650
+			); // 655 - 650 == 5
 
-		// was 25898 | 1275
-		// now 26018 | 1275
-
-		// return (negative ? "-" : "") + String(mainInteger) + "." + String(decimal);
 		return (negative ? "-" : "") + String(mainInteger) + "." + decimal;
 	}
 
 	void drawTemperaturePage()
 	{
-		previousLine1 = currentLine1;
-		previousLine2 = currentLine2;
-		
 		currentLine1 = "\008" + limitDecimals(weightedAirTemp, 1) + " " + limitDecimals(air[0].getTempEma(), 1) + "/" + limitDecimals(air[1].getTempEma(), 1) + "\001";
 		currentLine2 = "\006" + limitDecimals(setPoint, 1) + "\001       ";
-		// currentLine2 = "\006" + limitDecimals(setPoint, 1) + "\001 " + "\x7e" + limitDecimals(Output, 2);
+		// currentLine1 = chars[8] + limitDecimals(weightedAirTemp, 1) + chars[0] + limitDecimals(air[0].getTempEma(), 1) + symbols[0] + limitDecimals(air[1].getTempEma(), 1) + chars[1];
+		// currentLine2 = chars[6] + limitDecimals(setPoint, 1) + chars[1] + chars[0] + chars[0] + chars[0] + chars[0] + chars[0] + chars[0] + chars[0];
 
 		if (previousLine1 != currentLine1 || previousLine2 != currentLine2) // for after all pages are switched over...
 			drawLines(currentLine1, currentLine2);
@@ -536,25 +528,17 @@ public:
 		drawWaterLevel(); // prints on bottom right
 	}
 
-	void drawWaterLevel( uint8_t lineNum = 1)
-	{
-		String extra = "\005" + waterTank.getDisplayString();
-		drawExtra(extra, 13, lineNum);
-	}
-
 	// display cycle info, time/cycleDuration
 	void drawPumpCycleInfoPage()
 	{
-		previousLine1 = currentLine1;
-		previousLine2 = currentLine2;
 
 		currentLine1 = pump.getStatusString() + " " + formatTimeToString(pump.cycleDuration);
 		currentLine2 = "RunTtl\004" + formatHoursWithTenths(getTotalSeconds());
+		// currentLine1 = pump.getStatusString() + chars[0] + formatTimeToString(pump.cycleDuration);
+		// currentLine2 = pumpCycleInfoChar + chars[4] + formatHoursWithTenths(getTotalSeconds());
 
 		if (previousLine1 != currentLine1 || previousLine2 != currentLine2) // for after all pages are switched over...
 			drawLines(currentLine1, currentLine2);
-
-		// drawWaterLevel(); // prints on bottom right
 	}
 
 
@@ -568,72 +552,52 @@ public:
 		const uint32_t accumOff = (totalSeconds - pump.accumOn);
 		const int32_t netAccumOn = pump.accumOn - accumOff;
 
-		previousLine1 = currentLine1;
-		previousLine2 = currentLine2;
-
 		currentLine1 = "\006\004 " + String((netAccumAboveTarget < 0) ? hours : "+" + hours);
 		currentLine2 = "State\004" + String(pump.state) + (netAccumOn < 0 ? " Off" : "  On") + "\004" + formatHoursWithTenths((netAccumOn < 0) ? netAccumOn * -1 : netAccumOn);
+		// currentLine1 = chars[6] + chars[4] + chars[0] + String((netAccumAboveTarget < 0) ? hours : symbols[1] + hours);
+		// currentLine2 = accumTime[0] + chars[4] + String(pump.state) + (netAccumOn < 0 ? (chars[0] + accumTime[1]): (chars[0] + chars[0] + accumTime[2])) + chars[4] + formatHoursWithTenths((netAccumOn < 0) ? netAccumOn * -1 : netAccumOn);
 
 		if (previousLine1 != currentLine1 || previousLine2 != currentLine2) // for after all pages are switched over...
 			drawLines(currentLine1, currentLine2);
-
-		// drawWaterLevel(); // prints on bottom right
-
 	}
 
 	void drawSetPage()
 	{													// Set Temperature page
-		previousLine1 = currentLine1;
-		previousLine2 = currentLine2;
-
 		currentLine1 = "Temp\004" + limitDecimals(weightedAirTemp, 1) + "\001      ";
 		currentLine2 = "   \006" + limitDecimals(setPoint, 1) + "        "; 
-		// currentLine2 = "   \006" + limitDecimals(setPoint, 1) + "\001\x7e" + String(Output); 
+		// currentLine1 = setPage + chars[4] + limitDecimals(weightedAirTemp, 1) + chars[1] + chars[0] + chars[0] + chars[0] + chars[0] + chars[0] + chars[0];
+		// currentLine2 = chars[0] + chars[0] + chars[0] + chars[6] + limitDecimals(setPoint, 1) + chars[0] + chars[0] + chars[0] + chars[0] + chars[0] + chars[0] + chars[0] + chars[0]; 
 
 		if (previousLine1 != currentLine1 || previousLine2 != currentLine2) // for after all pages are switched over...
 			drawLines(currentLine1, currentLine2);
-
-		// drawWaterLevel(); // prints on bottom right
-
 	}
 
-	void show_Greenhouse()
-	{ // Show greenhouse and exterior sensor readings
-		previousLine1 = currentLine1;
-		previousLine2 = currentLine2;
-
+	// Show greenhouse and exterior sensor readings
+	void drawGreenhouse()
+	{ 
 		currentLine1 = "GH\004" + limitDecimals(air[3].currentEMA[0], 1) + "\001 " + limitDecimals(air[3].humid, 1) + "%  ";
 		currentLine2 = " \007 " + limitDecimals(air[2].currentEMA[0], 1) + "\001 " + limitDecimals(air[2].humid, 1) + "%  ";
+		// currentLine1 = greenhouse + chars[4] + limitDecimals(air[3].currentEMA[0], 1) + chars[1] + chars[0] + limitDecimals(air[3].humid, 1) + symbols[2] + chars[0] + chars[0];
+		// currentLine2 = chars[0] + chars[7] + chars[0] + limitDecimals(air[2].currentEMA[0], 1) + chars[1] + chars[0] + limitDecimals(air[2].humid, 1) + symbols[2] + chars[0] + chars[0];
 
 		if (previousLine1 != currentLine1 || previousLine2 != currentLine2) // for after all pages are switched over...
 			drawLines(currentLine1, currentLine2);
-
-		// drawWaterLevel(); // prints on bottom right
-
 	}
 
 	void drawWaterFillingPage()
 	{											 // Water Filling Temp Page
-		previousLine1 = currentLine1;
-		previousLine2 = currentLine2;
-
-		currentLine1 = "\005" + String(waterTank.ema) + ":\x7e" + (waterTank.diffEma < 10 ? "  " : " ") + String(waterTank.diffEma);
-		currentLine2 = "Flr\004" + String(floorSensor[0].ema) + ":" + String(floorSensor[1].ema) + "     ";
+		currentLine1 = "\005 " + String(waterTank.ema) + ":" + String(waterTank.slowEma) + " \x7e" + (waterTank.diffEma < 10 ? "  " : " ") + String(waterTank.diffEma);
+		currentLine2 = "Flr\004" + String(int(floorEmaAvg)) + ":" + String(int(floorEmaAvgSlow)) + "     ";
+		// currentLine1 = chars[5] + chars[0] + String(waterTank.ema) + symbols[3] + String(waterTank.slowEma) + chars[0] + chars[9] + (waterTank.diffEma < 10 ? (chars[0] + chars[0]) : chars[0]) + String(waterTank.diffEma);
+		// currentLine2 = waterFilling + chars[4] + String(floorSensor[0].ema) + symbols[3] + String(floorSensor[1].ema) + chars[0] + chars[0] + chars[0] + chars[0] + chars[0];
 
 		if (previousLine1 != currentLine1 || previousLine2 != currentLine2) // for after all pages are switched over...
 			drawLines(currentLine1, currentLine2);
-
-		// drawWaterLevel(); // prints on bottom right
-
 	}
 
 	// void show_WaterFlowCounter()
 	// {
 	// 	// flow rate
-
-		// previousLine1 = currentLine1;
-		// previousLine2 = currentLine2;
-
 		// currentLine1 = "WtrRate\004" + String(flowRate) + " l/m";
 		// currentLine2 = "WtrTtl\004" + String(totalMillilitres / 1000.) + " L";
 
@@ -655,48 +619,23 @@ public:
 		// 															: (dayOfWeek == 6)	 ? ("Fri")
 		// 																									 : ("Sat"));
 
-		// previousLine1 = currentLine1;
-		// previousLine2 = currentLine2;
-
 		// currentLine1 = String(int(hour(t)) < 10 ? F("0") : F("")) + String(hour(t)) + String(int(minute(t)) < 10 ? F("0") : F("")) + String(minute(t)) + String(int(second(t)) < 10 ? F("0") : F("")) + String(second(t)) + " " + theDay;
 		// currentLine2 = String(day(t)) + " " + String(month(t)) + " " + String(year(t));
 
 		// if (previousLine1 != currentLine1 || previousLine2 != currentLine2) // for after all pages are switched over...
 		// 	drawLines(currentLine1, currentLine2);
 
-		// // drawWaterLevel(); // prints on bottom right
 	// }
 
-	// // void pagePidInfo()
-	// // {
-
-	// 	previousLine1 = currentLine1;
-	// 	previousLine2 = currentLine2;
-
-	// 	currentLine1 = "Kp"
-	// 	currentLine2 = "RunTtl\004" + formatHoursWithTenths(getTotalSeconds());
+	// void pagePidInfo()
+	// {
+	// 	currentLine1 = "Kp\004" + int(Kp) + " Ki\004" + Ki
+	// 	currentLine2 = "Kd\004" + int(Kd) + " Outpt\004" + Output;
 
 	// 	if (previousLine1 != currentLine1 || previousLine2 != currentLine2) // for after all pages are switched over...
 	// 		drawLines(currentLine1, currentLine2);
 
-	// 	// drawWaterLevel(); // prints on bottom right
-
-	// // 	lcd.setCursor(0, 0);
-	// // 	lcd.print(F("Kp"));
-	// // 	lcd.write(4);
-	// // 	lcd.print(Kp, 0);
-	// // 	lcd.print(F(" Ki"));
-	// // 	lcd.write(4);
-	// // 	lcd.print(Ki, 4); // space for 8
-
-	// // 	lcd.setCursor(0, 1);
-	// // 	lcd.print(F("Kd"));
-	// // 	lcd.write(4);
-	// // 	lcd.print(Kd, 0);
-	// // 	lcd.print(F(" Outpt"));
-	// // 	lcd.write(4);
-	// // 	lcd.print(Output);
-	// // }
+	// }
 
 } Tstat = Display_c();
 

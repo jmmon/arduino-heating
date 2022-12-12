@@ -63,9 +63,6 @@ uint32_t prevLoopStartTime = 0;		// counters
 const uint16_t ms1000Interval = 1000;
 const uint16_t ms2500Interval = 2500;
 
-// new timers counter, 20ms base for quick display-screen switching
-// uint32_t last20ms = 0;
-
 // SDA = A4 pin; SCL = A5 pin
 LiquidCrystal_I2C lcd(0x27, 16, 2); // set the LCD address to 0x27 for a 16 chars and 2 line display
 
@@ -75,6 +72,8 @@ const uint16_t EMA_MULT_PERIODS[3] = {
 // 12 * 2.5s = 30s   EMA =   0.5m
 // 600 * 2.5s = 1500s EMA =  25m
 // 1800 * 2.5s = 4500s EMA = 75m
+// so if x == EMA(600) - EMA(12) and y == EMA(1800) - EMA(600), we would expect y > x because x is over a smaller range.
+// And so if x > y, we know the temp is increasing rapidly
 
 const uint16_t FLOOR_WARMUP_TEMPERATURE = 550; // 0-1023, NOTE: insulation (cardboard, rugs) will require higher value
 float floorEmaAvg = 0;
@@ -147,7 +146,7 @@ time_t t = now();
 // double Kd = 0.0; // 0.002
 
 double weightedAirTemp;
-double setPoint = 68;
+double setPoint = 67;
 // double Output;
 
 // AutoPID myPID(&weightedAirTemp, &setPoint, &Output, outputMin, outputMax, Kp, Ki, Kd);

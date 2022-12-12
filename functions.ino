@@ -59,9 +59,7 @@ void airSensorOutlierCheck()
 			}
 
 			air[0].tempF = air[1].tempF;
-		}
-
-		if (
+		} else if (
 				air[1].tempF > 20 + air[1].currentEMA[2] ||
 				air[1].tempF < -20 + air[1].currentEMA[2])
 		{
@@ -114,6 +112,7 @@ void updateTEMP()
 		else
 			floorSensor[0].ema = floorSensor[1].ema;
 	}
+
 	floorEmaAvg = (floorSensor[0].ema + floorSensor[1].ema) / FLOOR_SENSOR_COUNT;							// avg two readings
 	floorEmaAvgSlow = (floorSensor[0].slowEma + floorSensor[1].slowEma) / FLOOR_SENSOR_COUNT; // avg two readings
 

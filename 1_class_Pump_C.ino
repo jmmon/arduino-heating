@@ -6,24 +6,21 @@
 // 622/649 floor (warm but not hot)
 
 // const uint8_t ON_PHASE_BASE_PWM = 255;
-const uint8_t ON_PHASE_BASE_PWM = 155;
-const uint8_t COLD_FLOOR_PWM_BOOST = 75;
+const uint8_t ON_PHASE_BASE_PWM = 145;
+const uint8_t COLD_FLOOR_PWM_BOOST = 110; // want to reach max
 
 // PWM boost during motor start
-// const uint8_t STARTING_PHASE_PWM_BOOST = 56; // ({sum(1-10)} == 55) + {1*remaining seconds}
-// const uint8_t STARTING_PHASE_SECONDS = 11; // time allotted for the starting boost
-// const uint8_t STARTING_PHASE_STEP = 10; // starting reduction amount for startingPhaseStepAdjust
 const uint8_t STARTING_PHASE_PWM_BOOST = 28; // ({sum(1-10)} == 55) + {1*remaining seconds}
-const uint8_t STARTING_PHASE_SECONDS = 8;		 // time allotted for the starting boost
+// const uint8_t STARTING_PHASE_SECONDS = 8;		 // time allotted for the starting boost
 const uint8_t STARTING_PHASE_STEP = 7;			 // starting reduction amount for startingPhaseStepAdjust
-uint8_t startingPhaseStepAdjust = 1;
+uint8_t startingPhaseStepAdjust = 0;
 
-const uint16_t ON_CYCLE_MINIMUM_SECONDS = 180;	 // 3m
+const uint16_t ON_CYCLE_MINIMUM_SECONDS = 420;	 // 7m
 const uint16_t OFF_CYCLE_MINIMUM_SECONDS = 1800; // 30m
-const uint32_t END_OF_STARTUP_TIMER = ON_CYCLE_MINIMUM_SECONDS - STARTING_PHASE_SECONDS;
+// const uint32_t END_OF_STARTUP_TIMER = ON_CYCLE_MINIMUM_SECONDS - STARTING_PHASE_SECONDS;
 
 // PWM boost every so often, in case pump gets hung up:
-const uint16_t PULSE_PWM_SECONDS_INTERVAL = 3600; // seconds (every hour)
+const uint16_t PULSE_PWM_SECONDS_INTERVAL = 1800; // seconds (every hour)
 const uint8_t PULSE_PWM_AMOUNT = 22;							// boost
 uint16_t pulsePwmCounter = 0;											// counts the seconds since last boost
 
@@ -55,10 +52,9 @@ public:
 		return (floorEmaAvg < FLOOR_WARMUP_TEMPERATURE || floorEmaAvgSlow < FLOOR_WARMUP_TEMPERATURE);
 	}
 
-	// void setPwm(uint16_t target)
-	// {
-	// 	pwm = target >= 255 ? 255 : target;
-	// }
+	bool isAboveAdjustedSetPoint() {
+		return weightedAirTemp >= setPoint - floorOffset;
+	}
 
 	uint8_t limitPwm(int16_t target)
 	{
@@ -87,19 +83,23 @@ public:
 	{
 		state = 2; // motor starting phase
 
+		// re-set cycle timer
 		resetDuration();
 		timeRemaining = ON_CYCLE_MINIMUM_SECONDS;
-		pulsePwmCounter = 0;													 // reset "pwm pulse" counter when turning on
-		startingPhaseStepAdjust = STARTING_PHASE_STEP; // smooth pwm transition, subtract this from pwm, and then --
+
+		// reset "pwm pulse" counter when turning on
+		pulsePwmCounter = 0;													 
+		// smooth pwm transition, subtract this from pwm, and then --
+		startingPhaseStepAdjust = STARTING_PHASE_STEP; 
 
 		// check if floor is cold
 		coldFloor = isCold();
-		// calculate pwm
-		uint8_t nextPwm = limitPwm(ON_PHASE_BASE_PWM + STARTING_PHASE_PWM_BOOST); // 181
+		// add starting PWM boost, to decrease as it goes
+		uint8_t basePwm = limitPwm(ON_PHASE_BASE_PWM + STARTING_PHASE_PWM_BOOST);
+		// calc cold floor boosted PWM
+		uint8_t coldPwm =  limitPwm(basePwm + COLD_FLOOR_PWM_BOOST);
 		// add on COLD_FLOOR_PWM_BOOST if coldFloor
-		nextPwm = limitPwm((coldFloor && (COLD_FLOOR_PWM_BOOST + nextPwm) > nextPwm) ? nextPwm + COLD_FLOOR_PWM_BOOST : nextPwm);
-		//setPwm(nextPwm);
-		pwm = nextPwm;
+		pwm = (coldFloor && coldPwm > basePwm) ? coldPwm : basePwm;
 	}
 
 	void stop(bool skipTimer = false)
@@ -109,7 +109,6 @@ public:
 		state = 0;
 		resetDuration();
 		pwm = 0;
-		//setPwm(0);
 		timeRemaining = (skipTimer) ? 0 : OFF_CYCLE_MINIMUM_SECONDS; // 30 minute wait (except on init)
 	}
 
@@ -124,22 +123,21 @@ public:
 		state = 1;
 		// turn off coldFloor if floor stays warm for a bit
 		coldFloor = isCold();
-		// uint16_t nextPwm = limitedBasePwm();
-		// setPwm(nextPwm);
 		pwm = limitedBasePwm();
 	}
 
+	// during startup phase
 	void stepDownPwm()
-	{ // during startup phase
-		uint8_t nextPwm = limitedBasePwm();
+	{ 
+		// base pwm
+		uint8_t basePwm = limitedBasePwm();
 
-		nextPwm = limitPwm(((pwm - startingPhaseStepAdjust) >= (nextPwm)) ? pwm - startingPhaseStepAdjust : nextPwm);
+		// current PWM is boosted for startup. Calc after stepping down one time
+		uint8_t steppedDownPwm = pwm - startingPhaseStepAdjust;
+		// if pwm stepped down is more than the base pwm, we use it; else we use basePwm;
+		pwm = (steppedDownPwm > basePwm) ? steppedDownPwm : basePwm;
 
-		pwm = nextPwm;
-		//setPwm(nextPwm);
-
-		if (startingPhaseStepAdjust - 1 >= 1)
-			startingPhaseStepAdjust -= 1;
+		startingPhaseStepAdjust -= 1;
 	}
 
 	void pulsePwm()
@@ -151,18 +149,13 @@ public:
 			pulsePwmCounter = 0;
 
 			uint8_t pulsePwm = limitPwm(ON_PHASE_BASE_PWM + PULSE_PWM_AMOUNT);
-			uint8_t nextPwm = limitPwm(pulsePwm >= pwm ? pulsePwm : pwm);
-			pwm = nextPwm;
-			//setPwm(nextPwm);
+			pwm = limitPwm(pulsePwm >= pwm ? pulsePwm : pwm);
 		}
 	}
 
-	bool isAboveAdjustedsetPoint() {
-		return weightedAirTemp >= setPoint - floorOffset;
-	}
-
+	// called every second
 	void update()
-	{									 // called every second
+	{
 		cycleDuration++; // this cycle cycleDuration
 		DEBUG_highsLowsFloor();
 
@@ -173,12 +166,12 @@ public:
 
 		// time spent above setpoint
 		//bool isAboveTargetTemperature = weightedAirTemp >= setPoint;
-		if (isAboveAdjustedsetPoint())
+		if (isAboveAdjustedSetPoint())
 			accumAbove++;
 
 		bool pwmHasChanged = checkCycle();
 
-		//if (pwmHasChanged)
+		if (pwmHasChanged)
 			analogWrite(HEAT_PUMP_PIN, pwm);
 	}
 
@@ -209,7 +202,8 @@ public:
 
 			else if (state == 2)
 			{ // startup();
-				bool isStillStartingUp = timeRemaining > END_OF_STARTUP_TIMER;
+				// bool isStillStartingUp = timeRemaining > END_OF_STARTUP_TIMER;
+				bool isStillStartingUp = startingPhaseStepAdjust > 0;
 				if (isStillStartingUp)
 					stepDownPwm();
 				else
@@ -229,7 +223,7 @@ public:
 			{ // offContinued() && check after delayedStart
 				bool isPumpOn = pwm > 0;
 
-				if (!isAboveAdjustedsetPoint())
+				if (!isAboveAdjustedSetPoint())
 					if (isPumpOn)
 						runOn();
 					else
@@ -240,7 +234,7 @@ public:
 
 			else if (state == 1)
 			{ // onContinued();
-				if (isAboveAdjustedsetPoint())
+				if (isAboveAdjustedSetPoint())
 					stop(); // most common stop trigger
 				else
 				{

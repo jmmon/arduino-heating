@@ -118,7 +118,7 @@ void loop()
 		}
 
 		// 2500ms Loop:
-		if (prevLoopStartTime % ms1000Interval == 0)
+		if (prevLoopStartTime % ms2500Interval == 0)
 		{
 			waterTank.update();
 			updateTEMP(); // read air temp

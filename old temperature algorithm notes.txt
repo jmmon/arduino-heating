@@ -100,3 +100,23 @@ It should also depend on the temperature trend: if the trend is slow, the floor 
 	    Need to see how it goes and adjust if it just cycles on and off (3m and 30m) repeatedly
 
 	
+
+
+
+
+
+
+
+
+Jan 18 2023:
+
+Should implement the temperature trend (or adjust it):
+		As the temperature drops, if the trend is slow-dropping, 
+				the setpoint should be lowered (turns on later)
+		As the temperature drops, if the trend is fast-dropping,
+				the setpoint should be raised (turns on sooner)
+		
+		As the temperature rises, if the trend is slow-rising,
+				the setpoint should be raised (stays on longer)
+		As the temperature rises, if the trend is fast-rising,
+				the setpoint should be lowered (stays on shorter)

@@ -116,6 +116,9 @@ void updateTEMP()
 	floorEmaAvg = (floorSensor[0].ema + floorSensor[1].ema) / FLOOR_SENSOR_COUNT;							// avg two readings
 	floorEmaAvgSlow = (floorSensor[0].slowEma + floorSensor[1].slowEma) / FLOOR_SENSOR_COUNT; // avg two readings
 
+// used to offset setpoint.
+// As floor warms up this will be higher, so pump will cut off sooner or start later
+// As floor cools, this will be lower so pump will cut off later or start sooner
 	// the warmer the floor, the higher this will be. setPoint - floorOffset == target temperature
 	floorOffset = calcFloorBatteryCapacity();
 

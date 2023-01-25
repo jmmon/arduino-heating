@@ -82,15 +82,6 @@ const byte customCharDotInsideHouse[8] = {
 		B10001,
 		B10001};
 
-// const String chars[10] = {" ", "\001", "\002", "\003", "\004", "\005", "\006", "\007", "\008", "\x7e"}; 
-// const String pumpCycleInfoChar = "RunTtl";
-// const String symbols[4] = {"/", "+", "%", ":"};
-// const String accumTime[3] = {"State", "Off", "On"};
-// const String setPage = "Temp";
-
-// const String greenhouse = "GH";
-// const String waterFilling = "Flr";
-
 /* struct consts:
 Sketch uses 26416 bytes (85%) of program storage space. Maximum is 30720 bytes.
 Global variables use 1389 bytes (67%) of dynamic memory, leaving 659 bytes for local variables. Maximum is 2048 bytes.
@@ -164,8 +155,6 @@ private:
 	String currentLine2 = "";
 	String previousLine1 = "";
 	String previousLine2 = "";
-	// char charLine1[16] = {"1", "1", "1", "1","1", "1", "1", "1","1", "1", "1", "1","1", "1", "1", "1",};
-	// char charLine2[16] = {"1", "1", "1", "1","1", "1", "1", "1","1", "1", "1", "1","1", "1", "1", "1",};
 
 public:
 	Display_c()
@@ -477,11 +466,7 @@ public:
 
 	void drawLines(String line1, String line2) {
 		drawLine(line1, 0, 0);
-		// lcd.setCursor(0,0);
-		// lcd.print(line1);
 		drawLine(line2, 0, 1);
-		// lcd.setCursor(0, 1);
-		// lcd.print(line2);
 	}
 
 	void drawLine(String string, uint8_t slot, uint8_t lineNum) {
@@ -519,8 +504,6 @@ public:
 	{
 		currentLine1 = "\008" + limitDecimals(weightedAirTemp, 1) + " " + limitDecimals(air[0].getTempEma(), 1) + "/" + limitDecimals(air[1].getTempEma(), 1) + "\001";
 		currentLine2 = "\006" + limitDecimals(setPoint, 1) + "\001       ";
-		// currentLine1 = chars[8] + limitDecimals(weightedAirTemp, 1) + chars[0] + limitDecimals(air[0].getTempEma(), 1) + symbols[0] + limitDecimals(air[1].getTempEma(), 1) + chars[1];
-		// currentLine2 = chars[6] + limitDecimals(setPoint, 1) + chars[1] + chars[0] + chars[0] + chars[0] + chars[0] + chars[0] + chars[0] + chars[0];
 
 		if (previousLine1 != currentLine1 || previousLine2 != currentLine2) // for after all pages are switched over...
 			drawLines(currentLine1, currentLine2);
@@ -534,8 +517,6 @@ public:
 
 		currentLine1 = pump.getStatusString() + " " + formatTimeToString(pump.cycleDuration);
 		currentLine2 = "RunTtl\004" + formatHoursWithTenths(getTotalSeconds());
-		// currentLine1 = pump.getStatusString() + chars[0] + formatTimeToString(pump.cycleDuration);
-		// currentLine2 = pumpCycleInfoChar + chars[4] + formatHoursWithTenths(getTotalSeconds());
 
 		if (previousLine1 != currentLine1 || previousLine2 != currentLine2) // for after all pages are switched over...
 			drawLines(currentLine1, currentLine2);
@@ -554,8 +535,6 @@ public:
 
 		currentLine1 = "\006\004 " + String((netAccumAboveTarget < 0) ? hours : "+" + hours);
 		currentLine2 = "State\004" + String(pump.state) + (netAccumOn < 0 ? " Off" : "  On") + "\004" + formatHoursWithTenths((netAccumOn < 0) ? netAccumOn * -1 : netAccumOn);
-		// currentLine1 = chars[6] + chars[4] + chars[0] + String((netAccumAboveTarget < 0) ? hours : symbols[1] + hours);
-		// currentLine2 = accumTime[0] + chars[4] + String(pump.state) + (netAccumOn < 0 ? (chars[0] + accumTime[1]): (chars[0] + chars[0] + accumTime[2])) + chars[4] + formatHoursWithTenths((netAccumOn < 0) ? netAccumOn * -1 : netAccumOn);
 
 		if (previousLine1 != currentLine1 || previousLine2 != currentLine2) // for after all pages are switched over...
 			drawLines(currentLine1, currentLine2);
@@ -565,8 +544,6 @@ public:
 	{													// Set Temperature page
 		currentLine1 = "Temp\004" + limitDecimals(weightedAirTemp, 1) + "\001      ";
 		currentLine2 = "   \006" + limitDecimals(setPoint, 1) + "        "; 
-		// currentLine1 = setPage + chars[4] + limitDecimals(weightedAirTemp, 1) + chars[1] + chars[0] + chars[0] + chars[0] + chars[0] + chars[0] + chars[0];
-		// currentLine2 = chars[0] + chars[0] + chars[0] + chars[6] + limitDecimals(setPoint, 1) + chars[0] + chars[0] + chars[0] + chars[0] + chars[0] + chars[0] + chars[0] + chars[0]; 
 
 		if (previousLine1 != currentLine1 || previousLine2 != currentLine2) // for after all pages are switched over...
 			drawLines(currentLine1, currentLine2);
@@ -588,8 +565,6 @@ public:
 	{											 // Water Filling Temp Page
 		currentLine1 = "\005 " + String(waterTank.ema) + ":" + String(waterTank.slowEma) + " \x7e" + (waterTank.diffEma < 10 ? "  " : " ") + String(waterTank.diffEma);
 		currentLine2 = "Flr\004" + String(int(floorEmaAvg)) + ":" + String(int(floorEmaAvgSlow)) + "     ";
-		// currentLine1 = chars[5] + chars[0] + String(waterTank.ema) + symbols[3] + String(waterTank.slowEma) + chars[0] + chars[9] + (waterTank.diffEma < 10 ? (chars[0] + chars[0]) : chars[0]) + String(waterTank.diffEma);
-		// currentLine2 = waterFilling + chars[4] + String(floorSensor[0].ema) + symbols[3] + String(floorSensor[1].ema) + chars[0] + chars[0] + chars[0] + chars[0] + chars[0];
 
 		if (previousLine1 != currentLine1 || previousLine2 != currentLine2) // for after all pages are switched over...
 			drawLines(currentLine1, currentLine2);

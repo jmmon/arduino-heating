@@ -1,4 +1,4 @@
-//#include <Arduino.h>
+// #include <Arduino.h>
 
 // Floor Sensor approximate readings examples
 // ~489/ 518 cold floor
@@ -12,7 +12,7 @@ const uint8_t COLD_FLOOR_PWM_BOOST = 110; // want to reach max
 // PWM boost during motor start
 const uint8_t STARTING_PHASE_PWM_BOOST = 28; // ({sum(1-10)} == 55) + {1*remaining seconds}
 // const uint8_t STARTING_PHASE_SECONDS = 8;		 // time allotted for the starting boost
-const uint8_t STARTING_PHASE_STEP = 7;			 // starting reduction amount for startingPhaseStepAdjust
+const uint8_t STARTING_PHASE_STEP = 7; // starting reduction amount for startingPhaseStepAdjust
 uint8_t startingPhaseStepAdjust = 0;
 
 const uint16_t ON_CYCLE_MINIMUM_SECONDS = 420;	 // 7m
@@ -28,7 +28,6 @@ static const uint8_t DELAY_SECONDS = 3;				 // default cycleDuration for delay-s
 const uint8_t EMERGENCY_ON_TRIGGER_OFFSET = 5; // if in 30-min off cycle, if temp drops by this amount off target, start the pump
 
 uint32_t timeRemaining = 0; // Counter for minimum cycle times
-
 
 class Pump_C
 {
@@ -52,8 +51,18 @@ public:
 		return (floorEmaAvg < FLOOR_WARMUP_TEMPERATURE || floorEmaAvgSlow < FLOOR_WARMUP_TEMPERATURE);
 	}
 
-	bool isAboveAdjustedSetPoint() {
-		return weightedAirTemp >= setPoint - floorOffset;
+	bool isAboveAdjustedSetPoint()
+	{
+		// as floor offset increases pump will cut off sooner or start later
+		// as floor offset decreases pump will turn on sooner or cut off later
+		// return weightedAirTemp >= setPoint - floorOffset;
+
+		// how about: take the air temp slow ema compared to current ema
+		// slow ema - current === difference,
+		// if difference is positive this means we have extra capacity of heat
+		// if difference is negative this means we don't have extra capacity of heat
+		double difference = air[0].currentEMA[2] - air[0].currentEMA[0];
+		return weightedAirTemp >= setPoint - difference;
 	}
 
 	uint8_t limitPwm(int16_t target)
@@ -88,16 +97,16 @@ public:
 		timeRemaining = ON_CYCLE_MINIMUM_SECONDS;
 
 		// reset "pwm pulse" counter when turning on
-		pulsePwmCounter = 0;													 
+		pulsePwmCounter = 0;
 		// smooth pwm transition, subtract this from pwm, and then --
-		startingPhaseStepAdjust = STARTING_PHASE_STEP; 
+		startingPhaseStepAdjust = STARTING_PHASE_STEP;
 
 		// check if floor is cold
 		coldFloor = isCold();
 		// add starting PWM boost, to decrease as it goes
 		uint8_t basePwm = limitPwm(ON_PHASE_BASE_PWM + STARTING_PHASE_PWM_BOOST);
 		// calc cold floor boosted PWM
-		uint8_t coldPwm =  limitPwm(basePwm + COLD_FLOOR_PWM_BOOST);
+		uint8_t coldPwm = limitPwm(basePwm + COLD_FLOOR_PWM_BOOST);
 		// add on COLD_FLOOR_PWM_BOOST if coldFloor
 		pwm = (coldFloor && coldPwm > basePwm) ? coldPwm : basePwm;
 	}
@@ -128,7 +137,7 @@ public:
 
 	// during startup phase
 	void stepDownPwm()
-	{ 
+	{
 		// base pwm
 		uint8_t basePwm = limitedBasePwm();
 
@@ -165,12 +174,14 @@ public:
 			accumOn++;
 
 		// time spent above setpoint
-		//bool isAboveTargetTemperature = weightedAirTemp >= setPoint;
+		// bool isAboveTargetTemperature = weightedAirTemp >= setPoint;
 		if (isAboveAdjustedSetPoint())
 			accumAbove++;
 
+		// check for cycle change
 		bool pwmHasChanged = checkCycle();
 
+		// adjust pump if needed
 		if (pwmHasChanged)
 			analogWrite(HEAT_PUMP_PIN, pwm);
 	}
@@ -182,7 +193,6 @@ public:
 
 		if (isDuringACycle)
 		{
-			// timer is running, should stay in these states
 			timeRemaining--;
 
 			if (state == 0)
@@ -214,11 +224,11 @@ public:
 		{
 			// NO timer restriction (extended phase)
 			// if floor is warm, floorOffset increases, so target temperature decreases
-			//bool shouldPumpBeOn = weightedAirTemp < adjustedsetPoint;
+			// bool shouldPumpBeOn = weightedAirTemp < adjustedsetPoint;
 
 			// bool shouldPumpBeOn = Output > MIDPOINT;
 
-// 23952 : 1221
+			// 23952 : 1221
 			if (state == 0)
 			{ // offContinued() && check after delayedStart
 				bool isPumpOn = pwm > 0;

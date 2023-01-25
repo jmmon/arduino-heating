@@ -80,3 +80,28 @@ Dec 4th:
 		Seems to be behind by ~7+%!!!
 
 	Water level does not beep once hitting full!!!
+
+
+
+
+Dec 31st:
+
+	Should keep a trend (other than jus tthe floor temp) and use it to maintain temperature better.
+	Problem: When super cold outside, the inside set temperature is a little cold;
+	And when not as cold, the inside temperature is a little warm!
+
+
+	Trying to make it so when the temperature is warmer outside, the inside heats a little less. (Move the target temperature lower for example).
+	When the temperature is colder outside, the inside heats up a little more. (Move the target temperature higher for example)
+
+*** Should make a variable: some sort of ratio. That way I can tweak the variable to change how the trend affects the target temperature.
+  e.g. fastDrop_ratio ??
+
+
+
+Jan 19th 2023:
+	Need to make sure water alarm works better!
+	Should be preemptive: for example:
+		If tank is > 80% and recent water-level-trend is high, start the alarm!
+	That way I (hopefully) don't run into the issue of overfilling
+

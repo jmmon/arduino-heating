@@ -29,6 +29,8 @@ const uint8_t EMERGENCY_ON_TRIGGER_OFFSET = 5; // if in 30-min off cycle, if tem
 
 uint32_t timeRemaining = 0; // Counter for minimum cycle times
 
+double difference = 0;
+
 class Pump_C
 {
 public:
@@ -61,7 +63,11 @@ public:
 		// slow ema - current === difference,
 		// if difference is positive this means we have extra capacity of heat
 		// if difference is negative this means we don't have extra capacity of heat
-		double difference = air[0].currentEMA[2] - air[0].currentEMA[0];
+		
+		double diff = air[0].currentEMA[1] - air[0].currentEMA[0];
+		if (diff >= 0) diff = min(diff, 2);
+		else diff = max(diff, -2);
+		difference = diff; // save difference to global var
 		return weightedAirTemp >= setPoint - difference;
 	}
 

@@ -1,6 +1,6 @@
-//#include <Arduino.h>
-//#include <LiquidCrystal_I2C.h>
-//#include <TimeLib.h>
+// #include <Arduino.h>
+// #include <LiquidCrystal_I2C.h>
+// #include <TimeLib.h>
 
 const byte customCharInside[8] = { // "inside"
 		B00000,
@@ -176,7 +176,6 @@ public:
 		lcd.createChar(6, customCharsetPoint);
 		lcd.createChar(7, customCharSunAndHouse);
 		lcd.createChar(8, customCharDotInsideHouse);
-
 	}
 
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -388,34 +387,35 @@ public:
 
 		incrementSwitchPageCounter();
 
-		if (waterTank.filling)
-		{
-			drawWaterLevel();		// draw waterLevel
-		}
+		// Basically,
+		// 	What I want is: if (tank is filling and) tank is between 90 and 95%,
+		//		The beeper should beep every ~4 seconds (until tank is no longer filling)
+		//		(Increment a counter, and if counter % 16 == 0, do a beep, else, stop the beep)
+		// And, if (tank is filling and) tank is above 95%,
+		//		The beeper should beep every ~1 seconds (until tank is no longer filling)
+		//		(Increment a counter, and if counter % 4 == 0, do a beep, else, stop the beep)
+		// And, if the tank is newly full,
+		// 		The beeper should beep every ~0.5 seconds for a duration of 180 seconds.
+		//		(Increment a counter, and if counter % 2 == 0, do a beep, else, stop the beep)
 
 		if (waterTank.filling)
 		{
+			drawWaterLevel(); // draw waterLevel
+
 			// do alarm stuff
-			bool isWaterTankPercentOver95 = waterTank.displayPercent >= TONE_TIMER_TRIGGER_PERCENT_FAST;
-			bool isWaterTankPercentOver90 = waterTank.displayPercent >= TONE_TIMER_TRIGGER_PERCENT_SLOW;
+			bool isWaterOver95 = waterTank.displayPercent >= TONE_TIMER_TRIGGER_PERCENT_FAST;
+			bool isWaterOver90 = waterTank.displayPercent >= TONE_TIMER_TRIGGER_PERCENT_SLOW;
+			bool isWaterOver85 = waterTank.displayPercent >= 85;
 
-			// Basically,
-			// 	What I want is: if (tank is filling and) tank is between 90 and 95%,
-			//		The beeper should beep every ~4 seconds (until tank is no longer filling)
-			//		(Increment a counter, and if counter % 16 == 0, do a beep, else, stop the beep)
-			// And, if (tank is filling and) tank is above 95%,
-			//		The beeper should beep every ~1 seconds (until tank is no longer filling)
-			//		(Increment a counter, and if counter % 4 == 0, do a beep, else, stop the beep)
-			// And, if the tank is newly full,
-			// 		The beeper should beep every ~0.5 seconds for a duration of 180 seconds.
-			//		(Increment a counter, and if counter % 2 == 0, do a beep, else, stop the beep)
-			if (isWaterTankPercentOver90)
+			if (isWaterOver85)
 			{
-				alarmCounter++; // count while above 90% (and filling)
+				alarmCounter++; // count while above 85% (and filling)
 
 				// beep when it should
-				if (isWaterTankPercentOver95)
+				if (isWaterOver95)
 					checkBeep(4); // fast beeping
+				else if (isWaterOver90)
+					checkBeep(8); // medium beeping
 				else
 					checkBeep(16); // slow beeping
 			}
@@ -433,9 +433,9 @@ public:
 
 		regulateValve();
 
+		//
 		if (alarmCountdown > 0)
 			checkBeep(2, alarmCountdown);
-
 	} // end update (every 0.25 seconds)
 
 	void beepOnTime(uint8_t counter, uint16_t spacing)
@@ -464,25 +464,34 @@ public:
 	// Pages:
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-	void drawLines(String line1, String line2) {
+	void drawLines(String line1, String line2)
+	{
 		drawLine(line1, 0, 0);
 		drawLine(line2, 0, 1);
 	}
 
-	void drawLine(String string, uint8_t slot, uint8_t lineNum) {
+	void drawLine(String string, uint8_t slot, uint8_t lineNum)
+	{
 		lcd.setCursor(slot, lineNum);
 		lcd.print(string);
 	}
 
-	void drawWaterLevel( uint8_t lineNum = 1)
+	void drawLinesIfDifferent(String l1, String l2)
+	{
+		if (previousLine1 != l1 || previousLine2 != l2) // for after all pages are switched over...
+			drawLines(currentLine1, currentLine2);
+	}
+
+	void drawWaterLevel(uint8_t lineNum = 1)
 	{
 		String extra = "\005" + waterTank.getDisplayString();
 		drawLine(extra, 13, lineNum);
 	}
 
-	String limitDecimals(float num, uint8_t decimals) { // Does not work for negative numbers!
-		bool negative = num < 0; // save for the end
-		num = (negative) ? 0 - num : num; // convert to positive
+	String limitDecimals(float num, uint8_t decimals = 1)
+	{																			 // Does not work for negative numbers!
+		bool negative = num < 0;						 // save for the end
+		num = (negative) ? 0 - num : num;		 // convert to positive
 		uint32_t mult = pow(10.0, decimals); // get our multiplier/divisor
 		// have to do it even more manually!
 		// need to build a string with "nn" + "." + "n" to get 1 decimal place
@@ -491,11 +500,11 @@ public:
 		// int num_mult = int(num * mult); // gets 10x, so 65.55 => 655  (removes the decimal)
 		// int main_mult = int(mainInteger * mult); // mainInteger * 10, so 65 * 10 => 650
 		// int decimal = num_mult - main_mult;
-		
+
 		String decimal = String(
-				uint32_t(num * mult) // gets 10x, so 65.55 => 655.5 => 655
+				uint32_t(num * mult)					 // gets 10x, so 65.55 => 655.5 => 655
 				- uint32_t(mainInteger * mult) // mainInteger * 10, so 65 * 10 => 650
-			); // 655 - 650 == 5
+		);																 // 655 - 650 == 5
 
 		return (negative ? "-" : "") + String(mainInteger) + "." + decimal;
 	}
@@ -503,28 +512,23 @@ public:
 	void drawTemperaturePage()
 	{
 		currentLine1 = "\008" + limitDecimals(weightedAirTemp, 1) + " " + limitDecimals(air[0].getTempEma(), 1) + "/" + limitDecimals(air[1].getTempEma(), 1) + "\001";
-		currentLine2 = "\006" + limitDecimals(setPoint, 1) + "\001       ";
+		currentLine2 = "\006" + limitDecimals(setPoint, 1) + "\001 " + limitDecimals(difference, 1) + "   ";
 
-		if (previousLine1 != currentLine1 || previousLine2 != currentLine2) // for after all pages are switched over...
-			drawLines(currentLine1, currentLine2);
-
+		drawLinesIfDifferent(currentLine1, currentLine2);
 		drawWaterLevel(); // prints on bottom right
 	}
 
 	// display cycle info, time/cycleDuration
 	void drawPumpCycleInfoPage()
 	{
-
 		currentLine1 = pump.getStatusString() + " " + formatTimeToString(pump.cycleDuration);
 		currentLine2 = "RunTtl\004" + formatHoursWithTenths(getTotalSeconds());
 
-		if (previousLine1 != currentLine1 || previousLine2 != currentLine2) // for after all pages are switched over...
-			drawLines(currentLine1, currentLine2);
+		drawLinesIfDifferent(currentLine1, currentLine2);
 	}
 
-
 	void drawAccumTimePage()
-	{											 // Total time and time spent with pump on/off
+	{ // Total time and time spent with pump on/off
 		const uint32_t totalSeconds = getTotalSeconds();
 		const uint32_t accumBelow = (totalSeconds - pump.accumAbove);
 		const int32_t netAccumAboveTarget = pump.accumAbove - accumBelow; // positive or negative
@@ -536,69 +540,63 @@ public:
 		currentLine1 = "\006\004 " + String((netAccumAboveTarget < 0) ? hours : "+" + hours);
 		currentLine2 = "State\004" + String(pump.state) + (netAccumOn < 0 ? " Off" : "  On") + "\004" + formatHoursWithTenths((netAccumOn < 0) ? netAccumOn * -1 : netAccumOn);
 
-		if (previousLine1 != currentLine1 || previousLine2 != currentLine2) // for after all pages are switched over...
-			drawLines(currentLine1, currentLine2);
+		drawLinesIfDifferent(currentLine1, currentLine2);
 	}
 
 	void drawSetPage()
-	{													// Set Temperature page
+	{ // Set Temperature page
 		currentLine1 = "Temp\004" + limitDecimals(weightedAirTemp, 1) + "\001      ";
-		currentLine2 = "   \006" + limitDecimals(setPoint, 1) + "        "; 
+		currentLine2 = "   \006" + limitDecimals(setPoint, 1) + "        ";
 
-		if (previousLine1 != currentLine1 || previousLine2 != currentLine2) // for after all pages are switched over...
-			drawLines(currentLine1, currentLine2);
+		drawLinesIfDifferent(currentLine1, currentLine2);
 	}
 
 	// Show greenhouse and exterior sensor readings
 	void drawGreenhouse()
-	{ 
+	{
 		currentLine1 = "GH\004" + limitDecimals(air[3].currentEMA[0], 1) + "\001 " + limitDecimals(air[3].humid, 1) + "%  ";
 		currentLine2 = " \007 " + limitDecimals(air[2].currentEMA[0], 1) + "\001 " + limitDecimals(air[2].humid, 1) + "%  ";
-		// currentLine1 = greenhouse + chars[4] + limitDecimals(air[3].currentEMA[0], 1) + chars[1] + chars[0] + limitDecimals(air[3].humid, 1) + symbols[2] + chars[0] + chars[0];
-		// currentLine2 = chars[0] + chars[7] + chars[0] + limitDecimals(air[2].currentEMA[0], 1) + chars[1] + chars[0] + limitDecimals(air[2].humid, 1) + symbols[2] + chars[0] + chars[0];
 
-		if (previousLine1 != currentLine1 || previousLine2 != currentLine2) // for after all pages are switched over...
-			drawLines(currentLine1, currentLine2);
+		drawLinesIfDifferent(currentLine1, currentLine2);
 	}
 
 	void drawWaterFillingPage()
-	{											 // Water Filling Temp Page
+	{ // Water Filling Temp Page
 		currentLine1 = "\005 " + String(waterTank.ema) + ":" + String(waterTank.slowEma) + " \x7e" + (waterTank.diffEma < 10 ? "  " : " ") + String(waterTank.diffEma);
 		currentLine2 = "Flr\004" + String(int(floorEmaAvg)) + ":" + String(int(floorEmaAvgSlow)) + "     ";
 
-		if (previousLine1 != currentLine1 || previousLine2 != currentLine2) // for after all pages are switched over...
-			drawLines(currentLine1, currentLine2);
+		drawLinesIfDifferent(currentLine1, currentLine2);
 	}
 
 	// void show_WaterFlowCounter()
 	// {
 	// 	// flow rate
-		// currentLine1 = "WtrRate\004" + String(flowRate) + " l/m";
-		// currentLine2 = "WtrTtl\004" + String(totalMillilitres / 1000.) + " L";
+	// currentLine1 = "WtrRate\004" + String(flowRate) + " l/m";
+	// currentLine2 = "WtrTtl\004" + String(totalMillilitres / 1000.) + " L";
 
-		// if (previousLine1 != currentLine1 || previousLine2 != currentLine2) // for after all pages are switched over...
-		// 	drawLines(currentLine1, currentLine2);
+	// if (previousLine1 != currentLine1 || previousLine2 != currentLine2) // for after all pages are switched over...
+	// 	drawLines(currentLine1, currentLine2);
 
-		// // drawWaterLevel(); // prints on bottom right
+	// // drawWaterLevel(); // prints on bottom right
 	// }
 
 	// void show_Time()
 	// {
-		// t = now(); // update time when this is called!!
-		// const uint8_t dayOfWeek = weekday(t); // number!
+	// t = now(); // update time when this is called!!
+	// const uint8_t dayOfWeek = weekday(t); // number!
 
-		// String theDay = String((dayOfWeek == 1) ? ("Sun") : (dayOfWeek == 2) ? ("Mon")
-		// 															: (dayOfWeek == 3)	 ? ("Tue")
-		// 															: (dayOfWeek == 4)	 ? ("Wed")
-		// 															: (dayOfWeek == 5)	 ? ("Thu")
-		// 															: (dayOfWeek == 6)	 ? ("Fri")
-		// 																									 : ("Sat"));
+	// String theDay = String((dayOfWeek == 1) ? ("Sun") : (dayOfWeek == 2) ? ("Mon")
+	// 															: (dayOfWeek == 3)	 ? ("Tue")
+	// 															: (dayOfWeek == 4)	 ? ("Wed")
+	// 															: (dayOfWeek == 5)	 ? ("Thu")
+	// 															: (dayOfWeek == 6)	 ? ("Fri")
+	// 																									 : ("Sat"));
 
-		// currentLine1 = String(int(hour(t)) < 10 ? F("0") : F("")) + String(hour(t)) + String(int(minute(t)) < 10 ? F("0") : F("")) + String(minute(t)) + String(int(second(t)) < 10 ? F("0") : F("")) + String(second(t)) + " " + theDay;
-		// currentLine2 = String(day(t)) + " " + String(month(t)) + " " + String(year(t));
+	// currentLine1 = String(int(hour(t)) < 10 ? F("0") : F("")) + String(hour(t)) + String(int(minute(t)) < 10 ? F("0") : F("")) + String(minute(t)) + String(int(second(t)) < 10 ? F("0") : F("")) + String(second(t)) + " " + theDay;
+	// currentLine2 = String(day(t)) + " " + String(month(t)) + " " + String(year(t));
 
-		// if (previousLine1 != currentLine1 || previousLine2 != currentLine2) // for after all pages are switched over...
-		// 	drawLines(currentLine1, currentLine2);
+	// if (previousLine1 != currentLine1 || previousLine2 != currentLine2) // for after all pages are switched over...
+	// 	drawLines(currentLine1, currentLine2);
 
 	// }
 

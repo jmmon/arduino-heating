@@ -52,8 +52,8 @@ const uint8_t STOP_FILL_TRIGGER = 30; // lower makes it harder to trigger OFF fi
 // 780 - 250 = 530
 // 530 / 100 == 5.3 units per percent
 // so 50% should be 5.3 * 50 + 250 == 515
-const uint16_t LOW_BOUND = 250;
-const uint16_t HIGH_BOUND = 780;
+const uint16_t LOW_BOUND = 300;
+const uint16_t HIGH_BOUND = 750;
 const uint8_t ERROR_HIGH_BOUND = 190;
 
 class WaterTank_C

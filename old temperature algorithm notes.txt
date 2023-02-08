@@ -120,3 +120,13 @@ Should implement the temperature trend (or adjust it):
 				the setpoint should be raised (stays on longer)
 		As the temperature rises, if the trend is fast-rising,
 				the setpoint should be lowered (stays on shorter)
+				
+				
+				
+				
+				
+				
+				
+FEB 7th 2023:
+	I ran out of water and the water guage said (310 - 298) and had a perecntage level of 9%.
+	This should be adjusted so that this is the 0 mark, because at this level the pump was running continuously as it ran out of water in the tank.

@@ -52,21 +52,32 @@ public:
 		return (floorEmaAvg < FLOOR_WARMUP_TEMPERATURE || floorEmaAvgSlow < FLOOR_WARMUP_TEMPERATURE);
 	}
 
+  double getTempDiffLimited(float old, float recent, double limit) 
+  {
+    double diff = double(old - recent);
+    // limit the diff to +- the limit
+    return diff >= 0
+      ? min(diff, limit)
+      : max(diff, (-1 * limit));
+  }
+
 	bool isAboveAdjustedSetPoint()
 	{
 		// as floor offset increases pump will cut off sooner or start later
 		// as floor offset decreases pump will turn on sooner or cut off later
 		// return weightedAirTemp >= setPoint - floorOffset;
 
-		// how about: take the air temp slow ema compared to current ema
-		// slow ema - current === difference,
+		// how about: take the air temp medium ema compared to current ema
+		// medium ema - current === difference,
+    // (or slow ema - medium ema === difference)
+    //    this way a sudden drop in temp (from opening the door) will
+    //      not trigger the pump quickly
 		// if difference is positive this means we have extra capacity of heat
 		// if difference is negative this means we don't have extra capacity of heat
-		
-		double diff = air[0].currentEMA[1] - air[0].currentEMA[0];
-		if (diff >= 0) diff = min(diff, 2);
-		else diff = max(diff, -2);
-		difference = diff; // save difference to global var
+
+		// save difference to global var
+    // difference = getTempDiffLimited(air[0].currentEMA[1], air[0].currentEMA[0], 2);
+    difference = getTempDiffLimited(air[0].currentEMA[2], air[0].currentEMA[1], 2);
 		return weightedAirTemp >= setPoint - difference;
 	}
 

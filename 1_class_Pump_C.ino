@@ -7,24 +7,23 @@
 
 // const uint8_t ON_PHASE_BASE_PWM = 255;
 const uint8_t ON_PHASE_BASE_PWM = 145;
-const uint8_t COLD_FLOOR_PWM_BOOST = 110; // want to reach max
+const uint8_t COLD_FLOOR_PWM_BOOST = 255 - ON_PHASE_BASE_PWM; // want to reach max
 
 // PWM boost during motor start
 const uint8_t STARTING_PHASE_PWM_BOOST = 28; // ({sum(1-10)} == 55) + {1*remaining seconds}
-// const uint8_t STARTING_PHASE_SECONDS = 8;		 // time allotted for the starting boost
-const uint8_t STARTING_PHASE_STEP = 7; // starting reduction amount for startingPhaseStepAdjust
+const uint8_t STARTING_PHASE_INITIAL_STEP = 7; // initial drop amount during starting phase
 uint8_t startingPhaseStepAdjust = 0;
 
-const uint16_t ON_CYCLE_MINIMUM_SECONDS = 420;	 // 7m
-const uint16_t OFF_CYCLE_MINIMUM_SECONDS = 1800; // 30m
+const uint16_t ON_CYCLE_MINIMUM_SECONDS = 60;	 // 1m
+const uint16_t OFF_CYCLE_MINIMUM_SECONDS = 300; // 5m
 // const uint32_t END_OF_STARTUP_TIMER = ON_CYCLE_MINIMUM_SECONDS - STARTING_PHASE_SECONDS;
 
 // PWM boost every so often, in case pump gets hung up:
 const uint16_t PULSE_PWM_SECONDS_INTERVAL = 1800; // seconds (every hour)
-const uint8_t PULSE_PWM_AMOUNT = 22;							// boost
+const uint8_t PULSE_PWM_AMOUNT = 23;							// boost
 uint16_t pulsePwmCounter = 0;											// counts the seconds since last boost
 
-static const uint8_t DELAY_SECONDS = 3;				 // default cycleDuration for delay-start
+static const uint8_t DELAY_SECONDS = 3;				 // seconds after setpoint change it checks which pump state to be in
 const uint8_t EMERGENCY_ON_TRIGGER_OFFSET = 5; // if in 30-min off cycle, if temp drops by this amount off target, start the pump
 
 uint32_t timeRemaining = 0; // Counter for minimum cycle times
@@ -105,7 +104,7 @@ public:
 		// reset "pwm pulse" counter when turning on
 		pulsePwmCounter = 0;
 		// smooth pwm transition, subtract this from pwm, and then --
-		startingPhaseStepAdjust = STARTING_PHASE_STEP;
+		startingPhaseStepAdjust = STARTING_PHASE_INITIAL_STEP;
 
 		// check if floor is cold
 		coldFloor = isCold();

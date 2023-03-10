@@ -5,30 +5,37 @@
 // 590/632 - 32m in to on-cycle
 // 622/649 floor (warm but not hot)
 
-// const uint8_t ON_PHASE_BASE_PWM = 255;
-const uint8_t ON_PHASE_BASE_PWM = 145;
-const uint8_t COLD_FLOOR_PWM_BOOST = 255 - ON_PHASE_BASE_PWM; // want to reach max
+// Pump PWM (speeds)
+const uint8_t ON_PHASE_BASE_PWM = 135;                        // normal run speed
+const uint8_t COLD_FLOOR_PWM_BOOST = 255 - ON_PHASE_BASE_PWM; // when cold, make it max
+const uint8_t PULSE_PWM_AMOUNT = 27;                          // occasional boost (to prevent stalling)
 
-// PWM boost during motor start
+// PWM boost during motor start phase
 const uint8_t STARTING_PHASE_PWM_BOOST = 28; // ({sum(1-10)} == 55) + {1*remaining seconds}
 const uint8_t STARTING_PHASE_INITIAL_STEP = 7; // initial drop amount during starting phase
 uint8_t startingPhaseStepAdjust = 0;
 
+// timers
 const uint16_t ON_CYCLE_MINIMUM_SECONDS = 60;	 // 1m
 const uint16_t OFF_CYCLE_MINIMUM_SECONDS = 300; // 5m
-// const uint32_t END_OF_STARTUP_TIMER = ON_CYCLE_MINIMUM_SECONDS - STARTING_PHASE_SECONDS;
+uint32_t timeRemaining = 0; // cycle time counter, to track if we're past the minimum cycle times
 
-// PWM boost every so often, in case pump gets hung up:
+const uint8_t ANTIFREEZE_CYCLE_PWM = 145; // slightly faster than normal
+const uint16_t ANTIFREEZE_CYCLE_SECONDS = 900; // 15m
+const uint16_t ANTIFREEZE_CYCLE_SECONDS_INTERVAL = 7200; // 120m or 2hours
+const uint8_t ANTIFREEZE_ENABLED_ABOVE_SETPOINT = 55; // degrees F - only run this cycle if setpoint is above this value (so in summer, make setpoint this value or less)
+
+// Occasional PWM boost (to prevent motor stalling)
 const uint16_t PULSE_PWM_SECONDS_INTERVAL = 1800; // seconds (every hour)
-const uint8_t PULSE_PWM_AMOUNT = 23;							// boost
 uint16_t pulsePwmCounter = 0;											// counts the seconds since last boost
 
+// Delayed start phase: seconds to delay before checking/starting
 static const uint8_t DELAY_SECONDS = 3;				 // seconds after setpoint change it checks which pump state to be in
-const uint8_t EMERGENCY_ON_TRIGGER_OFFSET = 5; // if in 30-min off cycle, if temp drops by this amount off target, start the pump
 
-uint32_t timeRemaining = 0; // Counter for minimum cycle times
-
+// holds setpoint offset, to maintain constant feel
 double difference = 0;
+// if temp drops lower than this from the setpoint, start the pump regardless of timers
+const uint8_t EMERGENCY_ON_TRIGGER_OFFSET = 5; // degrees from setpoint
 
 class Pump_C
 {
@@ -40,6 +47,10 @@ public:
 
 	uint8_t state = 0;					// holds motor state
 	uint32_t cycleDuration = 0; // for this cycle
+
+  // for ANTIFREEZE cycle, to detect when we can skip
+  uint32_t lastOnCycleStartedSecondsAgo = 0;  // when turning on, reset this to 0 and count up (continuously, until next turning on will reset it to 0)
+  uint32_t lastOnCycleDuration = 0;   // when turning on, reset this to 0 and count up while pump stays on
 
 	Pump_C()
 	{ // constructor
@@ -59,6 +70,29 @@ public:
     return diff >= 0
       ? min(diff, limit)
       : max(diff, (-1 * limit));
+  }
+
+  void inc_lastOnCycleDuration() { // run every second that the pump is on (or starting)
+    lastOnCycleDuration++;
+  }
+  void reset_lastOnCycleDuration() { // run once when pump turns on
+    lastOnCycleDuration = 0;
+  }
+  void inc_lastOnCycleStartedSecondsAgo() { // run every second
+    lastOnCycleStartedSecondsAgo++;
+  }
+  void reset_lastOnCycleStartedSecondsAgo() { // run once when pump turns on
+    lastOnCycleStartedSecondsAgo = 0;
+  }
+
+  void incrementAntiFreezeTimers(bool isPumpOn) {
+    inc_lastOnCycleStartedSecondsAgo();
+    if (isPumpOn) inc_lastOnCycleDuration();
+  }
+
+  void resetAntiFreezeTimers() {
+    lastOnCycleStartedSecondsAgo = 0;
+    lastOnCycleDuration = 0;
   }
 
 	bool isAboveAdjustedSetPoint()
@@ -103,7 +137,7 @@ public:
 		cycleDuration = 0;
 	}
 
-	//
+	// to start the pump, go to `starting phase`, reset duration, check cold floor, and set pwm.
 	void start()
 	{
 		state = 2; // motor starting phase
@@ -111,6 +145,9 @@ public:
 		// re-set cycle timer
 		resetDuration();
 		timeRemaining = ON_CYCLE_MINIMUM_SECONDS;
+
+    // reset timers for ANTIFREEZE cycle
+    resetAntiFreezeTimers();
 
 		// reset "pwm pulse" counter when turning on
 		pulsePwmCounter = 0;
@@ -188,6 +225,8 @@ public:
 		bool isPumpOn = pwm > 0;
 		if (isPumpOn)
 			accumOn++;
+    // to track when we can skip the ANTIFREEZE cycle
+    incrementAntiFreezeTimers(isPumpOn);
 
 		// time spent above setpoint
 		// bool isAboveTargetTemperature = weightedAirTemp >= setPoint;
@@ -195,84 +234,84 @@ public:
 			accumAbove++;
 
 		// check for cycle change
-		bool pwmHasChanged = checkCycle();
+		bool pwmHasChanged = checkCycle(isPumpOn);
 
 		// adjust pump if needed
 		if (pwmHasChanged)
 			analogWrite(HEAT_PUMP_PIN, pwm);
 	}
 
-	bool checkCycle()
+  // ===============================================
+  // Switching to different cycles:
+  // ===============================================
+
+  void offWithTimer() {
+    // special cases in extreme change
+    bool isTempBelowMaximumOffset = weightedAirTemp <= setPoint - EMERGENCY_ON_TRIGGER_OFFSET;
+
+    if (isTempBelowMaximumOffset)
+      start();
+  }
+
+  void onWithTimer() {
+    runOn();
+    pulsePwm();
+  }
+
+  void pumpStart() {
+    // bool isStillStartingUp = timeRemaining > END_OF_STARTUP_TIMER;
+    bool isStillStartingUp = startingPhaseStepAdjust > 0;
+    if (isStillStartingUp)
+      stepDownPwm();
+    else
+      runOn();
+  }
+
+  void offContinued(bool isPumpOn, bool _isAboveAdjustedSetPoint) {
+    if (!_isAboveAdjustedSetPoint)
+      if (isPumpOn)
+        runOn();
+      else
+        start(); // most common start trigger
+    else if (isPumpOn)
+      stop(); // coming from delay, in case we need to stop
+  }
+
+  void onContinued(bool _isAboveAdjustedSetPoint) {
+    if (_isAboveAdjustedSetPoint)
+      stop(); // most common stop trigger
+    else
+    {
+      runOn();
+      pulsePwm();
+    }
+  }
+
+  void delayTimerEnd() {
+    state = 0;
+  }
+
+	bool checkCycle(bool isPumpOn)
 	{
 		uint8_t lastPwm = pwm;
-		bool isDuringACycle = timeRemaining > 0;
+		bool isDuringATimedCycle = timeRemaining > 0;
 
-		if (isDuringACycle)
+		if (isDuringATimedCycle)
 		{
 			timeRemaining--;
 
-			if (state == 0)
-			{ // offWithTimer();
-				// special cases in extreme change
-				bool isTempBelowMaximumOffset = weightedAirTemp <= setPoint - EMERGENCY_ON_TRIGGER_OFFSET;
-
-				if (isTempBelowMaximumOffset)
-					start();
-			}
-
-			else if (state == 1)
-			{ // onWithTimer();
-				runOn();
-				pulsePwm(); // occasional higher PWM pulse
-			}
-
-			else if (state == 2)
-			{ // startup();
-				// bool isStillStartingUp = timeRemaining > END_OF_STARTUP_TIMER;
-				bool isStillStartingUp = startingPhaseStepAdjust > 0;
-				if (isStillStartingUp)
-					stepDownPwm();
-				else
-					runOn();
-			}
+			if (state == 0) offWithTimer();
+			else if (state == 1) onWithTimer();
+			else if (state == 2) pumpStart();
 		}
 		else
 		{
 			// NO timer restriction (extended phase)
-			// if floor is warm, floorOffset increases, so target temperature decreases
-			// bool shouldPumpBeOn = weightedAirTemp < adjustedsetPoint;
+      bool _isAboveAdjustedSetPoint = isAboveAdjustedSetPoint();
 
-			// bool shouldPumpBeOn = Output > MIDPOINT;
-
-			// 23952 : 1221
-			if (state == 0)
-			{ // offContinued() && check after delayedStart
-				bool isPumpOn = pwm > 0;
-
-				if (!isAboveAdjustedSetPoint())
-					if (isPumpOn)
-						runOn();
-					else
-						start(); // most common start trigger
-				else if (isPumpOn)
-					stop(); // coming from delay, in case we need to stop
-			}
-
-			else if (state == 1)
-			{ // onContinued();
-				if (isAboveAdjustedSetPoint())
-					stop(); // most common stop trigger
-				else
-				{
-					runOn();
-					pulsePwm();
-				}
-			}
-
-			else if (state == 3)
-			{						 // delayTimerEnd();
-				state = 0; // it'll check next update
-			}
+			if (state == 0) offContinued(isPumpOn, _isAboveAdjustedSetPoint);
+			else if (state == 1) onContinued(_isAboveAdjustedSetPoint);
+			else if (state == 3) delayTimerEnd();
 		}
 
 		// return true if changed

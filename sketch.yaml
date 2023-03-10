@@ -1,0 +1,2 @@
+default_fqbn: arduino:avr:nano:cpu=atmega328old
+default_port: COM10

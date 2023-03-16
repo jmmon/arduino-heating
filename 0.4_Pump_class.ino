@@ -45,7 +45,7 @@ public:
 
 	uint8_t pwm = 0; // holds motor PWM
 
-	uint8_t state = 0;					// holds motor state
+	uint8_t state = 0;					// 0 === off, 1 === on, 2 === starting, 3 === delayedStart, 4 === ANTIFREEZE
 	uint32_t cycleDuration = 0; // for this cycle
 
   // for ANTIFREEZE cycle, to detect when we can skip
@@ -72,25 +72,11 @@ public:
       : max(diff, (-1 * limit));
   }
 
-  void inc_lastOnCycleDuration() { // run every second that the pump is on (or starting)
-    lastOnCycleDuration++;
-  }
-  void reset_lastOnCycleDuration() { // run once when pump turns on
-    lastOnCycleDuration = 0;
-  }
-  void inc_lastOnCycleStartedSecondsAgo() { // run every second
+  void incrementAntiFreezeTimers(bool isPumpOn) { // run every second
     lastOnCycleStartedSecondsAgo++;
+    if (isPumpOn) lastOnCycleDuration++; // run every second that the pump is on (or starting)
   }
-  void reset_lastOnCycleStartedSecondsAgo() { // run once when pump turns on
-    lastOnCycleStartedSecondsAgo = 0;
-  }
-
-  void incrementAntiFreezeTimers(bool isPumpOn) {
-    inc_lastOnCycleStartedSecondsAgo();
-    if (isPumpOn) inc_lastOnCycleDuration();
-  }
-
-  void resetAntiFreezeTimers() {
+  void resetAntiFreezeTimers() { // run once when pump turns on
     lastOnCycleStartedSecondsAgo = 0;
     lastOnCycleDuration = 0;
   }

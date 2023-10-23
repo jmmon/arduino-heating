@@ -20,9 +20,10 @@ const uint16_t ON_CYCLE_MINIMUM_SECONDS = 60;	 // 1m
 const uint16_t OFF_CYCLE_MINIMUM_SECONDS = 300; // 5m
 uint32_t timeRemaining = 0; // cycle time counter, to track if we're past the minimum cycle times
 
-const uint8_t ANTIFREEZE_CYCLE_PWM = 145; // slightly faster than normal
-const uint16_t ANTIFREEZE_CYCLE_SECONDS = 900; // 15m
-const uint16_t ANTIFREEZE_CYCLE_SECONDS_INTERVAL = 7200; // 120m or 2hours
+// for the ANTIFREEZE cycle: run the pump a short while every so often
+const uint8_t ANTIFREEZE_CYCLE_PWM = ON_PHASE_BASE_PWM + 10; // slightly faster than normal
+const uint16_t ANTIFREEZE_CYCLE_SECONDS = 420; // 7m
+const uint32_t ANTIFREEZE_CYCLE_SECONDS_INTERVAL = 3 * 3600; // 120m or 2hours
 const uint8_t ANTIFREEZE_ENABLED_ABOVE_SETPOINT = 55; // degrees F - only run this cycle if setpoint is above this value (so in summer, make setpoint this value or less)
 
 // Occasional PWM boost (to prevent motor stalling)
@@ -36,6 +37,8 @@ static const uint8_t DELAY_SECONDS = 3;				 // seconds after setpoint change it 
 double difference = 0;
 // if temp drops lower than this from the setpoint, start the pump regardless of timers
 const uint8_t EMERGENCY_ON_TRIGGER_OFFSET = 5; // degrees from setpoint
+
+uint32_t lastCycleDuration = 0; // global
 
 class Pump_C
 {
@@ -52,53 +55,59 @@ public:
   uint32_t lastOnCycleStartedSecondsAgo = 0;  // when turning on, reset this to 0 and count up (continuously, until next turning on will reset it to 0)
   uint32_t lastOnCycleDuration = 0;   // when turning on, reset this to 0 and count up while pump stays on
 
+  /* Constructor function
+  */
 	Pump_C()
 	{ // constructor
 		pinMode(HEAT_PUMP_PIN, OUTPUT);
 	}
 
-	// if temp is cold return true, else if slow/fast temp are warm, return
+  /* Checks if floor is cold 
+  * based off both current and slow EMAs
+  * 
+  * @return {boolean} - is floor cold?
+  */
 	bool isCold()
 	{
 		return (floorEmaAvg < FLOOR_WARMUP_TEMPERATURE || floorEmaAvgSlow < FLOOR_WARMUP_TEMPERATURE);
 	}
 
-  double getTempDiffLimited(float old, float recent, double limit) 
+  /* limits temperature difference to a limit
+  *
+  * @param {float} prev - previous reading
+  * @param {float} current - current reading
+  * @param {double} limit - upper/lower bound
+  * 
+  * @return {double} - difference (or limit)
+  */
+  double limitTempDiff(float prev, float current, double limit) 
   {
-    double diff = double(old - recent);
+    double diff = double(prev - current);
     // limit the diff to +- the limit
     return diff >= 0
       ? min(diff, limit)
       : max(diff, (-1 * limit));
   }
 
-  void incrementAntiFreezeTimers(bool isPumpOn) { // run every second
-    lastOnCycleStartedSecondsAgo++;
-    if (isPumpOn) lastOnCycleDuration++; // run every second that the pump is on (or starting)
-  }
-  void resetAntiFreezeTimers() { // run once when pump turns on
-    lastOnCycleStartedSecondsAgo = 0;
-    lastOnCycleDuration = 0;
-  }
-
+  /* limits temperature difference to a limit
+  *
+  * @param {float} prev - previous reading
+  * @param {float} current - current reading
+  * @param {double} limit - upper/lower bound
+  * 
+  * @return {double} - difference (or limit)
+  */
 	bool isAboveAdjustedSetPoint()
 	{
-		// as floor offset increases pump will cut off sooner or start later
-		// as floor offset decreases pump will turn on sooner or cut off later
-		// return weightedAirTemp >= setPoint - floorOffset;
+		// as floor offset increases pump will cut off sooner and start later
+		// as floor offset decreases pump will turn on sooner and stop later
 
-		// how about: take the air temp medium ema compared to current ema
-		// medium ema - current === difference,
-    // (or slow ema - medium ema === difference)
-    //    this way a sudden drop in temp (from opening the door) will
-    //      not trigger the pump quickly
 		// if difference is positive this means we have extra capacity of heat
 		// if difference is negative this means we don't have extra capacity of heat
+		// difference between the two values, limited to the limit 3rd parameter
+    difference = limitTempDiff(air[0].currentEMA[2], air[0].currentEMA[1], 2);
 
-		// save difference to global var
-    // difference = getTempDiffLimited(air[0].currentEMA[1], air[0].currentEMA[0], 2);
-    difference = getTempDiffLimited(air[0].currentEMA[2], air[0].currentEMA[1], 2);
-		return weightedAirTemp >= setPoint - difference;
+		return weightedAirTemp >= setPoint - difference - (floorOffset / 2);
 	}
 
 	uint8_t limitPwm(int16_t target)
@@ -106,9 +115,10 @@ public:
 		return target >= 255 ? 255 : target;
 	}
 
-	uint8_t limitedBasePwm()
+	uint8_t limitedBasePwm(uint8_t nextState)
 	{
-		return limitPwm((coldFloor) ? ON_PHASE_BASE_PWM + COLD_FLOOR_PWM_BOOST : ON_PHASE_BASE_PWM);
+    const uint8_t NEXT_STATE_PWM = nextState == 4 ? ANTIFREEZE_CYCLE_PWM : ON_PHASE_BASE_PWM;
+		return limitPwm((coldFloor) ? NEXT_STATE_PWM + COLD_FLOOR_PWM_BOOST : NEXT_STATE_PWM);
 	}
 
 	String getStatusString()
@@ -120,12 +130,27 @@ public:
 
 	void resetDuration()
 	{
+    /*lastCycleDuration = cycleDuration;*/
 		cycleDuration = 0;
 	}
+
+  void incrementAntiFreezeTimers(bool isPumpOn) { // run every second
+    lastOnCycleStartedSecondsAgo++;
+    if (isPumpOn) lastOnCycleDuration++; // run every second that the pump is on (or starting)
+  }
+
+  void resetAntiFreezeTimers() { // run once when pump turns on
+    lastOnCycleStartedSecondsAgo = 0;
+    lastOnCycleDuration = 0;
+  }
+
 
 	// to start the pump, go to `starting phase`, reset duration, check cold floor, and set pwm.
 	void start()
 	{
+    // show cycle time
+    DEBUG_cycleTimes2(cycleDuration);
+
 		state = 2; // motor starting phase
 
 		// re-set cycle timer
@@ -152,6 +177,9 @@ public:
 
 	void stop(bool skipTimer = false)
 	{
+    // show cycle time
+    DEBUG_cycleTimes2(cycleDuration);
+
 		// check for cold floor so it stays up to date
 		coldFloor = isCold();
 		state = 0;
@@ -166,19 +194,20 @@ public:
 		timeRemaining = delaySeconds;
 	}
 
-	void runOn()
+	void runOn(uint8_t nextState = -1)
 	{ // continue run phase
-		state = 1;
+    if (nextState == -1) nextState = state;
+		state = nextState;
 		// turn off coldFloor if floor stays warm for a bit
 		coldFloor = isCold();
-		pwm = limitedBasePwm();
+		pwm = limitedBasePwm(nextState);
 	}
 
 	// during startup phase
-	void stepDownPwm()
+	void stepDownPwm(uint8_t nextState)
 	{
 		// base pwm
-		uint8_t basePwm = limitedBasePwm();
+		uint8_t basePwm = limitedBasePwm(nextState);
 
 		// current PWM is boosted for startup. Calc after stepping down one time
 		uint8_t steppedDownPwm = pwm - startingPhaseStepAdjust;
@@ -205,7 +234,9 @@ public:
 	void update()
 	{
 		cycleDuration++; // this cycle cycleDuration
-		DEBUG_highsLowsFloor();
+    const bool isEndOfCycle = true;
+    DEBUG_cycleTimes2(isEndOfCycle);
+		DEBUG_highsLowsFloor2();
 
 		// time spent on
 		bool isPumpOn = pwm > 0;
@@ -216,11 +247,12 @@ public:
 
 		// time spent above setpoint
 		// bool isAboveTargetTemperature = weightedAirTemp >= setPoint;
-		if (isAboveAdjustedSetPoint())
+    const bool _isAboveAdjustedSetPoint = isAboveAdjustedSetPoint();
+		if (_isAboveAdjustedSetPoint)
 			accumAbove++;
 
 		// check for cycle change
-		bool pwmHasChanged = checkCycle(isPumpOn);
+		bool pwmHasChanged = checkCycle(_isAboveAdjustedSetPoint, isPumpOn);
 
 		// adjust pump if needed
 		if (pwmHasChanged)
@@ -244,13 +276,13 @@ public:
     pulsePwm();
   }
 
-  void pumpStart() {
+  void pumpStart(uint8_t nextState) {
     // bool isStillStartingUp = timeRemaining > END_OF_STARTUP_TIMER;
     bool isStillStartingUp = startingPhaseStepAdjust > 0;
     if (isStillStartingUp)
-      stepDownPwm();
+      stepDownPwm(nextState);
     else
-      runOn();
+      runOn(nextState);
   }
 
   void offContinued(bool isPumpOn, bool _isAboveAdjustedSetPoint) {
@@ -259,8 +291,13 @@ public:
         runOn();
       else
         start(); // most common start trigger
-    else if (isPumpOn)
-      stop(); // coming from delay, in case we need to stop
+    else { 
+      if (isPumpOn)
+        stop(); // coming from delay, in case we need to stop
+      else {
+        // run timer for the ANTIFREEZE cycle?
+      }
+    }
   }
 
   void onContinued(bool _isAboveAdjustedSetPoint) {
@@ -273,11 +310,17 @@ public:
     }
   }
 
+  void onAntifreeze() {
+    
+  }
+
   void delayTimerEnd() {
     state = 0;
   }
 
-	bool checkCycle(bool isPumpOn)
+
+  // checks which state the pump should be in, returns boolean for if pwm changed
+	bool checkCycle(bool _isAboveAdjustedSetPoint, bool isPumpOn)
 	{
 		uint8_t lastPwm = pwm;
 		bool isDuringATimedCycle = timeRemaining > 0;
@@ -288,13 +331,12 @@ public:
 
 			if (state == 0) offWithTimer();
 			else if (state == 1) onWithTimer();
-			else if (state == 2) pumpStart();
+			else if (state == 2) pumpStart(1); // start into regular on cycle
+      /*else if (state == 4) pumpStart(4); // start into antifreeze cycle*/
 		}
 		else
 		{
 			// NO timer restriction (extended phase)
-      bool _isAboveAdjustedSetPoint = isAboveAdjustedSetPoint();
-
 			if (state == 0) offContinued(isPumpOn, _isAboveAdjustedSetPoint);
 			else if (state == 1) onContinued(_isAboveAdjustedSetPoint);
 			else if (state == 3) delayTimerEnd();

@@ -2,6 +2,13 @@
 //#include <ArduPID.h>
 //#include <TimeLib.h>
 
+/**
+* Sets up the time the program is started
+* - Unfortunately doesn't stay in sync because the clock on the Arduino
+*   is not quite accurate compared to the computer so it drifts...
+* - Could implement a photoresistor to detect "mid-day" and use that as
+*   an "anchor" point to keep the time in sync
+*/
 void timeSetup()
 {
 	// get and display time works!
@@ -47,9 +54,12 @@ void timeSetup()
 	setTime(hrs, mins, secs, dys, months, yrs);
 }
 
+/**
+* Resetting variables and pin outputs to defaults for initialization
+*/
 void setup()
 {
-	Serial.begin(9600);
+	Serial.begin(14400);
 	pump.stop(true);
 
 	// // AutoPID setup:
@@ -91,6 +101,12 @@ void setup()
 	prevLoopStartTime = 0;
 }
 
+/**
+* Main loop function to run all updates
+* - update thermostat every quarter second
+* - update pump every second
+* - update water tank & temperature readings every 2.5 seconds
+*/
 void loop()
 {
 	currentTime = millis();
@@ -108,7 +124,7 @@ void loop()
 		Tstat.update();
 
 		// 1000ms Loop:
-		if (prevLoopStartTime % ms1000Interval == 0)
+		if (prevLoopStartTime % MS_1000_INTERVAL == 0)
 		{
 			pump.update();
 
@@ -118,7 +134,7 @@ void loop()
 		}
 
 		// 2500ms Loop:
-		if (prevLoopStartTime % ms2500Interval == 0)
+		if (prevLoopStartTime % MS_2500_INTERVAL == 0)
 		{
 			waterTank.update();
 			updateTEMP(); // read air temp

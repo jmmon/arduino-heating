@@ -130,6 +130,23 @@ press+hold => enable/disable page from the view cycle
           * if tubes are already hot, skip the cycle
           * Maybe save a "recent longest cycle duration":
             - if pump ran for (duration) continuous minutes during the last (interval / 2), skip the antifreeze cycle
+  ##### Update March 17th 2023:
+    Should re-think the logic for pump cycles. Make it more simple to select cycle and to switch cycles
+    - Basically I need a clock and every second it checks what state should be next
+    - If state is different, we should switch state and the cycle will start
+    - Could save "nextState" for startup => on | antifreeze, i.e. state = 2 and nextState = 1 | 4
+        - state = 3 | nextState = 2
+
+    - On phase: run for x minutes while below the setpoint
+        - PWM Boost every n minutes for one tick
+    - antifreeze phase: if n minutes have passed since pump has been on, switch to state = 4 and run for y minutes
+        - so only check for this when switching to off from on, i.e. when stopping the pump
+        - Once we stop the pump, reset the timer.
+        - While during off phase, once timer reaches the end, switch to state = 4 and run timer for y minutes
+            - or switch to state = 2 with nextState = 4
+        - After stopping, will reset the timer again
+        - if pump needs to turn on while this is running, I guess switch to state = 1; can ignore startup
+    - off phase
 
   #### Major Change Idea:
    **T-Stat: Standalone power supply:**
@@ -154,4 +171,6 @@ press+hold => enable/disable page from the view cycle
         - T-Stat will receive temperature datas from the Heat arduino (how? serial? Sending messages maybe)
         - T-Stat will send pump signal to the Heat arduino (serial message with a PWM value? or at least a mode value)
         - Temp-Sensor on T-Stat will be routed back to Heat arduino I guess? And then forwareded to T-Stat
+
+
 

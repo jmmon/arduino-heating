@@ -68,48 +68,18 @@ void DEBUG_highsLowsFloor()
 {
 	if (DEBUG)
 	{
-		// if (lastCycleDuration != 0) {  // if end of cycle:
-		//     Serial.print(F(" ms:"));
+		/*if (lastCycleDuration != 0) {  // if end of cycle:*/
+			/*uint32_t ms = lastCycleDuration; // in ms*/
+			/*Serial.print(F(" ms:"));*/
+			/*Serial.print(ms);*/
 
-		//     uint32_t t = lastCycleDuration;
-		//     Serial.print(t);
-		//     uint16_t hours = t / 3600000;
-		//     t -= (hours * 3600000);
-		//     uint16_t minutes = t / 60000;
-		//     t -= (minutes * 60000);
-		//     uint16_t seconds = t / 1000;
-		//     t -= (seconds * 1000);
-		//     if (seconds >= 60) {
-		//         minutes += 1;
-		//         seconds -= 60;
-		//     }
-		//     if (minutes >= 60) {
-		//         hours += 1;
-		//         minutes -= 60;
-		//     }
-		//     if (t >= 500 && (minutes > 0 || hours > 0)) {
-		//         seconds += 1;
-		//     }
+      /*const uint32_t s = getMsFromSeconds(ms);*/
 
-		//     Serial.print(F("                          Total cycle time: "));
+			/*Serial.print(F("                          Total cycle time: "));*/
+      /*const String thisCycleTime = formatTimeToString(s);*/
 
-		//     if (hours > 0) {
-		//         Serial.print(hours);
-		//         Serial.print(F("h"));
-		//     }
-		//     if (minutes > 0) {
-		//         Serial.print(minutes);
-		//         Serial.print(F("m"));
-		//     }
-		//     if (seconds > 0) {
-		//         Serial.print(seconds);
-		//         Serial.print(F("s"));
-		//     }
-		//     if (hours == 0 && minutes == 0) {
-		//         Serial.print(t);
-		//     }
-		//     //Serial.println();
-		// }
+      /*Serial.print(thisCycleTime);*/
+		/*}*/
 
 		Serial.println();
 		Serial.print(F(" Set: "));

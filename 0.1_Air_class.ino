@@ -20,8 +20,10 @@ public:
 
 	bool working = true;
 
+  /* Constructor function to set up the air sensors
+  */
 	Air_C(DHT *s, float w)
-	{ // constructor
+	{
 		sensor = s;
 		WEIGHT = w;
 	}
@@ -32,6 +34,8 @@ public:
 	//            WEIGHT = w;
 	//        }
 
+  /* Read the temps and save them to state
+  */
 	void readTemp()
 	{
 		// read temp/humid
@@ -51,13 +55,20 @@ public:
 	//          humid = sensor->getHumidity();
 	//        }
 
+  /* Function to get the air temp Exponential Moving Average
+  * @param {boolean} weighted - true if weighted EMA
+  * @return {float} - temperature EMA, weighted or not
+  */
 	float getTempEma(bool weighted = false)
 	{
 		return (weighted) ? (WEIGHT * currentEMA[0]) : currentEMA[0];
 	}
 
-	// update runs every 2.5s
-	updateRecords()
+  /* Updates air temp highs/lows records
+  * updates air temps (EMAs)
+  * runs every 2.5 seconds
+  */
+	void updateRecords()
 	{
 		// update highest / lowest
 		if (highest < tempF)

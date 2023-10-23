@@ -161,8 +161,15 @@ public:
 	{ // constructor
 		pinMode(T_STAT_BUTTON_PIN, INPUT);
 	}
+  
+  void initialize() {
+    if (PRINT_TO_SERIAL) initializeLcd();
+    else {
+      // initialize serial?
+    }
+  }
 
-	void initialize()
+	void initializeLcd()
 	{
 		lcd.init(); // initialize the lcd
 		lcd.clear();
@@ -179,48 +186,12 @@ public:
 	}
 
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	// Helper functions:
-	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-	String formatTimeToString(uint32_t _t)
-	{ // takes seconds
-		// get base time from seconds count
-		uint16_t hours = _t / 3600;
-		_t -= (hours * 3600);
-		uint8_t minutes = _t / 60;
-		//_t -= (minutes * 60);
-		uint8_t seconds = _t % 60;
-
-		// rollover if necessary
-		if (seconds >= 60)
-		{
-			minutes += 1;
-			seconds -= 60;
-		}
-		if (minutes >= 60)
-		{
-			hours += 1;
-			minutes -= 60;
-		}
-
-		return (((hours < 10) ? ("0") : ("")) + String(hours) +
-						((minutes < 10) ? (":0") : (":")) + (String(minutes)) +
-						((seconds < 10) ? (":0") : (":")) + String(seconds));
-	}
-
-	String formatHoursWithTenths(int32_t _t)
-	{
-		return String((_t / 3600.), 1);
-	}
-
-	uint32_t getTotalSeconds()
-	{
-		return uint32_t(currentTime / 1000.);
-	}
-	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	// Utility functions:
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+    /**
+    Read buttons pin
+    */
 	void detectButtons()
 	{
 		uint16_t buttonRead = analogRead(T_STAT_BUTTON_PIN);
@@ -234,21 +205,27 @@ public:
 			return;
 		}
 
-		if (DEBUG)
-			Serial.println(buttonRead);
+		if (DEBUG) {
+        Serial.print(F(" ~"));
+        Serial.print(buttonRead);
+      }
 
-		// initialize variable
+		// holds how much we want to change the thermostat temperature
 		int8_t changeTstatByAmount = 0;
 
 		// button press will turn off alarm! Yay!
-		bool alarmIsOn = alarmCountdown > 0 || alarmCounter > 1;
-		if (alarmIsOn)
+		bool isAlarmOn = alarmCountdown > 0 || alarmCounter > 1;
+		if (isAlarmOn)
 		{
 			alarmCountdown = 0;
 			alarmCounter = 1; // set to odd number
 			checkBeep(2);			// silences tone if odd number
 		}
 
+    // which button was pressed? note which direction to adjust the temperature
+    // also reset records: 
+    // - when increasing, reset lows since our lows will now be higher
+    // - when decreasing, reset highs since our highs will now be lower
 		bool isButtonHeldForSecondTick = lastButtonRead > 63;
 		bool isTopButton = buttonRead > 850;
 		if (isButtonHeldForSecondTick)
@@ -273,7 +250,9 @@ public:
 		setPoint += double(SETPOINT_ADJ_PER_TICK * changeTstatByAmount);
 
 		// show (and hold onto) our set page
-		lcd.clear();
+    if (!PRINT_TO_SERIAL) {
+      lcd.clear();
+    }
 		drawSetPage();
 		holdSetPage = true;
 		// check if needs to run
@@ -311,10 +290,11 @@ public:
 			drawWaterFillingPage();
 			break;
 
-		// currentPage > highest ? rollover to 0 and rerun
+		// currentPage > highest ? rollover
 		default:
 			currentPage = 0;
-			printCurrentPage();
+      drawTemperaturePage();
+      /*printCurrentPage();*/
 			break;
 		}
 	}
@@ -348,7 +328,7 @@ public:
 			// if going into a new page, clear it
 			bool isNewPageNext = lcdPageSwitchCounter == LCD_INTERVAL_QTR_SECS;
 			if (isNewPageNext)
-				lcd.clear();
+        if (!PRINT_TO_SERIAL) lcd.clear();
 			// refresh the page, or print the new page if it switched
 			printCurrentPage();
 		}
@@ -472,8 +452,21 @@ public:
 
 	void drawLine(String string, uint8_t slot, uint8_t lineNum)
 	{
-		lcd.setCursor(slot, lineNum);
-		lcd.print(string);
+    if (!PRINT_TO_SERIAL) {
+      lcd.setCursor(slot, lineNum);
+      lcd.print(string);
+    } else {
+      // print to serial
+      if (slot == 0) {
+        // if printing the whole line, create a new line and print.
+        Serial.println();
+        Serial.print(string);
+      } else {
+        // else just add the string on to the end of the previous line
+        Serial.print(F(" ")); // add space
+        Serial.print(string);
+      }
+    }
 	}
 
 	void drawLinesIfDifferent(String l1, String l2)

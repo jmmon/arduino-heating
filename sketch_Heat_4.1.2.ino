@@ -1,4 +1,4 @@
- #include <Arduino.h>
+#include <Arduino.h>
 #include <TimeLib.h>
 
 #include <Wire.h>
@@ -6,7 +6,7 @@
 // #include <AutoPID.h>
 #include <DHT.h>
 // #include <dhtnew.h>
-#include <ArduPID.h>
+// #include <ArduPID.h>
 
 #define TONE_USE_INT
 #define TONE_PITCH 432
@@ -17,6 +17,7 @@
 
 const String VERSION_NUMBER = "4.1.2";
 const bool DEBUG = false;
+const bool PRINT_TO_SERIAL = DEBUG;
 
 const uint8_t AIR_SENSOR_COUNT = 4;
 const uint8_t FLOOR_SENSOR_COUNT = 2;
@@ -60,8 +61,8 @@ DHT dht[4] = {
 
 uint32_t currentTime = 0; // timer
 uint32_t prevLoopStartTime = 0;		// counters
-const uint16_t ms1000Interval = 1000;
-const uint16_t ms2500Interval = 2500;
+const uint16_t MS_1000_INTERVAL = 1000;
+const uint16_t MS_2500_INTERVAL = 2500;
 
 // SDA = A4 pin; SCL = A5 pin
 LiquidCrystal_I2C lcd(0x27, 16, 2); // set the LCD address to 0x27 for a 16 chars and 2 line display
@@ -81,9 +82,9 @@ float floorEmaAvgSlow = 0;
 bool coldFloor = false;
 
 // for tweaking the setpoint based on the floor reading
-const uint16_t minFloorRead = 525; // the 0 point for this calculation
-const uint8_t maxFloorOffset = 150; // added to above, the maximum for this calculation
-const uint8_t maxTempAdjust100x = 200; // degrees F * 100 to subtract from target temp, scaled by the floor read range
+const uint16_t MIN_FLOOR_READ = 525; // the 0 point for this calculation
+const uint8_t MAX_FLOOR_OFFSET = 150; // added to above, the maximum for this calculation 
+const uint8_t MAX_TEMP_ADJUST_100x = 200; // degrees F * 100 to subtract from target temp, scaled by the floor read range
 double floorOffset = 0;
 
 // for the lcd? or for debug?
@@ -158,4 +159,52 @@ float calcEma(uint16_t reading, uint16_t lastEma, uint16_t days)
 {
 	// ema = (floatSensorReadValue * (2. / (1 + EMA_PERIODS_SHORT)) + lastEma * (1 - (2. / (1 + EMA_PERIODS_SHORT))));
 	return (reading * (2. / (1 + days)) + lastEma * (1 - (2. / (1 + days))));
+}
+
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// Helper functions:
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// returns string
+String formatTimeToString(uint32_t _s)
+{
+  // get base time from seconds count
+  uint16_t hours = _s / 3600;
+  _s -= (hours * 3600);
+  uint8_t minutes = _s / 60;
+  uint8_t seconds = _s % 60;
+
+  // rollover if necessary
+  if (seconds >= 60)
+  {
+    minutes += 1;
+    seconds -= 60;
+  }
+
+  if (minutes >= 60)
+  {
+    hours += 1;
+    minutes -= 60;
+  }
+
+  return (((hours < 10) ? ("0") : ("")) + String(hours) +
+          ((minutes < 10) ? (":0") : (":")) + (String(minutes)) +
+          ((seconds < 10) ? (":0") : (":")) + String(seconds));
+}
+
+// returns string
+String formatHoursWithTenths(int32_t _t)
+{
+  return String((_t / 3600.), 1);
+}
+
+uint32_t msToSeconds(uint32_t _ms) {
+  return uint32_t(_ms / 1000.);
+}
+
+// returns uint32_t
+uint32_t getTotalSeconds()
+{
+  return msToSeconds(currentTime);
 }

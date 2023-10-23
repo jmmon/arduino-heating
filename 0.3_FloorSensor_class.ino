@@ -16,22 +16,30 @@ public:
 	uint16_t lastEma = 480;
 	uint16_t lastSlowEma = 480;
 
+  /* Constructor function
+  */
 	FloorSensor_C(uint8_t _pin)
-	{ // constructor
+	{
 		PIN = _pin;
 		pinMode(_pin, INPUT);
 	}
 
+  /* Read and average the temps
+  * @param {uint8_t} loops  - how many readings
+  * 
+  * @return {uint16_t} - average reading 0-1023
+  */
 	uint16_t readTemp(uint8_t loops = 5)
 	{
 		uint16_t val = 0;
-
-		for (uint8_t z = 0; z < loops; z++)
+		for (uint8_t z = 0; z < loops; z++) {
 			val += analogRead(PIN);
-
+    }
 		return val / loops;
 	}
 
+  /* Reads floor temp and updates EMAs
+  */
 	void update()
 	{
 		uint16_t floorRead = readTemp();

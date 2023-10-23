@@ -81,17 +81,25 @@ public:
 	// 255 || -1 == "--"; // initial state
 	uint8_t percent, lastPercent, displayPercent = 255; // initialize as '--'
 
+  /* Constructor function
+  */
 	WaterTank_C()
-	{ // constructor
+	{
 		pinMode(WATER_FLOAT_SENSOR_PIN, INPUT);
 	}
 
+  /* Sets up the water tank level
+  */
 	init()
 	{ // run at setup
 		ema = lastEma = slowEma = lastSlowEma = analogRead(WATER_FLOAT_SENSOR_PIN);
 	}
 
 	
+  /* Converts number to the display string to show tank percent level
+  * 
+  * @return {String} - string to show tank percentage
+  */
 	String getDisplayString()
 	{
 		// handle conversion / formatting:
@@ -106,22 +114,30 @@ public:
 		case (255):
 			return F("--");
 		default:
-			return (displayPercent < 10) ? (" ") + String(displayPercent) : String(displayPercent);
+			return ((displayPercent < 10) ? (" ") : ("")) +  String(displayPercent);
 		}
 	}
 
+  /* Uses sensor reading and high/low bounds to calculate tank percent level
+  *
+  * @return {uint8_t} - tank percentage level
+  */
 	uint8_t calculateTankPercent()
 	{
-		return ((ema <= ERROR_HIGH_BOUND) ? 101 : // error (lowest)
-								(ema <= LOW_BOUND) ? 0
-																	 : // empty
-								(ema <= HIGH_BOUND) ? (float)100 * (ema - LOW_BOUND) / (HIGH_BOUND - LOW_BOUND)
-																		: // normal range
-								100);									// full
+      if (ema <= ERROR_HIGH_BOUND) {
+        return 101; // error (lowest)
+      } else if (ema <= LOW_BOUND) {
+        return 0; // empty
+      } else if (ema <= HIGH_BOUND) {
+        return (float)100 * (ema - LOW_BOUND) / (HIGH_BOUND - LOW_BOUND)// normal range
+      } else {
+        return 100; // full
+      }
 	}
 
-	update()
-	{																																			// every 2.5 seconds
+  /* Reads sensor and updates EMAs
+  */
+  void calculateWaterLevelEmas() {
 		uint16_t floatSensorReadValue = analogRead(WATER_FLOAT_SENSOR_PIN); // float sensor
 
 		// calculate water level EMAs
@@ -135,23 +151,35 @@ public:
 		slowEma = calcEma(floatSensorReadValue, lastSlowEma, EMA_PERIODS_LONG);
 		diff = ema - slowEma;
 		diffEma = calcEma(diff, lastDiffEma, EMA_PERIODS_DIFF);
+  }
 
+  /* Calculates tank percent and updates display
+  * also handles initialization of display tank percent
+  */
+  void updateDisplayPercent() {
 		// calculate tank percent based on ema
 		lastPercent = percent;
 		percent = calculateTankPercent();
 
 		// set to percent instead of '--' (initialization)
-		bool isInitialization = displayPercent == 255;
-		if (isInitialization)
-			displayPercent = (displayPercent != percent) ? percent : displayPercent;
+		if (displayPercent == 255) {
+      displayPercent = (displayPercent != percent) 
+          ? percent 
+          : displayPercent;
+    }
+  }
 
+  /* Checks if water level is rising or falling etc
+  */
+  void determineTankState() {
 		// stabilize readings: stops wobble, i.e. 55 -> 54 -> 55 -> 54 -> 55
 		bool isFillingAndGreater = filling && percent > displayPercent;
 		bool isDrainingAndLesser = !filling && percent < displayPercent;
 		// when not filling, allow it to decrease
 		// when filling, allow it to increase
-		if ((isFillingAndGreater) || (isDrainingAndLesser))
+		if ((isFillingAndGreater) || (isDrainingAndLesser)) {
 			displayPercent = percent;
+    }
 
 		bool isTankRising = diffEma >= FILL_TRIGGER;
 		bool isFull = percent == 100;
@@ -168,19 +196,14 @@ public:
 		// Determine if tank is currently being filled:
 
 		// while tank is rising, adjust filling boolean based on if tank is at 100%
-		if (isTankRising)
-		{
+		if (isTankRising) {
 			filling = (percent != 100);
-		}
-		else
-		{
-			bool shouldStopRising = diffEma <= STOP_FILL_TRIGGER;
-			if (shouldStopRising)
-				filling = false;
-		}
+		} else if (diffEma <= STOP_FILL_TRIGGER) {
+      filling = false;
+    }
+		
 		// detect moment the tank fills to 100%
-		if (filling && (percent == 100))
-		{
+		if (filling && (percent == 100)) {
 			filling = false;
 			newlyFull = true;
 
@@ -188,6 +211,18 @@ public:
 			ema = lastEma = slowEma = lastSlowEma = HIGH_BOUND; // set to max
 			diffEma = lastDiffEma = 0;													// reset to 0
 		}
+  }
+
+  /* Update function to update the water tank data
+  * runs every 2.5 seconds
+  */
+	void update()
+	{
+    calculateWaterLevelEmas();
+
+    updateDisplayPercent();
+
+    determineTankState();
 	}
 
 } waterTank = WaterTank_C();

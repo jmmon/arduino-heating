@@ -1,5 +1,8 @@
 //#include <Arduino.h>
-
+/**
+Check if any readings are NaN!
+- Prints messages to serial
+*/
 void airSensorNanCheck()
 {
 	if (
@@ -11,27 +14,30 @@ void airSensorNanCheck()
 				isnan(air[1].tempF))
 		{
 			Serial.println(F("ERROR BOTH SENSORS "));
+      return;
 		}
-		else
-		{
-			air[0].humid = air[1].humid;
-			air[0].tempF = air[1].tempF;
 
-			if (errorCounter1 == 30)
-			{
-				Serial.print(F("DHT.main error! "));
-				errorCounter1 = 0;
-			}
-			errorCounter1++;
-		}
+    air[0].humid = air[1].humid;
+    air[0].tempF = air[1].tempF;
+
+    // show messages every 30 occurrances 
+    if (errorCounter1 == 30)
+    {
+      Serial.print(F("DHT.main error! "));
+      errorCounter1 = 0;
+    }
+    errorCounter1++;
+    return;
 	}
-	else if (
+
+	if (
 			isnan(air[1].humid) ||
 			isnan(air[1].tempF))
 	{
 		air[1].humid = air[0].humid;
 		air[1].tempF = air[0].tempF;
 
+    // show messages every 30 occurrances 
 		if (errorCounter2 == 30)
 		{
 			Serial.print(F("DHT.upstairs error! "));
@@ -41,55 +47,75 @@ void airSensorNanCheck()
 	}
 }
 
+/**
+check if air temps are "outliers" compared to the emas
+- replaces the outlier value with the other sensor's reading
+- and prints some messages
+*/
+const uint8_t AIR_TEMP_OUTLIER_DISTANCE = 20;
 void airSensorOutlierCheck()
 {
-	if (air[0].currentEMA[2] != 0)
+	if (air[0].currentEMA[2] == 0)
 	{ // don't run the first time
-		if (
-				air[0].tempF > 20 + air[0].currentEMA[2] ||
-				air[0].tempF < -20 + air[0].currentEMA[2])
-		{
-			// out of range, set to other sensor (hoping it is within range);
-			if (DEBUG)
-			{
-				Serial.print(F(" DHT.main outlier! "));
-				Serial.print(air[0].tempF);
-				Serial.print(F(" vs EMA_Long "));
-				Serial.print(air[0].currentEMA[2]);
-			}
-
-			air[0].tempF = air[1].tempF;
-		} else if (
-				air[1].tempF > 20 + air[1].currentEMA[2] ||
-				air[1].tempF < -20 + air[1].currentEMA[2])
-		{
-			// out of range, set to other sensor (hoping it is within range);
-			if (DEBUG)
-			{
-				Serial.print(F(" DHT.upstairs outlier! "));
-				Serial.print(air[1].tempF);
-				Serial.print(F(" vs EMA_Long "));
-				Serial.print(air[1].currentEMA[2]);
-			}
-
-			air[1].tempF = air[0].tempF;
-		}
+    return;
 	}
+
+  if (
+      air[0].tempF > AIR_TEMP_OUTLIER_DISTANCE + air[0].currentEMA[2] ||
+      air[0].tempF < (0 - AIR_TEMP_OUTLIER_DISTANCE) + air[0].currentEMA[2])
+  {
+    // out of range, set to other sensor (hoping it is within range);
+    if (DEBUG)
+    {
+      Serial.print(F(" DHT.main outlier! "));
+      Serial.print(air[0].tempF);
+      Serial.print(F(" vs EMA_Long "));
+      Serial.print(air[0].currentEMA[2]);
+    }
+
+    air[0].tempF = air[1].tempF;
+  } else if (
+      air[1].tempF > AIR_TEMP_OUTLIER_DISTANCE + air[1].currentEMA[2] ||
+      air[1].tempF < (0 - AIR_TEMP_OUTLIER_DISTANCE) + air[1].currentEMA[2])
+  {
+    // out of range, set to other sensor (hoping it is within range);
+    if (DEBUG)
+    {
+      Serial.print(F(" DHT.upstairs outlier! "));
+      Serial.print(air[1].tempF);
+      Serial.print(F(" vs EMA_Long "));
+      Serial.print(air[1].currentEMA[2]);
+    }
+
+    air[1].tempF = air[0].tempF;
+  }
 }
 
+/**
+Calculates "stored" heat, so we can use this to determine if heat should be on
+* calculate temperature offset to account for stored floor heat
+@return {double} - floor heat saturation percent
+*/
 double calcFloorBatteryCapacity() {
-// calculate temperature offset to account for stored floor heat
 	// taking into account the floor stored heat
-	int16_t floorRange = floorEmaAvg - minFloorRead;
+	int16_t floorRange = floorEmaAvg - MIN_FLOOR_READ;
 	// limit the range 0-150
-	floorRange = (floorRange < 0) ? 0 : (floorRange > maxFloorOffset) ? maxFloorOffset
-																													: floorRange;
+	floorRange = (floorRange < 0) 
+    ? 0 
+    : (floorRange > MAX_FLOOR_OFFSET) 
+      ? MAX_FLOOR_OFFSET
+      : floorRange;
 	// range 0-150 * 100 / max offset of 150 == percentage of 0~100
-	uint8_t floorRangePercent = uint8_t(floorRange * 100. / maxFloorOffset);
-	// multiply ratio by maxTempAdjust to get the total offset, subtract 1  for funsies, so cold floor feels like lower temp
-	return (floorRangePercent * maxTempAdjust100x / 10000.) - 1; 
+	uint8_t floorRangePercent = uint8_t(floorRange * 100. / MAX_FLOOR_OFFSET);
+	// multiply ratio by maxTempAdjust to get the total offset, 
+  // subtract 1  for funsies, so cold floor feels like lower temp; or not
+	return (floorRangePercent * MAX_TEMP_ADJUST_100x / 10000.); 
 }
 
+
+/**
+Updates floor temps, air temps
+*/
 void updateTEMP()
 {
 	// floor temp stuff

@@ -11,6 +11,24 @@ void DEBUG_startup()
 	}
 }
 
+void DEBUG_printHighsAndLows() {
+  Serial.print(F(" (HIGHS "));
+  Serial.print(air[0].highest);
+  if (air[0].highest != air[1].highest)
+  {
+    Serial.print(F("/"));
+    Serial.print(air[1].highest);
+  }
+  Serial.print(F(" LOWS "));
+  Serial.print(air[0].lowest);
+  if (air[0].lowest != air[1].lowest)
+  {
+    Serial.print(F("/"));
+    Serial.print(air[1].lowest);
+  }
+  Serial.print(F(") "));
+}
+
 void DEBUG_emaWater()
 {
 	if (DEBUG)
@@ -60,6 +78,7 @@ void DEBUG_airEmas()
 				Serial.print(air[1].currentEMA[0]);
 			}
 			Serial.print(F("  "));
+      DEBUG_printHighsAndLows();
 		}
 	}
 	tempDispCounter++;
@@ -136,28 +155,14 @@ void DEBUG_highsLowsFloor()
       } else {
         Serial.print(F("      "));
       }
+
       Serial.print(F("                                 *PWM: "));
       Serial.print(pump.getStatusString());
 
-      Serial.print(F(" (HIGHS "));
-      Serial.print(air[0].highest);
-      if (air[0].highest != air[1].highest)
-      {
-        Serial.print(F("/"));
-        Serial.print(air[1].highest);
-      }
-      Serial.print(F(" LOWS "));
-      Serial.print(air[0].lowest);
-      if (air[0].lowest != air[1].lowest)
-      {
-        Serial.print(F("/"));
-        Serial.print(air[1].lowest);
-      }
-      Serial.print(F(") "));
 
       // print cycle time info
       if (timeRemaining > 0) {
-        Serial.print(F("t: "));
+        Serial.print(F(" t: "));
         uint32_t t = timeRemaining;
         uint16_t hours = t / 3600;
         t -= (hours * 3600);

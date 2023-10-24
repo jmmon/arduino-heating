@@ -156,35 +156,37 @@ void DEBUG_highsLowsFloor()
       Serial.print(F(") "));
 
       // print cycle time info
-      Serial.print(F("t: "));
-      uint32_t t = timeRemaining;
-      uint16_t hours = t / 3600;
-      t -= (hours * 3600);
-      uint16_t minutes = t / 60;
-      t -= (minutes * 60);
-      uint16_t seconds = t;
-      if (seconds >= 60) {
-          minutes += 1;
-          seconds -= 60;
-      }
-      if (minutes >= 60) {
-          hours += 1;
-          minutes -= 60;
-      }
+      if (timeRemaining > 0) {
+        Serial.print(F("t: "));
+        uint32_t t = timeRemaining;
+        uint16_t hours = t / 3600;
+        t -= (hours * 3600);
+        uint16_t minutes = t / 60;
+        t -= (minutes * 60);
+        uint16_t seconds = t;
+        if (seconds >= 60) {
+            minutes += 1;
+            seconds -= 60;
+        }
+        if (minutes >= 60) {
+            hours += 1;
+            minutes -= 60;
+        }
 
-      if (hours > 0) {
-          if (hours < 10) Serial.print(F("0"));
-          Serial.print(hours);
-          Serial.print(F(":"));
-      }
-      if (minutes > 0) {
-          if (minutes < 10) Serial.print(F("0"));
-          Serial.print(minutes);
-          Serial.print(F(":"));
-      }
-      if (seconds > 0) {
-          if (seconds < 10) Serial.print(F("0"));
-          Serial.print(seconds);
+        if (hours > 0) {
+            if (hours < 10) Serial.print(F("0"));
+            Serial.print(hours);
+            Serial.print(F(":"));
+        }
+        if (minutes > 0) {
+            if (minutes < 10) Serial.print(F("0"));
+            Serial.print(minutes);
+            Serial.print(F(":"));
+        }
+        if (seconds > 0) {
+            if (seconds < 10) Serial.print(F("0"));
+            Serial.print(seconds);
+        }
       }
       //Serial.println();
 

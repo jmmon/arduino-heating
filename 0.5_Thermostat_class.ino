@@ -179,45 +179,6 @@ public:
 	}
 
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	// Helper functions:
-	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-	String formatTimeToString(uint32_t _t)
-	{ // takes seconds
-		// get base time from seconds count
-		uint16_t hours = _t / 3600;
-		_t -= (hours * 3600);
-		uint8_t minutes = _t / 60;
-		//_t -= (minutes * 60);
-		uint8_t seconds = _t % 60;
-
-		// rollover if necessary
-		if (seconds >= 60)
-		{
-			minutes += 1;
-			seconds -= 60;
-		}
-		if (minutes >= 60)
-		{
-			hours += 1;
-			minutes -= 60;
-		}
-
-		return (((hours < 10) ? ("0") : ("")) + String(hours) +
-						((minutes < 10) ? (":0") : (":")) + (String(minutes)) +
-						((seconds < 10) ? (":0") : (":")) + String(seconds));
-	}
-
-	String formatHoursWithTenths(int32_t _t)
-	{
-		return String((_t / 3600.), 1);
-	}
-
-	uint32_t getTotalSeconds()
-	{
-		return uint32_t(currentTime / 1000.);
-	}
-	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	// Utility functions:
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -522,14 +483,14 @@ public:
 	void drawPumpCycleInfoPage()
 	{
 		currentLine1 = pump.getStatusString() + " " + formatTimeToString(pump.cycleDuration);
-		currentLine2 = "RunTtl\004" + formatHoursWithTenths(getTotalSeconds());
+		currentLine2 = "RunTtl\004" + formatHoursWithTenths(getTotalSeconds(currentTime));
 
 		drawLinesIfDifferent(currentLine1, currentLine2);
 	}
 
 	void drawAccumTimePage()
 	{ // Total time and time spent with pump on/off
-		const uint32_t totalSeconds = getTotalSeconds();
+		const uint32_t totalSeconds = getTotalSeconds(currentTime);
 		const uint32_t accumBelow = (totalSeconds - pump.accumAbove);
 		const int32_t netAccumAboveTarget = pump.accumAbove - accumBelow; // positive or negative
 		const String hours = formatHoursWithTenths(netAccumAboveTarget);

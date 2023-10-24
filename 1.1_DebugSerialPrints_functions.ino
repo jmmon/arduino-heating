@@ -12,7 +12,7 @@ void DEBUG_startup()
 }
 
 void DEBUG_printHighsAndLows() {
-  Serial.print(F(" (HIGHS "));
+  Serial.print(F("(HIGHS "));
   Serial.print(air[0].highest);
   if (air[0].highest != air[1].highest)
   {
@@ -77,7 +77,7 @@ void DEBUG_airEmas()
 				Serial.print(F("/"));
 				Serial.print(air[1].currentEMA[0]);
 			}
-			Serial.print(F("  "));
+			Serial.print(F("                                                "));
       DEBUG_printHighsAndLows();
 		}
 	}

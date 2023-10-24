@@ -155,3 +155,119 @@ press+hold => enable/disable page from the view cycle
         - T-Stat will send pump signal to the Heat arduino (serial message with a PWM value? or at least a mode value)
         - Temp-Sensor on T-Stat will be routed back to Heat arduino I guess? And then forwareded to T-Stat
 
+
+# October 23 2023
+  #### Feature Request:
+**Heartbeat anti-freeze mode: v2**
+  Goal: prevent freezing of both cold and hot pipes inside the walls
+    What: Occasionally run, every 1-4 hours, enough to keep the cold water pipe from freezing
+  
+- When switching cycles, note the time of the last cycle and use it to calculate some sort of EMA.
+- Actually, what we need is a ratio, so we need to get every onTime/offTime pair
+- Start with an off cycle or start with an on cycle??
+  - if first saving the off cycle, 
+    - at evening time it will bump down the EMA to reduce heartbeat
+    - at morning time it will bump the ema up to increase heartbeat
+  - if first saving on cycle,
+    - at evening time it will bump up the EMA to increase heartbeat
+    - at morning time it will bump the ema up to reduce heartbeat
+
+- When switching cycles, save the last cycle time in a variable
+- Once the next cycle ends, we have the pair for the last cycle time.
+- Calculate ratio from those two:
+  - we want on time / total time, so `onTime/(onTime + offTime)`
+- and then calculate that into the EMA
+
+- The EMA would range from 0 to 1 and represent ratio of on to total time
+```
+uint32_t lastCycleTime = 0;
+loop {
+    // wait...
+
+    if (cycleOff) {
+        lastOffCycleTime = cycleTime;
+        pump.turnOn();
+    } else {
+        // cycleTime is now "lastOnCycleTime"
+        calculateIntoOnOffEma(lastOffCycleTime, cycleTime);
+        pump.turnOff();
+    }
+}
+
+calculateIntoOnOffEma(off, on) {
+    uint32_t total = off + on;
+    
+    float ratio = on / total;
+
+    calculateOnOffRatioEma(ratio);
+}
+```
+
+- So our heartbeat should run during off cycles, but I must continue the same timerCount
+  - e.g. do NOT start the timer when the off cycle starts; RESUME the timer
+    and PAUSE it when the on cycle starts.
+
+- We need a threshold to start the heartbeat, because we probably don't need it
+  when the ratio is less than ~0.1 or some number
+
+- EMA might be taken every second? So 60 * 60 * 24 = 86400 seconds per day
+  so that will be the EMA duration
+
+- Now we need to determine how much we want to heartbeat. We need:
+  `offTime` and/or `onTime`, `totalCycleTime`. Then, while cycle is off, we continue our timer
+  and when it's time to do a heartbeat, we stay on for `onTime` and then turn off
+
+- Ok, so here's how controlling the timer works: 
+``` 
+uint32_t timerCount = 0;
+isHeartbeatOn = false;
+
+
+loop {
+    if (cycleOff) {
+        runTimer()
+    }
+}
+
+function updateTimer() {
+    // increment timer
+    timerCount ++;
+
+    if (isHeartbeatOn) {
+        // turn off heartbeat after on for calculatedOnTime
+        if (timerCount >= calculatedOffTime + calculatedOnTime) {
+            timerCount = 0; // reset timer
+            isHeartbeatOn = false;
+        }
+    } else {
+        // turn on heartbeat after off for long enough
+        if (timerCount >= calculatedOffTime) {
+            isHeartbeatOn = true;
+        }
+
+    }
+}
+
+```
+
+- Calculating the times:
+- How much do we need at most? 1m on out of 30m?
+- use the ratio to adjust the off time according to the base
+- 15% => 30m / 0.15 === 200 minutes
+- 20% => 30m / 0.2 === 150 minutes
+- 25% => 30m / 0.25 === 120 minutes
+- 30% => 30m / 0.3 === 100 minutes
+- 40% => 30m / 0.4 === 75 minutes // doubt we'll go past here
+- 50% => 30m / 0.5 === 60 minutes
+- 75% => 30m / 0.75 = 40 minutes
+- 100% => 30m / 1 === 30 minutes
+
+- it'll work for now... but I want something a bit more logical to base it off of
+
+
+```
+uint32_t BASE = 60 * 30 * 1000; // 30m
+uint32_t calculatedOnTime = 60 * 1000 // ms === 1 minute
+uint32_t calculatedTotalTime = BASE / ratio;
+uint32_t calculatedOffTime = calculatedTotalTime - calculatedOnTime;
+```

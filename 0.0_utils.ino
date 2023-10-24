@@ -4,13 +4,13 @@
 
   @return {String} - time as hh:mm:ss
 */
-String formatTimeToString(uint32_t _seconds){ 
+String formatTimeToString(uint32_t _s){ 
   // get base time from seconds count
-  uint16_t hours = _seconds / 3600;
-  _seconds -= (hours * 3600);
-  uint8_t minutes = _seconds / 60;
-  //_seconds -= (minutes * 60);
-  uint8_t seconds = _seconds % 60;
+  uint16_t hours = _s / 3600;
+  _s -= (hours * 3600);
+  uint8_t minutes = _s / 60;
+  _s -= (minutes * 60);
+  uint8_t seconds = _s % 60;
 
   // rollover if necessary
   if (seconds >= 60)
@@ -35,9 +35,8 @@ String formatTimeToString(uint32_t _seconds){
 
   @return {String} - hours with tenths as h.h
 */
-String formatHoursWithTenths(int32_t _seconds)
-{
-  return String((_seconds / 3600.), 1);
+String formatHoursWithTenths(int32_t _s) {
+  return String((_s / 3600.), 1);
 }
 
 /* 

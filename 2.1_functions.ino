@@ -139,7 +139,7 @@ void updateTEMP()
 	// calculate weighted air temp
 	weightedAirTemp = (double)(air[0].getTempEma(true) + air[1].getTempEma(true)) / (air[0].WEIGHT + air[1].WEIGHT);
 
-	// DEBUG_airEmas();
+	DEBUG_airEmas();
 
 	// counter for what? other than DEBUG_emaWater
 	if (tempDispCounter2 >= 24)

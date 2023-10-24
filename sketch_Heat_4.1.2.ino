@@ -16,7 +16,7 @@
 
 
 const String VERSION_NUMBER = "4.1.2";
-const bool DEBUG = false;
+const bool DEBUG = true;
 
 const uint8_t AIR_SENSOR_COUNT = 4;
 const uint8_t FLOOR_SENSOR_COUNT = 2;

@@ -130,11 +130,22 @@ public:
 		lastDiff = diff;
 		lastDiffEma = diffEma;
 
+    float asFloat_FloatSensorReadValue = float(floatSensorReadValue);
+
 		// EMA calcs
-		ema = calcEma(floatSensorReadValue, lastEma, EMA_PERIODS_SHORT);
-		slowEma = calcEma(floatSensorReadValue, lastSlowEma, EMA_PERIODS_LONG);
+		ema = calcEma(
+      asFloat_floatSensorReadValue, 
+      float(lastEma), 
+      EMA_PERIODS_SHORT
+    );
+		slowEma = calcEma(
+      asFloat_floatSensorReadValue, 
+      float(lastSlowEma), 
+      EMA_PERIODS_LONG
+    );
+
 		diff = ema - slowEma;
-		diffEma = calcEma(diff, lastDiffEma, EMA_PERIODS_DIFF);
+		diffEma = calcEma(float(diff), float(lastDiffEma), EMA_PERIODS_DIFF);
 
 		// calculate tank percent based on ema
 		lastPercent = percent;

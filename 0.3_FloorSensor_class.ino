@@ -40,9 +40,19 @@ public:
 		lastEma = ema;
 		lastSlowEma = slowEma;
 
+    float asFloat_floorRead = float(floorRead);
+
 		// calc new emas
-		ema = uint16_t(calcEma(floorRead, lastEma, FLOOR_EMA_DAYS));
-		slowEma = uint16_t(calcEma(floorRead, lastSlowEma, FLOOR_EMA_DAYS_SLOW));
+		ema = uint16_t(calcEma(
+      asFloat_floorRead, 
+      float(lastEma), 
+      FLOOR_EMA_DAYS
+    ));
+		slowEma = uint16_t(calcEma(
+      asFloat_floorRead, 
+      float(lastSlowEma), 
+      FLOOR_EMA_DAYS_SLOW
+    ));
 	}
 
 } floorSensor[] = {

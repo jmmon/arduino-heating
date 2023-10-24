@@ -65,13 +65,13 @@ void DEBUG_airEmas()
 	tempDispCounter++;
 }
 
-void DEBUG_heartbeat() {
-  if (DEBUG) {
-    Serial.println();
-    Serial.print(F("Heartbeat: "));
-    Serial.print(heartbeatOnOffRatioEMA);
-  }
-}
+// void DEBUG_heartbeat() {
+//   if (DEBUG) {
+//     Serial.println();
+//     Serial.print(F("Heartbeat: "));
+//     Serial.print(heartbeatOnOffRatioEMA);
+//   }
+// }
 
 uint8_t highsLowsFloorDisplayCounter = 0;
 void DEBUG_highsLowsFloor()
@@ -162,7 +162,7 @@ void DEBUG_highsLowsFloor()
       t -= (hours * 3600);
       uint16_t minutes = t / 60;
       t -= (minutes * 60);
-      uint16_t seconds = t; 
+      uint16_t seconds = t;
       if (seconds >= 60) {
           minutes += 1;
           seconds -= 60;

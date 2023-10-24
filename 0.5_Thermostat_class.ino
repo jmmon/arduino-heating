@@ -160,6 +160,7 @@ public:
 	Display_c()
 	{ // constructor
 		pinMode(T_STAT_BUTTON_PIN, INPUT);
+		pinMode(WATER_VALVE_PIN, OUTPUT);
 	}
 
 	void initialize()

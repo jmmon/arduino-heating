@@ -1,3 +1,5 @@
+#include <TimeLib.h>
+
 /* 
   Takes seconds and computes hh:mm:ss string
   @param {uint32_t} _seconds - the time to convert

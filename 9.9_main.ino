@@ -75,15 +75,21 @@ void setup()
 	WATER_FLOW_INTERRUPT = digitalPinToInterrupt(WATER_FLOW_PIN); // set in setup
 																																//    attachInterrupt(WATER_FLOW_INTERRUPT, waterPulseCount, FALLING);
 
-	for (uint8_t k = 0; k < AIR_SENSOR_COUNT; k++)
-	{
+	for (uint8_t k = 0; k < AIR_SENSOR_COUNT; k++) {
 		dht[k].begin();
 		//        dhtnew[k].setType(22);
 	}
 
 	timeSetup();
-	Tstat.initialize();
-	DEBUG_startup();
+
+  // if (DEBUG) {
+  //   SerialDisplay.initialize();
+  // } else {
+  //   Tstat.initialize();
+  // }
+  DEBUG_startup();
+  Tstat.initialize();
+
 	waterTank.init();
 	updateTEMP();
 
@@ -106,11 +112,16 @@ void loop()
 	if (currentTime - prevLoopStartTime >= 250)
 	{
 		prevLoopStartTime += 250;
-		Tstat.update();
+    // if (DEBUG) {
+    //   SerialDisplay.update();
+    // } else {
+    //   Tstat.update();
+    // }
+
+    Tstat.update();
 
 		// 1000ms Loop:
-		if (prevLoopStartTime % ms1000Interval == 0)
-		{
+		if (prevLoopStartTime % ms1000Interval == 0) {
 			pump.update();
 
 			// // calc flowrate (not working)
@@ -119,8 +130,7 @@ void loop()
 		}
 
 		// 2500ms Loop:
-		if (prevLoopStartTime % ms2500Interval == 0)
-		{
+		if (prevLoopStartTime % ms2500Interval == 0) {
 			waterTank.update();
 			updateTEMP(); // read air temp
 		}
@@ -130,18 +140,15 @@ void loop()
 /*
 Insterrupt Service Routine ( not working )
  */
-void waterPulseCounter()
-{
+void waterPulseCounter() {
 	// Increment the pulse counter
 	waterPulseCount++;
 }
 
 // not working
-void waterCalcFlow()
-{
+void waterCalcFlow() {
 	// Only process counters once per second
-	if (waterPulseCount > 0)
-	{
+	if (waterPulseCount > 0) {
 		// Disable the interrupt while calculating flow rate and sending the value to
 		// the host
 		detachInterrupt(WATER_FLOW_INTERRUPT);

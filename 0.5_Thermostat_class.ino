@@ -1,6 +1,7 @@
 // #include <Arduino.h>
 // #include <LiquidCrystal_I2C.h>
 // #include <TimeLib.h>
+// #include "utils.h"
 
 const byte customCharInside[8] = { // "inside"
 		B00000,
@@ -447,27 +448,6 @@ public:
 	{
 		String extra = "\005" + waterTank.getDisplayString();
 		drawLine(extra, 13, lineNum);
-	}
-
-	String limitDecimals(float num, uint8_t decimals = 1)
-	{																			 // Does not work for negative numbers!
-		bool negative = num < 0;						 // save for the end
-		num = (negative) ? 0 - num : num;		 // convert to positive
-		uint32_t mult = pow(10.0, decimals); // get our multiplier/divisor
-		// have to do it even more manually!
-		// need to build a string with "nn" + "." + "n" to get 1 decimal place
-		// e.g. num == 65.55, decimals == 1:
-		uint16_t mainInteger = uint16_t(num); // 65.55 => 65
-		// int num_mult = int(num * mult); // gets 10x, so 65.55 => 655  (removes the decimal)
-		// int main_mult = int(mainInteger * mult); // mainInteger * 10, so 65 * 10 => 650
-		// int decimal = num_mult - main_mult;
-
-		String decimal = String(
-				uint32_t(num * mult)					 // gets 10x, so 65.55 => 655.5 => 655
-				- uint32_t(mainInteger * mult) // mainInteger * 10, so 65 * 10 => 650
-		);																 // 655 - 650 == 5
-
-		return (negative ? "-" : "") + String(mainInteger) + "." + decimal;
 	}
 
 	void drawTemperaturePage()

@@ -13,6 +13,7 @@
 #include <TonePitch.h>
 
 #include <math.h>
+#include "utils.h"
 
 
 const String VERSION_NUMBER = "4.1.2";
@@ -156,6 +157,5 @@ double setPoint = 67;
 // move this to functions?
 float calcEma(uint16_t reading, uint16_t lastEma, uint16_t days)
 {
-	// ema = (floatSensorReadValue * (2. / (1 + EMA_PERIODS_SHORT)) + lastEma * (1 - (2. / (1 + EMA_PERIODS_SHORT))));
-	return (reading * (2. / (1 + days)) + lastEma * (1 - (2. / (1 + days))));
+return (reading * (2. / (1 + days)) + lastEma * (1 - (2. / (1 + days))));
 }

@@ -132,8 +132,10 @@ public:
     float thisRatio = (totalTime == 0 && cycleDuration == 0) 
         ? 0 
         : cycleDuration / totalTime;
+
     heartbeatOnOffRatioEMA = (thisRatio * (2. / 1 + HEARTBEAT_ON_RATIO_EMA_PERIOD)) +
         heartbeatOnOffRatioEMA * (1 - (2. / 1 + HEARTBEAT_ON_RATIO_EMA_PERIOD));
+
     DEBUG_heartbeat();
   }
 
@@ -145,9 +147,11 @@ public:
         heartbeatTimer = 0;
         isHeartbeatOn = false;
         // could have this update every run, or only on init
-        heartbeatCalculatedOffTime = (HEARTBEAT_CYCLE_MINIMUM_OFF_DURATION 
-          / (heartbeatOnOffRatioEMA - HEARTBEAT_ON_CYCLE_DURATION));
+        // heartbeatCalculatedOffTime = (HEARTBEAT_CYCLE_MINIMUM_OFF_DURATION 
+        //   / (heartbeatOnOffRatioEMA - HEARTBEAT_ON_CYCLE_DURATION));
       }
+      heartbeatCalculatedOffTime = (HEARTBEAT_CYCLE_MINIMUM_OFF_DURATION 
+        / (heartbeatOnOffRatioEMA - HEARTBEAT_ON_CYCLE_DURATION));
 
       if (!isHeartbeatOn) {
         // turn on heartbeat after enough time has passed
@@ -286,11 +290,11 @@ public:
   */
 	void runOn(bool isHeartbeatCycle = false)
 	{ // continue run phase
-    if (isHeartbeatCycle) {
-      state = 4;
-    } else {
+    // if (isHeartbeatCycle) {
+    //   state = 4;
+    // } else {
       state = 1;
-    }
+    // }
 		// turn off coldFloor if floor stays warm for a bit
 		coldFloor = isFloorCold();
 		pwm = limitedBasePwm(isHeartbeatCycle);
@@ -320,8 +324,8 @@ public:
 	{ // occasional high power pulse to prevent motor hangups
 		pulsePwmCounter++;
 		bool isTimeForPwmPulse = pulsePwmCounter >= PULSE_PWM_SECONDS_INTERVAL;
-		if (isTimeForPwmPulse)
-		{
+
+		if (isTimeForPwmPulse) {
 			pulsePwmCounter = 0;
 
 			uint8_t pulsePwm = limitPwm(ON_PHASE_BASE_PWM + PULSE_PWM_AMOUNT);
@@ -339,21 +343,24 @@ public:
 
 		// time spent on
 		bool isPumpOn = pwm > 0;
-		if (isPumpOn)
-			accumOn++;
+		if (isPumpOn) {
+      accumOn++;
+    }
     // to track when we can skip the ANTIFREEZE cycle
 
 		// time spent above setpoint
 		// bool isAboveTargetTemperature = weightedAirTemp >= setPoint;
-		if (isAboveAdjustedSetPoint())
-			accumAbove++;
+		if (isAboveAdjustedSetPoint()) {
+      accumAbove++;
+    }
 
 		// check for cycle change
 		bool pwmHasChanged = checkCycle(isPumpOn);
 
 		// adjust pump if needed
-		if (pwmHasChanged)
-			analogWrite(HEAT_PUMP_PIN, pwm);
+		if (pwmHasChanged) {
+      analogWrite(HEAT_PUMP_PIN, pwm);
+    }
 	}
 
   // ===============================================
@@ -365,10 +372,11 @@ public:
   */
   void pumpStart(bool isHeartbeatCycle = false) {
     // if starting up, step down
-    if (startingPhasePwmStepAdjust > 0)
+    if (startingPhasePwmStepAdjust > 0) {
       stepDownPwm(isHeartbeatCycle);
-    else
+    } else {
       runOn(isHeartbeatCycle);
+    }
   }
 
   
@@ -384,10 +392,9 @@ public:
   Continuing on (extended)
   */
   void onExtended(bool _isAboveAdjustedSetPoint, bool isHeartbeatCycle = false) {
-      if (_isAboveAdjustedSetPoint && !isHeartbeatCycle)
+      if (_isAboveAdjustedSetPoint && !isHeartbeatCycle) {
         stop(); // most common stop trigger
-      else
-      {
+      } else {
         runOn(isHeartbeatCycle);
         pulsePwm();
       }
@@ -401,8 +408,9 @@ public:
     updateHeartbeat(true);
 
     // special cases in extreme change
-    if (weightedAirTemp <= setPoint - EMERGENCY_ON_TRIGGER_OFFSET)
-      start();
+    if (weightedAirTemp <= setPoint - EMERGENCY_ON_TRIGGER_OFFSET) {
+        start();
+      }
   }
 
   /*
@@ -410,14 +418,16 @@ public:
   */
   void offExtended(bool isPumpOn, bool _isAboveAdjustedSetPoint) {
     if (_isAboveAdjustedSetPoint) {
-      if (isPumpOn)
-        stop(); // coming from delay, in case we need to stop
+      if (isPumpOn) {
+          stop(); // coming from delay, in case we need to stop
+        }
     } else {
       updateHeartbeat();
-      if (isPumpOn)
+      if (isPumpOn) {
         runOn();
-      else
+      } else {
         start(); // most common start trigger
+      }
     }
   }
 
@@ -443,7 +453,7 @@ public:
           case(0): offWithTimer();
           case(1): onWithTimer();
           case(2): pumpStart();
-          case(5): pumpStart(true);
+          // case(5): pumpStart(true);
         }
 
 		} else {
@@ -454,7 +464,7 @@ public:
           case(0): offExtended(isPumpOn, _isAboveAdjustedSetPoint);
           case(1): onExtended(_isAboveAdjustedSetPoint);
           case(3): delayTimerEnd();
-          case(4): onExtended(_isAboveAdjustedSetPoint, true);
+          // case(4): onExtended(_isAboveAdjustedSetPoint, true);
 
         }
 		}

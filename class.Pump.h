@@ -229,7 +229,7 @@ public:
 
   @param {bool} isHeartbeatCycle - is this going into a heartbeat cycle
   **/
-	void start(bool _isHeartbeatCycle = false)
+	void start()
 	{
     // save off cycle time for our AntiFreeze function
     lastOffCycleDuration = cycleDuration;
@@ -243,12 +243,12 @@ public:
     // smooth pwm transition, subtract this from pwm, and then --
     startingPhasePwmStepAdjust = STARTING_PHASE_INITIAL_STEP;
 
-    // // if heartbeat cycle, adjust some variables
-    // if (_isHeartbeatCycle) {
-    //   state = 5; // Heartbeat starting phase
-    //   timeRemaining = HEARTBEAT_ON_CYCLE_DURATION;
-    //   basePwm = HEARTBEAT_CYCLE_PWM;
-    // }
+    // if heartbeat cycle, adjust some variables
+    if (isHeartbeatOn) {
+      state = 5; // Heartbeat starting phase
+      timeRemaining = HEARTBEAT_ON_CYCLE_DURATION;
+      basePwm = HEARTBEAT_CYCLE_PWM;
+    }
 
     // reset "pwm pulse" counter when turning on
     pulsePwmCounter = 0;
@@ -440,12 +440,15 @@ public:
   */
   void whilePumpOffExtended(bool isPumpOn, bool _isAboveAdjustedSetPoint) {
     if (_isAboveAdjustedSetPoint) {
-      if (isPumpOn) {
+      updateHeartbeat();
+
+        if (isHeartbeatOn) {
+          start();
+        } else if (isPumpOn) {
         stop(); // coming from delay, in case we need to stop
       }
     } else {
       // not warm enough, so we start the pump
-      updateHeartbeat();
 
       if (isPumpOn) {
         runOn();

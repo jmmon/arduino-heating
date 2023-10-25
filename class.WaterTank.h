@@ -54,6 +54,9 @@ const uint16_t LOW_BOUND = 300;
 const uint16_t HIGH_BOUND = 750;
 const uint8_t ERROR_HIGH_BOUND = 190;
 
+/* ==========================================================================
+ * WaterTank class
+ * ========================================================================== */
 class WaterTank_C
 {
 public:

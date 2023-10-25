@@ -2,6 +2,9 @@
 const uint8_t FLOOR_EMA_DAYS = 12;				// 12 readings EMA (30s)
 const uint16_t FLOOR_EMA_DAYS_SLOW = 60; // 60 readings EMA (150s == 2.5min)
 
+/* ==========================================================================
+ * FloorSensor class
+ * ========================================================================== */
 class FloorSensor_C
 {
 private:

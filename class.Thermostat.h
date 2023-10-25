@@ -125,6 +125,9 @@ const uint8_t TONE_TIMER_TRIGGER_PERCENT_FAST = 95;
 
 const uint16_t VALVE_CLOSE_DURATION = 21600; // seconds (6 hours)
 
+/* ==========================================================================
+ * Display class
+ * ========================================================================== */
 class Display_c
 {
 private:

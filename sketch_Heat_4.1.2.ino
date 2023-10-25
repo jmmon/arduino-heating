@@ -37,6 +37,7 @@ float calcEma(uint16_t reading, uint16_t lastEma, uint16_t _days) {
 #include "class.Pump.h"
 #include "class.Thermostat.h"
 
-// #include "functions.h"
-
-// #include "main.h"
+/*
+  NOTE: for some reason, I must keep 0.9, 2.0, and 9.9 files as `ino` files
+  or else it messes something up (starts the pump when it should be off)
+*/

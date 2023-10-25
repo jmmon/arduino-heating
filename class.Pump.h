@@ -20,16 +20,6 @@ const uint16_t ON_CYCLE_MINIMUM_SECONDS = 60;	 // 1m
 const uint16_t OFF_CYCLE_MINIMUM_SECONDS = 5 * 60; // 5m
 uint32_t timeRemaining = 0; // cycle time counter, to track if we're past the minimum cycle times
 
-const uint8_t HEARTBEAT_CYCLE_PWM = 145; // slightly faster than normal
-const uint16_t HEARTBEAT_CYCLE_MINIMUM_OFF_DURATION = 30 * 60; //30m
-const uint32_t HEARTBEAT_ON_CYCLE_DURATION = 60; // 1m
-const uint32_t HEARTBEAT_ON_RATIO_EMA_PERIOD = 60 * 60 * 24; // 1 day
-uint32_t heartbeatCalculatedOffTime = HEARTBEAT_CYCLE_MINIMUM_OFF_DURATION - HEARTBEAT_ON_CYCLE_DURATION;
-
-// AntiFreeze function
-float heartbeatOnOffRatioEMA = 0;
-uint32_t heartbeatTimer = 0;
-
 // Occasional PWM boost (to prevent motor stalling)
 const uint16_t PULSE_PWM_SECONDS_INTERVAL = 30 * 60; // seconds (every hour)
 uint16_t pulsePwmCounter = 0;											// counts the seconds since last boost
@@ -42,6 +32,22 @@ double difference = 0;
 // if temp drops lower than this from the setpoint, start the pump regardless of timers
 const uint8_t EMERGENCY_ON_TRIGGER_OFFSET = 5; // degrees from setpoint
 
+/* ==========================================================================
+ * Heartbeat functionality vars
+ * ========================================================================== */
+const uint8_t HEARTBEAT_CYCLE_PWM = 145; // slightly faster than normal
+const uint16_t HEARTBEAT_CYCLE_MINIMUM_OFF_DURATION = 30 * 60; //30m
+const uint32_t HEARTBEAT_ON_CYCLE_DURATION = 60; // 1m
+const uint32_t HEARTBEAT_ON_RATIO_EMA_PERIOD = 60 * 60 * 24; // 1 day
+uint32_t heartbeatCalculatedOffTime = HEARTBEAT_CYCLE_MINIMUM_OFF_DURATION - HEARTBEAT_ON_CYCLE_DURATION;
+
+// AntiFreeze function
+float heartbeatOnOffRatioEMA = 0;
+uint32_t heartbeatTimer = 0;
+
+/* ==========================================================================
+ * Pump class
+ * ========================================================================== */
 class Pump_C
 {
 public:

@@ -50,140 +50,260 @@ public:
 
 	uint8_t pwm = 0; // holds motor PWM
 
-	uint8_t state = 0;					// 0 === off, 1 === on, 2 === starting, 3 === delayedStart, 4 === ANTIFREEZE
+  /* 
+  0 === off, 
+  1 === on, 
+  2 === starting, 
+  3 === delayedStart, 
+  4 === Continuing Heartbeat cycle
+  5 === starting Heartbeat cycle
+  */
+	uint8_t state = 0;					
 	uint32_t cycleDuration = 0; // for this cycle
 
-  // for ANTIFREEZE cycle, to detect when we can skip
-  uint32_t lastOnCycleStartedSecondsAgo = 0;  // when turning on, reset this to 0 and count up (continuously, until next turning on will reset it to 0)
-  uint32_t lastOnCycleDuration = 0;   // when turning on, reset this to 0 and count up while pump stays on
+  // for Heartbeat
+  uint32_t lastOffCycleDuration = 0;
+  bool isHeartbeatOn = false;
 
+
+  /*
+  Constructor function
+  set up pump pin
+  */
 	Pump_C()
-	{ // constructor
+	{
 		pinMode(HEAT_PUMP_PIN, OUTPUT);
 	}
 
-	// if temp is cold return true, else if slow/fast temp are warm, return
-	bool isCold()
+  /*
+  Check if floor is cold
+  @return {bool}
+  */
+	bool isFloorCold()
 	{
 		return (floorEmaAvg < FLOOR_WARMUP_TEMPERATURE || floorEmaAvgSlow < FLOOR_WARMUP_TEMPERATURE);
 	}
 
-  double getTempDiffLimited(float old, float recent, double limit) 
+  /*
+  Compares EMAs for given air sensor, and limits the result
+  @param {uint8_t} airSensorIndex - index of air sensor
+  @param {double} limit - temperature limit
+  */
+  double updateAirLimitedTempDifference(uint8_t airSensorIndex = 0, double limit = 2) 
   {
-    double diff = double(old - recent);
-    // limit the diff to +- the limit
-    return diff >= 0
-      ? min(diff, limit)
-      : max(diff, (-1 * limit));
+    float prev = air[airSensorIndex].currentEMA[2];
+    float current = air[airSensorIndex].currentEMA[1];
+    // get absolute difference
+    double diff = double(prev - current);
+    // limit the diff to the limit
+		// save difference to global var
+    difference = diff >= 0 ? min(diff, limit) : max(diff, -limit);
   }
 
-  void incrementAntiFreezeTimers(bool isPumpOn) { // run every second
-    lastOnCycleStartedSecondsAgo++;
-    if (isPumpOn) lastOnCycleDuration++; // run every second that the pump is on (or starting)
-  }
-  void resetAntiFreezeTimers() { // run once when pump turns on
-    lastOnCycleStartedSecondsAgo = 0;
-    lastOnCycleDuration = 0;
-  }
+  /*
+  Checks air temp difference/trend, then applies that to setpoint to
+  determine if we're warm enough
 
+  // take the air temp medium ema compared to current ema
+  // medium ema - current === difference,
+  // (or slow ema - medium ema === difference)
+  //    this way a sudden drop in temp (from opening the door) will
+  //      not trigger the pump quickly
+  // if difference is positive this means we have extra capacity of heat
+  // if difference is negative this means we don't have extra capacity of heat
+
+  @return {bool}
+  */
 	bool isAboveAdjustedSetPoint()
 	{
-		// as floor offset increases pump will cut off sooner or start later
-		// as floor offset decreases pump will turn on sooner or cut off later
-		// return weightedAirTemp >= setPoint - floorOffset;
-
-		// how about: take the air temp medium ema compared to current ema
-		// medium ema - current === difference,
-    // (or slow ema - medium ema === difference)
-    //    this way a sudden drop in temp (from opening the door) will
-    //      not trigger the pump quickly
-		// if difference is positive this means we have extra capacity of heat
-		// if difference is negative this means we don't have extra capacity of heat
-
-		// save difference to global var
-    // difference = getTempDiffLimited(air[0].currentEMA[1], air[0].currentEMA[0], 2);
-    difference = getTempDiffLimited(air[0].currentEMA[2], air[0].currentEMA[1], 2);
+    updateAirLimitedTempDifference(0);
 		return weightedAirTemp >= setPoint - difference;
 	}
 
-	uint8_t limitPwm(int16_t target)
-	{
+
+  /*
+  Updates onOffRatioEma based on last on/off cycle
+  Runs after the on cycle completes 
+  - cycleDuration === duration of the recent ON cycle
+
+  @param {uint32_t} totalTime - on+off total time
+  */
+  void calculateOnOffRatioEMA(uint32_t totalTime) {
+    float thisRatio = (totalTime == 0 && cycleDuration == 0) 
+        ? 0 
+        : cycleDuration / totalTime;
+    heartbeatOnOffRatioEMA = (thisRatio * (2. / 1 + HEARTBEAT_ON_RATIO_EMA_PERIOD)) +
+        heartbeatOnOffRatioEMA * (1 - (2. / 1 + HEARTBEAT_ON_RATIO_EMA_PERIOD));
+    DEBUG_heartbeat();
+  }
+
+  /* 
+  only runs when pump is OFF
+  */
+  void updateHeartbeat(bool initialize = false) {
+      if (initialize) {
+        heartbeatTimer = 0;
+        isHeartbeatOn = false;
+        // could have this update every run, or only on init
+        heartbeatCalculatedOffTime = (HEARTBEAT_CYCLE_MINIMUM_OFF_DURATION 
+          / (heartbeatOnOffRatioEMA - HEARTBEAT_ON_CYCLE_DURATION));
+      }
+
+      if (!isHeartbeatOn) {
+        // turn on heartbeat after enough time has passed
+        if (heartbeatTimer >= heartbeatCalculatedOffTime) {
+          isHeartbeatOn = true;
+        }
+
+      } else {
+        // turn off heartbeat after some more time
+        if (heartbeatTimer >= heartbeatCalculatedOffTime + HEARTBEAT_ON_CYCLE_DURATION) {
+          heartbeatTimer = 0; // reset timer
+          isHeartbeatOn = false;
+        }
+      }
+
+      heartbeatTimer++;
+  }
+
+  /* 
+  Returns PWM, limited to 255 (the max PWM)
+  */
+	uint8_t limitPwm(int16_t target) {
 		return target >= 255 ? 255 : target;
 	}
 
-	uint8_t limitedBasePwm()
-	{
-		return limitPwm((coldFloor) ? ON_PHASE_BASE_PWM + COLD_FLOOR_PWM_BOOST : ON_PHASE_BASE_PWM);
+  /* 
+  Returns PWM, depending on cold floor and heartbeat cycle
+  */
+	uint8_t limitedBasePwm(bool isHeartbeatCycle = false) {
+    uint8_t base = isHeartbeatCycle ? HEARTBEAT_CYCLE_PWM : ON_PHASE_BASE_PWM;
+		return limitPwm(base + (coldFloor) ? COLD_FLOOR_PWM_BOOST : 0);
 	}
 
-	String getStatusString()
-	{
+  /* 
+  Converts state (or PWM) into a string to display
+  @return {String}
+  */
+	String getStatusString() {
 		return (state == 0)		? "OFF"
 					 : (state == 3) ? "---"
 													: String(pwm);
 	}
 
-	void resetDuration()
+  /*
+  Resets cycle duration
+  */
+	void resetCycleDuration()
 	{
 		cycleDuration = 0;
 	}
 
-	// to start the pump, go to `starting phase`, reset duration, check cold floor, and set pwm.
-	void start()
+  /**
+  * Starting the pump from off
+  - save and re-set the cycle duration/timer
+  - set state to the appropriate "pump start" phase
+  - re-set pulsePwmCounter, startingPhasePwmStepAdjust
+  - Set up appropriate PWM for the pump
+
+  @param {bool} isHeartbeatCycle - is this going into a heartbeat cycle
+  **/
+	void start(bool isHeartbeatCycle = false)
 	{
-		state = 2; // motor starting phase
+    // save off cycle time for our AntiFreeze function
+    lastOffCycleDuration = cycleDuration;
+    resetCycleDuration();
+    timeRemaining = ON_CYCLE_MINIMUM_SECONDS;
 
-		// re-set cycle timer
-		resetDuration();
-		timeRemaining = ON_CYCLE_MINIMUM_SECONDS;
+    uint8_t basePwm = ON_PHASE_BASE_PWM;
 
-    // reset timers for ANTIFREEZE cycle
-    resetAntiFreezeTimers();
+    state = 2;
 
-		// reset "pwm pulse" counter when turning on
-		pulsePwmCounter = 0;
-		// smooth pwm transition, subtract this from pwm, and then --
-		startingPhasePwmStepAdjust = STARTING_PHASE_INITIAL_STEP;
+    // smooth pwm transition, subtract this from pwm, and then --
+    startingPhasePwmStepAdjust = STARTING_PHASE_INITIAL_STEP;
 
-		// check if floor is cold
-		coldFloor = isCold();
-		// add starting PWM boost, to decrease as it goes
-		uint8_t basePwm = limitPwm(ON_PHASE_BASE_PWM + STARTING_PHASE_PWM_BOOST);
-		// calc cold floor boosted PWM
-		uint8_t coldPwm = limitPwm(basePwm + COLD_FLOOR_PWM_BOOST);
-		// add on COLD_FLOOR_PWM_BOOST if coldFloor
-		pwm = (coldFloor && coldPwm > basePwm) ? coldPwm : basePwm;
+    // // if heartbeat cycle, adjust some variables
+    // if (isHeartbeatCycle) {
+    //   state = 5; // Antifreeze starting phase??
+    //
+    //   timeRemaining = HEARTBEAT_ON_CYCLE_DURATION;
+    //
+    //   // smooth pwm transition, subtract this from pwm, and then --
+    //   startingPhasePwmStepAdjust = startingPhasePwmStepAdjust - 1;
+    //
+    //   basePwm = HEARTBEAT_CYCLE_PWM;
+    // }
+
+    // reset "pwm pulse" counter when turning on
+    pulsePwmCounter = 0;
+
+    // set up next PWM
+    // check if floor is cold
+    coldFloor = isFloorCold();
+    // add starting PWM boost, to decrease as it goes
+    basePwm = limitPwm(basePwm + STARTING_PHASE_PWM_BOOST);
+    // calc cold floor boosted PWM
+    uint8_t coldPwm = limitPwm(basePwm + COLD_FLOOR_PWM_BOOST);
+    // add on COLD_FLOOR_PWM_BOOST if coldFloor
+    pwm = (coldFloor) ? coldPwm : basePwm;
 	}
 
-	void stop(bool skipTimer = false)
+  /**
+  * Stop the pump
+  On initialization/startup, we don't want to run the timer, because
+  that could prevent our heat from  turning on for 30m
+  @param {bool} isInitialization - is this initialization?
+  **/
+	void stop(bool isInitialization = false)
 	{
+    // for our AntiFreeze function
+    uint32_t totalOffOnDuration = lastOffCycleDuration + cycleDuration;
+    calculateOnOffRatioEMA(totalOffOnDuration);
+
 		// check for cold floor so it stays up to date
-		coldFloor = isCold();
+		coldFloor = isFloorCold();
 		state = 0;
-		resetDuration();
+		resetCycleDuration();
 		pwm = 0;
-		timeRemaining = (skipTimer) ? 0 : OFF_CYCLE_MINIMUM_SECONDS; // 30 minute wait (except on init)
+		timeRemaining = (isInitialization) ? 0 : OFF_CYCLE_MINIMUM_SECONDS; // 30 minute wait (except on init)
 	}
 
+  /**
+  * Initializes the "delayed start" mode,
+  e.g. will force a check of the temp/state after delaySeconds
+  @param {uint16_t} delaySeconds - seconds after which to check the state
+  */
 	void checkAfter(uint16_t delaySeconds = DELAY_SECONDS)
 	{
 		state = 3; // "delay" state
 		timeRemaining = delaySeconds;
 	}
 
-	void runOn()
+  /**
+  * When continuing pump ON phase,
+  either going into normal ON phase or going to Antifreeze On phase
+  @param {bool} isHeartbeatCycle - is this Antifreeze cycle
+  */
+	void runOn(bool isHeartbeatCycle = false)
 	{ // continue run phase
-		state = 1;
+    if (isHeartbeatCycle) {
+      state = 4;
+    } else {
+      state = 1;
+    }
 		// turn off coldFloor if floor stays warm for a bit
-		coldFloor = isCold();
-		pwm = limitedBasePwm();
+		coldFloor = isFloorCold();
+		pwm = limitedBasePwm(isHeartbeatCycle);
 	}
 
-	// during startup phase
-	void stepDownPwm()
+  /**
+  * During pump startup phase, step down PWM each cycle
+  @param {bool} isHeartbeatCycle - is this Antifreeze cycle
+  */
+	void stepDownPwm(bool isHeartbeatCycle = false)
 	{
 		// base pwm
-		uint8_t basePwm = limitedBasePwm();
+		uint8_t basePwm = limitedBasePwm(isHeartbeatCycle);
 
 		// current PWM is boosted for startup. Calc after stepping down one time
 		uint8_t steppedDownPwm = pwm - startingPhasePwmStepAdjust;
@@ -193,6 +313,9 @@ public:
 		startingPhasePwmStepAdjust -= 1;
 	}
 
+  /**
+  * called every second while pump is ON
+  */
 	void pulsePwm()
 	{ // occasional high power pulse to prevent motor hangups
 		pulsePwmCounter++;
@@ -206,7 +329,9 @@ public:
 		}
 	}
 
-	// called every second
+  /**
+  * called every second
+  */
 	void update()
 	{
 		cycleDuration++; // this cycle cycleDuration
@@ -217,7 +342,6 @@ public:
 		if (isPumpOn)
 			accumOn++;
     // to track when we can skip the ANTIFREEZE cycle
-    incrementAntiFreezeTimers(isPumpOn);
 
 		// time spent above setpoint
 		// bool isAboveTargetTemperature = weightedAirTemp >= setPoint;
@@ -236,73 +360,103 @@ public:
   // Switching to different cycles:
   // ===============================================
 
-  void offWithTimer() {
-    // special cases in extreme change
-    bool isTempBelowMaximumOffset = weightedAirTemp <= setPoint - EMERGENCY_ON_TRIGGER_OFFSET;
-
-    if (isTempBelowMaximumOffset)
-      start();
+  /*
+  When starting the pump
+  */
+  void pumpStart(bool isHeartbeatCycle = false) {
+    // if starting up, step down
+    if (startingPhasePwmStepAdjust > 0)
+      stepDownPwm(isHeartbeatCycle);
+    else
+      runOn(isHeartbeatCycle);
   }
 
+  
+  /*
+  Continuing on (with timer)
+  */
   void onWithTimer() {
     runOn();
     pulsePwm();
   }
 
-  void pumpStart() {
-    // bool isStillStartingUp = timeRemaining > END_OF_STARTUP_TIMER;
-    bool isStillStartingUp = startingPhasePwmStepAdjust > 0;
-    if (isStillStartingUp)
-      stepDownPwm();
-    else
-      runOn();
+  /*
+  Continuing on (extended)
+  */
+  void onExtended(bool _isAboveAdjustedSetPoint, bool isHeartbeatCycle = false) {
+      if (_isAboveAdjustedSetPoint && !isHeartbeatCycle)
+        stop(); // most common stop trigger
+      else
+      {
+        runOn(isHeartbeatCycle);
+        pulsePwm();
+      }
   }
 
-  void offContinued(bool isPumpOn, bool _isAboveAdjustedSetPoint) {
-    if (!_isAboveAdjustedSetPoint)
+  /*
+  Turning off pump Off (with timer)
+  */
+  void offWithTimer() {
+    // update heartbeat timer
+    updateHeartbeat(true);
+
+    // special cases in extreme change
+    if (weightedAirTemp <= setPoint - EMERGENCY_ON_TRIGGER_OFFSET)
+      start();
+  }
+
+  /*
+  Continuing pump off pump (extended)
+  */
+  void offExtended(bool isPumpOn, bool _isAboveAdjustedSetPoint) {
+    if (_isAboveAdjustedSetPoint) {
+      if (isPumpOn)
+        stop(); // coming from delay, in case we need to stop
+    } else {
+      updateHeartbeat();
       if (isPumpOn)
         runOn();
       else
         start(); // most common start trigger
-    else if (isPumpOn)
-      stop(); // coming from delay, in case we need to stop
-  }
-
-  void onContinued(bool _isAboveAdjustedSetPoint) {
-    if (_isAboveAdjustedSetPoint)
-      stop(); // most common stop trigger
-    else
-    {
-      runOn();
-      pulsePwm();
     }
   }
 
+  /*
+  When coming from delayed check
+  */
   void delayTimerEnd() {
     state = 0;
   }
 
+  /**
+  * change cycles if needed, and returns true if PWM changed
+  */
 	bool checkCycle(bool isPumpOn)
 	{
 		uint8_t lastPwm = pwm;
-		bool isDuringATimedCycle = timeRemaining > 0;
 
-		if (isDuringATimedCycle)
-		{
+    // if during a timed cycle
+		if (timeRemaining > 0) {
 			timeRemaining--;
 
-			if (state == 0) offWithTimer();
-			else if (state == 1) onWithTimer();
-			else if (state == 2) pumpStart();
-		}
-		else
-		{
-			// NO timer restriction (extended phase)
-      bool _isAboveAdjustedSetPoint = isAboveAdjustedSetPoint();
+        switch(state) {
+          case(0): offWithTimer();
+          case(1): onWithTimer();
+          case(2): pumpStart();
+          case(5): pumpStart(true);
+        }
 
-			if (state == 0) offContinued(isPumpOn, _isAboveAdjustedSetPoint);
-			else if (state == 1) onContinued(_isAboveAdjustedSetPoint);
-			else if (state == 3) delayTimerEnd();
+		} else {
+			// NO timer restriction, we can change if needed
+      bool _isAboveAdjustedSetPoint = isAboveAdjustedSetPoint();
+ 
+        switch(state){
+          case(0): offExtended(isPumpOn, _isAboveAdjustedSetPoint);
+          case(1): onExtended(_isAboveAdjustedSetPoint);
+          case(3): delayTimerEnd();
+          case(4): onExtended(_isAboveAdjustedSetPoint, true);
+
+        }
 		}
 
 		// return true if changed

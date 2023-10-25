@@ -13,20 +13,25 @@ const uint8_t PULSE_PWM_AMOUNT = 27;                          // occasional boos
 // PWM boost during motor start phase
 const uint8_t STARTING_PHASE_PWM_BOOST = 28; // ({sum(1-10)} == 55) + {1*remaining seconds}
 const uint8_t STARTING_PHASE_INITIAL_STEP = 7; // initial drop amount during starting phase
-uint8_t startingPhaseStepAdjust = 0;
+uint8_t startingPhasePwmStepAdjust = 0;
 
 // timers
 const uint16_t ON_CYCLE_MINIMUM_SECONDS = 60;	 // 1m
-const uint16_t OFF_CYCLE_MINIMUM_SECONDS = 300; // 5m
+const uint16_t OFF_CYCLE_MINIMUM_SECONDS = 5 * 60; // 5m
 uint32_t timeRemaining = 0; // cycle time counter, to track if we're past the minimum cycle times
 
-const uint8_t ANTIFREEZE_CYCLE_PWM = 145; // slightly faster than normal
-const uint16_t ANTIFREEZE_CYCLE_SECONDS = 900; // 15m
-const uint16_t ANTIFREEZE_CYCLE_SECONDS_INTERVAL = 7200; // 120m or 2hours
-const uint8_t ANTIFREEZE_ENABLED_ABOVE_SETPOINT = 55; // degrees F - only run this cycle if setpoint is above this value (so in summer, make setpoint this value or less)
+const uint8_t HEARTBEAT_CYCLE_PWM = 145; // slightly faster than normal
+const uint16_t HEARTBEAT_CYCLE_MINIMUM_OFF_DURATION = 30 * 60; //30m
+const uint32_t HEARTBEAT_ON_CYCLE_DURATION = 60; // 1m
+const uint32_t HEARTBEAT_ON_RATIO_EMA_PERIOD = 60 * 60 * 24; // 1 day
+uint32_t heartbeatCalculatedOffTime = HEARTBEAT_CYCLE_MINIMUM_OFF_DURATION - HEARTBEAT_ON_CYCLE_DURATION;
+
+// AntiFreeze function
+float heartbeatOnOffRatioEMA = 0;
+uint32_t heartbeatTimer = 0;
 
 // Occasional PWM boost (to prevent motor stalling)
-const uint16_t PULSE_PWM_SECONDS_INTERVAL = 1800; // seconds (every hour)
+const uint16_t PULSE_PWM_SECONDS_INTERVAL = 30 * 60; // seconds (every hour)
 uint16_t pulsePwmCounter = 0;											// counts the seconds since last boost
 
 // Delayed start phase: seconds to delay before checking/starting
@@ -138,7 +143,7 @@ public:
 		// reset "pwm pulse" counter when turning on
 		pulsePwmCounter = 0;
 		// smooth pwm transition, subtract this from pwm, and then --
-		startingPhaseStepAdjust = STARTING_PHASE_INITIAL_STEP;
+		startingPhasePwmStepAdjust = STARTING_PHASE_INITIAL_STEP;
 
 		// check if floor is cold
 		coldFloor = isCold();
@@ -181,11 +186,11 @@ public:
 		uint8_t basePwm = limitedBasePwm();
 
 		// current PWM is boosted for startup. Calc after stepping down one time
-		uint8_t steppedDownPwm = pwm - startingPhaseStepAdjust;
+		uint8_t steppedDownPwm = pwm - startingPhasePwmStepAdjust;
 		// if pwm stepped down is more than the base pwm, we use it; else we use basePwm;
 		pwm = (steppedDownPwm > basePwm) ? steppedDownPwm : basePwm;
 
-		startingPhaseStepAdjust -= 1;
+		startingPhasePwmStepAdjust -= 1;
 	}
 
 	void pulsePwm()
@@ -246,7 +251,7 @@ public:
 
   void pumpStart() {
     // bool isStillStartingUp = timeRemaining > END_OF_STARTUP_TIMER;
-    bool isStillStartingUp = startingPhaseStepAdjust > 0;
+    bool isStillStartingUp = startingPhasePwmStepAdjust > 0;
     if (isStillStartingUp)
       stepDownPwm();
     else

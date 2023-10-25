@@ -1,7 +1,3 @@
-//#include <Arduino.h>
-//#include <ArduPID.h>
-//#include <TimeLib.h>
-
 void timeSetup()
 {
 	// get and display time works!

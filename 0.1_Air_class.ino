@@ -1,6 +1,3 @@
-//#include <Arduino.h>
-//#include <DHT.h>
-
 class Air_C
 {
 private:
@@ -70,7 +67,8 @@ public:
 		for (uint8_t i = 0; i < 3; i++) { 
       // save as lastEMA before updating the currentEMA
 			lastEMA[i] = lastEMA[i] == 0 ? tempF : currentEMA[i];
-			currentEMA[i] = calcEma(float(tempF), float(lastEMA[i]), EMA_MULT_PERIODS[i]);
+			// currentEMA[i] = calcEMAFromFloats(tempF, lastEMA[i], EMA_MULT_PERIODS[i]);
+			currentEMA[i] = calcEma(tempF, lastEMA[i], EMA_MULT_PERIODS[i]);
 		}
 	};
 

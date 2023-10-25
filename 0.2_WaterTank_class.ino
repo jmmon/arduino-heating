@@ -1,5 +1,3 @@
-//#include <Arduino.h>
-
 // water level sensor input: 5v
 
 // float sensor has ohm output: 240 ohm empty ~~~ 30 ohm full (++ wire resistance) (off of 5v)
@@ -133,19 +131,14 @@ public:
     float asFloat_FloatSensorReadValue = float(floatSensorReadValue);
 
 		// EMA calcs
-		ema = calcEma(
-      asFloat_floatSensorReadValue, 
-      float(lastEma), 
-      EMA_PERIODS_SHORT
-    );
-		slowEma = calcEma(
-      asFloat_floatSensorReadValue, 
-      float(lastSlowEma), 
-      EMA_PERIODS_LONG
-    );
+		// ema = calcEMAFromFloats(floatSensorReadValue, lastEma, EMA_PERIODS_SHORT);
+		// slowEma = calcEMAFromFloats(floatSensorReadValue, lastSlowEma, EMA_PERIODS_LONG);
+		ema = calcEma(floatSensorReadValue, lastEma, EMA_PERIODS_SHORT);
+		slowEma = calcEma(floatSensorReadValue, lastSlowEma, EMA_PERIODS_LONG);
 
 		diff = ema - slowEma;
-		diffEma = calcEma(float(diff), float(lastDiffEma), EMA_PERIODS_DIFF);
+		// diffEma = calcEMAFromFloats(diff, lastDiffEma, EMA_PERIODS_DIFF);
+		diffEma = calcEma(diff, lastDiffEma, EMA_PERIODS_DIFF);
 
 		// calculate tank percent based on ema
 		lastPercent = percent;

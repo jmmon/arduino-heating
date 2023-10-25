@@ -13,6 +13,7 @@
 #include <TonePitch.h>
 
 #include <math.h>
+#include "utils.h"
 
 
 const String VERSION_NUMBER = "4.1.2";
@@ -153,3 +154,8 @@ double setPoint = 67;
 
 // ArduPID ArduPIDController;
 
+// move this to functions?
+float calcEma(uint16_t reading, uint16_t lastEma, uint16_t days)
+{
+return (reading * (2. / (1 + days)) + lastEma * (1 - (2. / (1 + days))));
+}

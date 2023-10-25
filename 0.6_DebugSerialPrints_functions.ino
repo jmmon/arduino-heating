@@ -82,13 +82,13 @@ void DEBUG_airEmas()
 	tempDispCounter++;
 }
 
-// void DEBUG_heartbeat() {
-//   if (DEBUG) {
-//     Serial.println();
-//     Serial.print(F("Heartbeat: "));
-//     Serial.print(heartbeatOnOffRatioEMA);
-//   }
-// }
+void DEBUG_heartbeat() {
+  if (DEBUG) {
+    Serial.println();
+    Serial.print(F("Heartbeat: "));
+    Serial.print(heartbeatOnOffRatioEMA);
+  }
+}
 
 uint8_t highsLowsFloorDisplayCounter = 0;
 void DEBUG_highsLowsFloor()

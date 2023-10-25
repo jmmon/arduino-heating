@@ -157,5 +157,5 @@ double setPoint = 67;
 // move this to functions?
 float calcEma(uint16_t reading, uint16_t lastEma, uint16_t days)
 {
-return (reading * (2. / (1 + days)) + lastEma * (1 - (2. / (1 + days))));
+  return (reading * (2. / (1 + days)) + lastEma * (1 - (2. / (1 + days))));
 }

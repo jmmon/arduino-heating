@@ -1,8 +1,3 @@
-// #include <Arduino.h>
-// #include <LiquidCrystal_I2C.h>
-// #include <TimeLib.h>
-// #include "utils.h"
-
 const byte customCharInside[8] = { // "inside"
 		B00000,
 		B00000,

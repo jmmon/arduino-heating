@@ -271,3 +271,9 @@ uint32_t calculatedOnTime = 60 * 1000 // ms === 1 minute
 uint32_t calculatedTotalTime = BASE / ratio;
 uint32_t calculatedOffTime = calculatedTotalTime - calculatedOnTime;
 ```
+
+## Need to figure out logic for handling pump states, integrating the new mode
+### Currently:
+- Switches to "start" and resets timer, starts at high PWM and steps down
+- Later switches to "on" and continues the timer, now at a steady PWM
+

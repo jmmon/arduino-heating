@@ -276,4 +276,15 @@ uint32_t calculatedOffTime = calculatedTotalTime - calculatedOnTime;
 ### Currently:
 - Switches to "start" and resets timer, starts at high PWM and steps down
 - Later switches to "on" and continues the timer, now at a steady PWM
+### Basic logic:
+1. Update function runs every second, which runs a function depending on the current pump state.
+2. These functions adjust the PWM or the state as necessary (depending on temp etc) for the next update.
 
+- I want the Heartbeat time (time spent on) to also accumulate in accumOn
+- It needs to start higher and step down, just like regular startup of pump
+- Duration will be ~1m (maybe ~3m?), so it should step down for ~6 seconds and then continue for the remaining duration
+
+- While off, we will occassionally run the heartbeat
+> - this turns on the pump, and resets the cycle timer
+> - after the heartbeat, I want the pump to turn off and I guess it can reset the cycle timer again
+> - so after heartbeat, it should go back to `state === 0`

@@ -87,7 +87,7 @@ String limitDecimals(float num, uint8_t decimals = 1) {
 
 
 // // move this to functions?
-// float calcEma(uint16_t reading, uint16_t lastEma, uint16_t days)
+// float calcEma(uint16_t reading, uint16_t lastEma, uint16_t _days)
 // {
-// 	return (reading * (2. / (1 + days)) + lastEma * (1 - (2. / (1 + days))));
+// 	return (reading * (2. / (1 + _days)) + lastEma * (1 - (2. / (1 + _days))));
 // }

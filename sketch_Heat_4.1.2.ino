@@ -37,6 +37,6 @@ float calcEma(uint16_t reading, uint16_t lastEma, uint16_t _days) {
 #include "class.Pump.h"
 #include "class.Thermostat.h"
 
-#include "functions.h"
+// #include "functions.h"
 
-#include "main.h"
+// #include "main.h"

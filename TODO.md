@@ -288,3 +288,7 @@ uint32_t calculatedOffTime = calculatedTotalTime - calculatedOnTime;
 > - this turns on the pump, and resets the cycle timer
 > - after the heartbeat, I want the pump to turn off and I guess it can reset the cycle timer again
 > - so after heartbeat, it should go back to `state === 0`
+
+- When in heartbeat mode, should IGNORE the normal "stop/start" triggers!!!
+> - I don't want it to turn off when in heartbeat mode!
+> - e.g. if state === 5 or state === 4, ignore the temp checks!

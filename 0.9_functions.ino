@@ -7,14 +7,14 @@ void airSensorNanCheck() {
 				isnan(air[1].humid) ||
 				isnan(air[1].tempF)
     ) {
-			Serial.println(F("ERROR BOTH SENSORS "));
+      DEBUG_dhtNaN(2);
 		} else {
 			air[0].humid = air[1].humid;
 			air[0].tempF = air[1].tempF;
 
 			if (errorCounter1 == 30)
 			{
-				Serial.print(F("DHT.main error! "));
+        DEBUG_dhtNaN(0);
 				errorCounter1 = 0;
 			}
 			errorCounter1++;
@@ -27,7 +27,7 @@ void airSensorNanCheck() {
 		air[1].tempF = air[0].tempF;
 
 		if (errorCounter2 == 30) {
-			Serial.print(F("DHT.upstairs error! "));
+      DEBUG_dhtNaN(1);
 			errorCounter2 = 0;
 		}
 		errorCounter2++;
@@ -46,12 +46,7 @@ void airSensorOutlierCheck() {
       air[0].tempF < (0-AIR_SENSOR_OUTLIER_DISTANCE) + air[0].currentEMA[2]
   ) {
     // out of range, set to other sensor (hoping it is within range);
-    if (DEBUG) {
-      Serial.print(F(" DHT.main outlier! "));
-      Serial.print(air[0].tempF);
-      Serial.print(F(" vs EMA_Long "));
-      Serial.print(air[0].currentEMA[2]);
-    }
+    DEBUG_dhtOutlier(0);
 
     air[0].tempF = air[1].tempF;
   } else if (
@@ -59,12 +54,8 @@ void airSensorOutlierCheck() {
       air[1].tempF < -20 + air[1].currentEMA[2]
   ) {
     // out of range, set to other sensor (hoping it is within range);
-    if (DEBUG) {
-      Serial.print(F(" DHT.upstairs outlier! "));
-      Serial.print(air[1].tempF);
-      Serial.print(F(" vs EMA_Long "));
-      Serial.print(air[1].currentEMA[2]);
-    }
+
+    DEBUG_dhtOutlier(1);
 
     air[1].tempF = air[0].tempF;
   }

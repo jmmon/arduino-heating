@@ -108,7 +108,7 @@ void loop()
 		Tstat.update();
 
 		// 1000ms Loop:
-		if (prevLoopStartTime % ms1000Interval == 0)
+		if (prevLoopStartTime % MS_1000_INTERVAL == 0)
 		{
 			pump.update();
 
@@ -118,7 +118,7 @@ void loop()
 		}
 
 		// 2500ms Loop:
-		if (prevLoopStartTime % ms2500Interval == 0)
+		if (prevLoopStartTime % MS_2500_INTERVAL == 0)
 		{
 			waterTank.update();
 			updateTEMP(); // read air temp

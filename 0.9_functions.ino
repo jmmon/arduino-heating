@@ -6,12 +6,10 @@ void airSensorNanCheck()
   ) {
 		if (
 				isnan(air[1].humid) ||
-				isnan(air[1].tempF))
-		{
+				isnan(air[1].tempF)
+    ) {
 			Serial.println(F("ERROR BOTH SENSORS "));
-		}
-		else
-		{
+		} else {
 			air[0].humid = air[1].humid;
 			air[0].tempF = air[1].tempF;
 
@@ -22,16 +20,14 @@ void airSensorNanCheck()
 			}
 			errorCounter1++;
 		}
-	}
-	else if (
+	} else if (
 			isnan(air[1].humid) ||
-			isnan(air[1].tempF))
-	{
+			isnan(air[1].tempF)
+  ) {
 		air[1].humid = air[0].humid;
 		air[1].tempF = air[0].tempF;
 
-		if (errorCounter2 == 30)
-		{
+		if (errorCounter2 == 30) {
 			Serial.print(F("DHT.upstairs error! "));
 			errorCounter2 = 0;
 		}
@@ -39,53 +35,54 @@ void airSensorNanCheck()
 	}
 }
 
-void airSensorOutlierCheck()
-{
-	if (air[0].currentEMA[2] != 0)
-	{ // don't run the first time
-		if (
-				air[0].tempF > 20 + air[0].currentEMA[2] ||
-				air[0].tempF < -20 + air[0].currentEMA[2])
-		{
-			// out of range, set to other sensor (hoping it is within range);
-			if (DEBUG)
-			{
-				Serial.print(F(" DHT.main outlier! "));
-				Serial.print(air[0].tempF);
-				Serial.print(F(" vs EMA_Long "));
-				Serial.print(air[0].currentEMA[2]);
-			}
-
-			air[0].tempF = air[1].tempF;
-		} else if (
-				air[1].tempF > 20 + air[1].currentEMA[2] ||
-				air[1].tempF < -20 + air[1].currentEMA[2])
-		{
-			// out of range, set to other sensor (hoping it is within range);
-			if (DEBUG)
-			{
-				Serial.print(F(" DHT.upstairs outlier! "));
-				Serial.print(air[1].tempF);
-				Serial.print(F(" vs EMA_Long "));
-				Serial.print(air[1].currentEMA[2]);
-			}
-
-			air[1].tempF = air[0].tempF;
-		}
+const uint8_t AIR_SENSOR_OUTLIER_DISTANCE = 20;
+void airSensorOutlierCheck() {
+  // don't run the first time
+	if (air[0].currentEMA[2] == 0) { 
+    return;
 	}
+
+  if (
+      air[0].tempF > AIR_SENSOR_OUTLIER_DISTANCE + air[0].currentEMA[2] ||
+      air[0].tempF < (0-AIR_SENSOR_OUTLIER_DISTANCE) + air[0].currentEMA[2]
+  ) {
+    // out of range, set to other sensor (hoping it is within range);
+    if (DEBUG) {
+      Serial.print(F(" DHT.main outlier! "));
+      Serial.print(air[0].tempF);
+      Serial.print(F(" vs EMA_Long "));
+      Serial.print(air[0].currentEMA[2]);
+    }
+
+    air[0].tempF = air[1].tempF;
+  } else if (
+      air[1].tempF > 20 + air[1].currentEMA[2] ||
+      air[1].tempF < -20 + air[1].currentEMA[2]
+  ) {
+    // out of range, set to other sensor (hoping it is within range);
+    if (DEBUG) {
+      Serial.print(F(" DHT.upstairs outlier! "));
+      Serial.print(air[1].tempF);
+      Serial.print(F(" vs EMA_Long "));
+      Serial.print(air[1].currentEMA[2]);
+    }
+
+    air[1].tempF = air[0].tempF;
+  }
 }
 
 double calcFloorBatteryCapacity() {
 // calculate temperature offset to account for stored floor heat
 	// taking into account the floor stored heat
-	int16_t floorRange = floorEmaAvg - minFloorRead;
+	int16_t floorRange = floorEmaAvg - MIN_FLOOR_READ;
+
 	// limit the range 0-150
-	floorRange = (floorRange < 0) ? 0 : (floorRange > maxFloorOffset) ? maxFloorOffset
-																													: floorRange;
+	floorRange = max(0, min(MAX_FLOOR_OFFSET, floorRange));
+
 	// range 0-150 * 100 / max offset of 150 == percentage of 0~100
-	uint8_t floorRangePercent = uint8_t(floorRange * 100. / maxFloorOffset);
+	uint8_t floorRangePercent = uint8_t(floorRange * 100. / MAX_FLOOR_OFFSET);
 	// multiply ratio by maxTempAdjust to get the total offset, subtract 1  for funsies, so cold floor feels like lower temp
-	return (floorRangePercent * maxTempAdjust100x / 10000.) - 1; 
+	return (floorRangePercent * MAX_TEMP_ADJUST_100X / (100. * 100.)) - 1; 
 }
 
 void updateTEMP()

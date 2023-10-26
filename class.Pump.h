@@ -39,11 +39,16 @@ const uint8_t HEARTBEAT_CYCLE_PWM = 145; // slightly faster than normal
 const uint16_t HEARTBEAT_CYCLE_MINIMUM_OFF_DURATION = 30 * 60; //30m
 const uint32_t HEARTBEAT_ON_CYCLE_DURATION = 1 * 60; // 1m
 const uint32_t HEARTBEAT_ON_RATIO_EMA_PERIOD = 1 * 60 * 60 * 24; // 1 day
+// initially set, and then calculated after each off cycle
 uint32_t heartbeatCalculatedOffTime = HEARTBEAT_CYCLE_MINIMUM_OFF_DURATION - HEARTBEAT_ON_CYCLE_DURATION;
 
-// AntiFreeze function
+// on off ratio ranges 0-1
 float heartbeatOnOffRatioEMA = 0;
+// to determine how far in the heartbeat cycle we are (to turn on and off the pump)
 uint32_t heartbeatTimer = 0;
+// for Heartbeat
+uint32_t lastOffCycleDuration = 0;
+bool isHeartbeatOn = false;
 
 /* ==========================================================================
  * Pump class
@@ -68,9 +73,6 @@ public:
 	uint8_t state = 0;					
 	uint32_t cycleDuration = 0; // for this cycle
 
-  // for Heartbeat
-  uint32_t lastOffCycleDuration = 0;
-  bool isHeartbeatOn = false;
 
   /*
   Constructor function
@@ -88,7 +90,7 @@ public:
 
   @param {uint32_t} totalTime - on+off total time
   */
-  void calculateOnOffRatioEMA(uint32_t totalTime) {
+  void updateOnOffRatioEMA(uint32_t totalTime) {
     float thisRatio = (totalTime == 0 && cycleDuration == 0) 
         ? 0 
         : cycleDuration / totalTime;
@@ -228,7 +230,7 @@ public:
 	{
     // for our AntiFreeze function
     uint32_t totalOffOnDuration = lastOffCycleDuration + cycleDuration;
-    calculateOnOffRatioEMA(totalOffOnDuration);
+    updateOnOffRatioEMA(totalOffOnDuration);
 
 		// check for cold floor so it stays up to date
 		coldFloor = isFloorCold();

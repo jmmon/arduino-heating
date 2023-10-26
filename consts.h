@@ -43,8 +43,8 @@ DHT dht[4] = {
 
 uint32_t currentTime = 0; // timer
 uint32_t prevLoopStartTime = 0;		// counters
-const uint16_t ms1000Interval = 1000;
-const uint16_t ms2500Interval = 2500;
+const uint16_t MS_1000_INTERVAL = 1000;
+const uint16_t ms_2500_Interval = 2500;
 
 // SDA = A4 pin; SCL = A5 pin
 LiquidCrystal_I2C lcd(0x27, 16, 2); // set the LCD address to 0x27 for a 16 chars and 2 line display
@@ -64,9 +64,9 @@ float floorEmaAvgSlow = 0;
 bool coldFloor = false;
 
 // for tweaking the setpoint based on the floor reading
-const uint16_t minFloorRead = 525; // the 0 point for this calculation
-const uint8_t maxFloorOffset = 150; // added to above, the maximum for this calculation
-const uint8_t maxTempAdjust100x = 200; // degrees F * 100 to subtract from target temp, scaled by the floor read range
+const uint16_t MIN_FLOOR_READ = 525; // the 0 point for this calculation
+const uint8_t MAX_FLOOR_OFFSET = 150; // added to above, the maximum for this calculation
+const uint8_t MAX_TEMP_ADJUST_100X = 200; // degrees F * 100 to subtract from target temp, scaled by the floor read range
 double floorOffset = 0;
 
 // for the lcd? or for debug?

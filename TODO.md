@@ -330,3 +330,9 @@ isOn && !isHeartbeatOn ? stop pump
 - Then the pump reacts to this state and does what it needs to do?
 > - e.g. calculate off/on ratio and maintain its state
 - The pump should not be determining if the floor has enough capacity etc
+
+# Could simplify pump state:
+- simply "on" or "off", 
+- maybe also "onTimed" and "offTimed" (or just check if timeRemaining > 0)
+- Then determine if "starting" by checking stepDownCount > 0
+- Finally isHeartbeatOn to determine PWM base value??

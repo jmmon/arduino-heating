@@ -16,11 +16,19 @@ public:
 	uint16_t lastEma = 480;
 	uint16_t lastSlowEma = 480;
 
+  /**
+   * Constructor fn
+   * @param {uint8_t} _pin - Pin for this sensor
+   * */
 	FloorSensor_C(uint8_t _pin) { // constructor
 		PIN = _pin;
 		pinMode(_pin, INPUT);
 	}
 
+  /**
+   * Read the temp and return it
+   * @param {uint8_t} [loops=5] - How many readings to average together
+   * */
   uint16_t readTemp(uint8_t loops = 5) {
 		uint16_t val = 0;
 
@@ -30,6 +38,10 @@ public:
 		return val / loops;
 	}
 
+  /**
+   * Read floor temp and calculate EMAs
+   * runs every 2.5 seconds
+   * */
 	void update() {
 		uint16_t floorRead = readTemp();
 
@@ -37,11 +49,7 @@ public:
 		lastEma = ema;
 		lastSlowEma = slowEma;
 
-    float asFloat_floorRead = float(floorRead);
-
 		// calc new emas
-		// ema = uint16_t(calcEMAFromFloats(floorRead, lastEma, FLOOR_EMA_DAYS));
-		// slowEma = uint16_t(calcEMAFromFloats(floorRead, lastSlowEma, FLOOR_EMA_DAYS_SLOW));
 		ema = uint16_t(calcEma(floorRead, lastEma, FLOOR_EMA_DAYS));
 		slowEma = uint16_t(calcEma(floorRead, lastSlowEma, FLOOR_EMA_DAYS_SLOW));
 	}

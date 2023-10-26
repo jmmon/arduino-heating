@@ -23,6 +23,13 @@ void DEBUG_dhtOutlier(uint8_t index) {
     Serial.print(air[index].currentEMA[2]);
 }
 
+void DEBUG_buttonRead(uint16_t _buttonRead) {
+  if (!DEBUG) {
+    return;
+  }
+  Serial.println(_buttonRead);
+}
+
 
 void DEBUG_dhtNaN(uint8_t index = 2) {
   if (!DEBUG) {

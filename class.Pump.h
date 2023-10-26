@@ -104,7 +104,7 @@ public:
   }
 
   /* 
-  only runs while pump is OFF
+  * only runs while pump is OFF
   */
   void updateHeartbeat(bool initialize = false) {
       if (initialize) {

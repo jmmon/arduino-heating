@@ -155,11 +155,16 @@ private:
 	String previousLine2 = "";
 
 public:
-  // constructor
+  /**
+   * Constructor fn
+   * */
 	Display_c() {
 		pinMode(T_STAT_BUTTON_PIN, INPUT);
 	}
 
+  /**
+   * Set up LCD and special characters
+   * */
 	void initialize() {
 		lcd.init(); // initialize the lcd
 		lcd.clear();
@@ -179,25 +184,31 @@ public:
 	// Utility functions:
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+  /**
+   * detects thermostat button presses to adjust setpoint
+   * - clears alarm (if it was running)
+   * - shows Setpoint page and holds that page
+   * - check pump after a few seconds
+   * */
 	void detectButtons() {
 		uint16_t buttonRead = analogRead(T_STAT_BUTTON_PIN);
 
-		bool isButtonPressDetected = buttonRead > 63;
 
-		if (!isButtonPressDetected) {
+    // if no button is pressed this time, return after saving the reading
+		if (buttonRead <= 63) {
 			// save for next time
 			lastButtonRead = buttonRead;
 			return;
 		}
 
-		if (DEBUG) Serial.println(buttonRead);
+    DEBUG_buttonRead(buttonRead);
 
-		// initialize variable
+		// holds our change value
 		int8_t changeTstatByAmount = 0;
 
 		// button press will turn off alarm! Yay!
-		bool alarmIsOn = alarmCountdown > 0 || alarmCounter > 1;
-		if (alarmIsOn) {
+		bool isAlarmOn = alarmCountdown > 0 || alarmCounter > 1;
+		if (isAlarmOn) {
 			alarmCountdown = 0;
 			alarmCounter = 1; // set to odd number
 			checkBeep(2);			// silences tone if odd number
@@ -209,14 +220,16 @@ public:
 			if (isTopButton) {
 				changeTstatByAmount = 1;
 				// reset record lows
-				for (uint8_t k = 0; k < 2; k++)
-					air[k].lowest = air[k].tempF;
-			  }	else {
+				for (uint8_t k = 0; k < 2; k++) {
+          air[k].lowest = air[k].tempF;
+        }
+      }	else {
         // bottom button
 				changeTstatByAmount = -1;
 				// reset record highs
-				for (uint8_t k = 0; k < 2; k++)
-					air[k].highest = air[k].tempF;
+				for (uint8_t k = 0; k < 2; k++) {
+          air[k].highest = air[k].tempF;
+        }
 			}
 		}
 
@@ -234,7 +247,10 @@ public:
 		lastButtonRead = buttonRead;
 	}
 
-	// render current page every call, and rollover currentPage when needed
+  /**
+   * Prints the current page, first saving previous lines for diffing
+   * runs every update, unless holding a page
+   * */
 	void printCurrentPage() {
 		previousLine1 = currentLine1;
 		previousLine2 = currentLine2;
@@ -268,10 +284,15 @@ public:
 		}
 	}
 
+  /**
+   * Determines when to switch pages, which page to show
+   * runs every update
+   * */
 	void incrementSwitchPageCounter() {
 		// if holding, and pump moves out of "delayed" phase, turn off holdSetPage
-		if (holdSetPage && pump.state != 3)
-			holdSetPage = false;
+		if (holdSetPage && pump.state != 3) {
+      holdSetPage = false;
+    }
 
 		// increment currentPage every 3.5 seconds
 		lcdPageSwitchCounter--;
@@ -291,14 +312,19 @@ public:
 		}	else {
 			// if going into a new page, clear it
 			bool isNewPageNext = lcdPageSwitchCounter == LCD_INTERVAL_QTR_SECS;
-			if (isNewPageNext)
-				lcd.clear();
+			if (isNewPageNext) {
+        lcd.clear();
+      }
 			// refresh the page, or print the new page if it switched
 			printCurrentPage();
 		}
-		// printCurrentPage();
 	}
 
+  /**
+   * After tank is full, this should close the (future) water 
+   * input valve for a duration, to prevent water tank overflow!
+   * runs every update
+   * */
 	void regulateValve() {
 		// should be closed during our timer (when tank gets full)
 		bool shouldValveBeClosed = valveCloseTimer > 0;
@@ -340,7 +366,7 @@ public:
 		// 		The beeper should beep every ~0.5 seconds for a duration of 180 seconds.
 		//		(Increment a counter, and if counter % 2 == 0, do a beep, else, stop the beep)
 
-		if (waterTank.filling) {
+		if (waterTank.isFilling) {
 			drawWaterLevel(); // draw waterLevel
 
 			// do alarm stuff
@@ -352,16 +378,17 @@ public:
 				alarmCounter++; // count while above 85% (and filling)
 
 				// beep when it should
-				if (isWaterOver95)
-					checkBeep(4); // fast beeping
-				else if (isWaterOver90)
-					checkBeep(8); // medium beeping
-				else
-					checkBeep(16); // slow beeping
+				if (isWaterOver95) {
+          checkBeep(4); // fast beeping
+        } else if (isWaterOver90) {
+          checkBeep(8); // medium beeping
+        } else {
+          checkBeep(16); // slow beeping
+        }
 			}
-		}	else if (waterTank.newlyFull) {
+		}	else if (waterTank.isNewlyFull) {
 			// moment it hits 100%
-			waterTank.newlyFull = false;
+			waterTank.isNewlyFull = false;
 
 			alarmCountdown = 180 * 4; // seconds * 4
 
@@ -377,16 +404,38 @@ public:
     }
 	} // END update (every 0.25 seconds)
 
-	void beepOnTime(uint8_t counter, uint16_t spacing) {
-		if (counter % spacing == 0) {
+	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	// Beep helper functions, for the filling alarm
+	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  /**
+   * For the water tank beeper, play tone every {quarterSecondsInterval} occurrances
+   * runs every update
+   *
+   * @param {uint8_t} counter - how many times to beep
+   * @param {uint16_t} quarterSecondsInterval - how often to beep
+   *
+   * @example
+   *   beepOnTime(100, 4); // would beep
+   *   beepOnTime(99, 4); // would NOT beep
+   * */
+	void beepOnTime(uint8_t counter, uint16_t quarterSecondsInterval) {
+		if (counter % quarterSecondsInterval == 0) {
       tone(TONE_PIN, NOTE_C5, 250); // play our tone on pin for 250ms
     } else {
       noTone(TONE_PIN);
     }
 	}
 
-	// takes spacing (n * 0.25s) and optional countdown timer for when hitting maximum
-	void checkBeep(uint8_t spacing, uint16_t countdown = 0) {
+  /**
+   * For the water tank beeper, check if it's time to beep
+   * takes quarterSecondsInterval (n * 0.25s) and optional countdown timer for when hitting maximum
+   * runs every update
+   *
+   * @param {uint8_t} quarterSecondsInterval - how often to beep
+   * @param {uint16_t} countdown - how long to beep
+   * */
+	void checkBeep(uint8_t quarterSecondsInterval, uint16_t countdown = 0) {
 		// if countdown, we count down the timer and beep when needed
 		uint16_t counter = alarmCounter;
 		if (countdown > 0) {
@@ -394,35 +443,61 @@ public:
 			counter = countdown;
 		}
 
-		beepOnTime(counter, spacing);
+		beepOnTime(counter, quarterSecondsInterval);
+	}
+
+	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	// Draw helpers:
+	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  /**
+   * Draw both lines
+   * @param {String} line1 - line 1 content
+   * @param {String} line2 - line 2 content
+   * */
+	void drawLines(String line1, String line2) {
+		drawLine(line1, 0, 0);
+		drawLine(line2, 0, 1);
+	}
+
+  /**
+   * Writes the string to the given line
+   * @param {String} string - the string to write
+   * @param {uint8_t} slot - the starting slot/column
+   * @param {uint8_t} lineNum - the line number
+   * */
+	void drawLine(String string, uint8_t slot, uint8_t lineNum) {
+		lcd.setCursor(slot, lineNum);
+		lcd.print(string);
+	}
+
+  /**
+   * diff the lines before drawing the new page
+   * @param {String} line1 - line 1 content
+   * @param {String} line2 - line 2 content
+   * */
+	void drawLinesIfDifferent(String line1, String line2) {
+		if (previousLine1 != line1 || previousLine2 != line2)  {
+      drawLines(currentLine1, currentLine2);
+    }
+	}
+
+  /**
+   * Water level corner indicator
+   * @param {uint8_t} lineNum - line number to draw the icon on (0 or 1)
+   * */
+	void drawWaterLevel(uint8_t lineNum = 1) {
+		String extra = "\005" + waterTank.getDisplayString();
+		drawLine(extra, 13, lineNum);
 	}
 
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	// Pages:
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-	void drawLines(String line1, String line2) {
-		drawLine(line1, 0, 0);
-		drawLine(line2, 0, 1);
-	}
-
-	void drawLine(String string, uint8_t slot, uint8_t lineNum) {
-		lcd.setCursor(slot, lineNum);
-		lcd.print(string);
-	}
-
-  // diff the lines before drawing the new page
-	void drawLinesIfDifferent(String l1, String l2) {
-		if (previousLine1 != l1 || previousLine2 != l2)  {
-      drawLines(currentLine1, currentLine2);
-    }
-	}
-
-	void drawWaterLevel(uint8_t lineNum = 1) {
-		String extra = "\005" + waterTank.getDisplayString();
-		drawLine(extra, 13, lineNum);
-	}
-
+  /**
+   * Air Temperature page, also shows water level
+   * */
 	void drawTemperaturePage() {
 		currentLine1 = "\008" + limitDecimals(weightedAirTemp, 1) + " " + limitDecimals(air[0].getTempEma(), 1) + "/" + limitDecimals(air[1].getTempEma(), 1) + "\001";
 		currentLine2 = "\006" + limitDecimals(setPoint, 1) + "\001 " + limitDecimals(difference, 1) + "   ";
@@ -431,15 +506,21 @@ public:
 		drawWaterLevel(); // prints on bottom right
 	}
 
-	// display cycle info, time/cycleDuration
+  /**
+   * Pump Cycle Info page
+   * display cycle info, time/cycleDuration
+   * */
 	void drawPumpCycleInfoPage() {
 		currentLine1 = pump.getStatusString() + " " + formatTimeToString(pump.cycleDuration);
 		currentLine2 = "RunTtl\004" + formatHoursWithTenths(getTotalSeconds(currentTime));
 
 		drawLinesIfDifferent(currentLine1, currentLine2);
 	}
-  //
- // Total time and time spent with pump on/off
+
+  /**
+   * Accum time page
+   * Total time, and time spent with pump on/off
+   * */
 	void drawAccumTimePage() {
 		const uint32_t totalSeconds = getTotalSeconds(currentTime);
 		const uint32_t accumBelow = (totalSeconds - pump.accumAbove);
@@ -459,14 +540,19 @@ public:
 		drawLinesIfDifferent(currentLine1, currentLine2);
 	}
 
-	void drawSetPage() { // Set Temperature page
+  /**
+   * Set Temperature page
+   * */
+	void drawSetPage() {
 		currentLine1 = "Temp\004" + limitDecimals(weightedAirTemp, 1) + "\001      ";
 		currentLine2 = "   \006" + limitDecimals(setPoint, 1) + "        ";
 
 		drawLinesIfDifferent(currentLine1, currentLine2);
 	}
 
-	// Show greenhouse and exterior sensor readings
+  /**
+   * Draw greenhouse & exterior sensor readings
+   * */
 	void drawGreenhouse() {
 		currentLine1 = "GH\004" + limitDecimals(air[3].currentEMA[0], 1) + "\001 " + limitDecimals(air[3].humid, 1) + "%  ";
 		currentLine2 = " \007 " + limitDecimals(air[2].currentEMA[0], 1) + "\001 " + limitDecimals(air[2].humid, 1) + "%  ";
@@ -474,6 +560,9 @@ public:
 		drawLinesIfDifferent(currentLine1, currentLine2);
 	}
 
+  /**
+   * Draws water filling page
+   * */
 	void drawWaterFillingPage() { // Water Filling Temp Page
 		currentLine1 = "\005 " + String(waterTank.ema) + ":" + String(waterTank.slowEma) + " \x7e" + (waterTank.diffEma < 10 ? "  " : " ") + String(waterTank.diffEma);
 		currentLine2 = "Flr\004" + String(int(floorEmaAvg)) + ":" + String(int(floorEmaAvgSlow)) + "     ";

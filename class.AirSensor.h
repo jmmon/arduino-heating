@@ -4,7 +4,6 @@
 class Air_C {
 private:
 	DHT *sensor;
-	//         DHTNEW *sensor;
 
 public:
 	float tempC = 0;
@@ -19,18 +18,19 @@ public:
 
 	bool working = true;
 
-  // constructor
-	Air_C(DHT *s, float w) {
-		sensor = s;
-		WEIGHT = w;
+  /**
+   * Constructor fn
+   * @param {DHT} *sensor - DHT sensor
+   * @param {float} weight - weight
+   * */
+	Air_C(DHT *sensor, float weight) {
+		sensor = sensor;
+		WEIGHT = weight;
 	}
 
-	//        Air_C(DHTNEW *s, String l, float w) {  //constructor
-	//            sensor = s;
-	//            label = l;
-	//            WEIGHT = w;
-	//        }
-
+  /**
+   * Read this temperature and save to state
+   * */
 	void readTemp()	{
 		// read temp/humid
 		tempC = sensor->readTemperature();
@@ -38,23 +38,19 @@ public:
 		humid = sensor->readHumidity();
 	};
 
-	//        readTemp() {
-	////          uint32_t start = micros();
-	////          int chk = sensor.read();
-	////          uint32_t stop = micros();
-	//
-	//          sensor->read();
-	//          tempC = sensor->getTemperature();
-	//          tempF = (tempC * 9 / 5) + 32;
-	//          humid = sensor->getHumidity();
-	//        }
-
+  /**
+   * get current temp, weighted if necessary
+   * @param {bool} weighted - weight the EMA when returning
+   * */
 	float getTempEma(bool weighted = false)	{
-		return (weighted) ? (WEIGHT * currentEMA[0]) : currentEMA[0];
+		return currentEMA[0] * (weighted ? WEIGHT : 1);
 	}
 
-	// update runs every 2.5s
-	updateRecords()	{
+  /**
+   * update high/low records and calculate the EMAs
+   * runs every 2.5s
+   * */
+	void updateRecords()	{
 		// update highest / lowest
 		if (highest < tempF)
 			highest = tempF;
@@ -76,9 +72,4 @@ public:
 		Air_C(&dht[1], 2), //"UPSTAIRS"
 		Air_C(&dht[2], 2), //"OUTSIDE"
 		Air_C(&dht[3], 2), //"GREENHOUSE"
-
-		//    Air_C(&dhtnew[0], "MAIN", 1),
-		//    Air_C(&dhtnew[1], "UPSTAIRS", 2),
-		//    Air_C(&dhtnew[2], "OUTSIDE", 2),
-		//    Air_C(&dhtnew[3], "GREENHOUSE", 2),
 };

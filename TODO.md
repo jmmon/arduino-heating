@@ -292,3 +292,41 @@ uint32_t calculatedOffTime = calculatedTotalTime - calculatedOnTime;
 - When in heartbeat mode, should IGNORE the normal "stop/start" triggers!!!
 > - I don't want it to turn off when in heartbeat mode!
 > - e.g. if state === 5 or state === 4, ignore the temp checks!
+
+
+# Conditions for pump:
+isOn && temp > setpoint
+- (temp > setpoint) && (isTimed) && (timeRemaining == 0)        ? Change to off
+- (temp > setpoint) && (isTimed) && (timeRemaining > 0)         ? no change ( leave on)
+- (temp > setpoint) && (!isTimed)                               ? Change to off
+isOff && temp > setpoint
+- (temp > setpoint) && (isTimed) && (timeRemaining == 0)        ? no change ( leave off)
+- (temp > setpoint) && (isTimed) && (timeRemaining > 0)         ? no change ( leave off)
+- (temp > setpoint) && (!isTimed)                               ? no change ( leave off)
+
+isOn && temp < setpoint
+- (temp < setpoint) && (isTimed) && (timeRemaining == 0)        ? no change ( leave on)
+- (temp < setpoint) && (isTimed) && (timeRemaining > 0)         ? no change ( leave on)
+- (temp < setpoint) && (!isTimed)                               ? no change ( leave on)
+isOff && temp < setpoint
+- (temp < setpoint) && (isTimed) && (timeRemaining == 0)        ? no change ( leave off)
+- (temp < setpoint) && (isTimed) && (timeRemaining > 0)         ? no change ( leave off)
+- (temp < setpoint) && (!isTimed)                               ? Change to on
+
+isOff:
+- accumulate heartbeat counter
+isOff && isHeartbeatOn ? start pump (for heartbeat cycle)
+
+isOn:
+isOn && !isHeartbeatOn ? stop pump
+
+
+**NOTE: Could skip the "start" phase for heartbeat mode and simply 
+    use a higher PWM! May be a bit louder though**
+
+# Maybe should separate logic more:
+
+- Basically have some update fn to calculate whether or not we need heat
+- Then the pump reacts to this state and does what it needs to do?
+> - e.g. calculate off/on ratio and maintain its state
+- The pump should not be determining if the floor has enough capacity etc

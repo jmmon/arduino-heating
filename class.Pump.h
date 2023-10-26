@@ -82,52 +82,6 @@ public:
 	}
 
   /*
-  Check if floor is cold
-  @return {bool}
-  */
-	bool isFloorCold()
-	{
-		return (floorEmaAvg < FLOOR_WARMUP_TEMPERATURE || floorEmaAvgSlow < FLOOR_WARMUP_TEMPERATURE);
-	}
-
-  /*
-  Compares EMAs for given air sensor, and limits the result
-  @param {uint8_t} airSensorIndex - index of air sensor
-  @param {double} limit - temperature limit
-  */
-  double updateAirLimitedTempDifference(uint8_t airSensorIndex = 0, double limit = 2) 
-  {
-    float prev = air[airSensorIndex].currentEMA[2];
-    float current = air[airSensorIndex].currentEMA[1];
-    // get absolute difference
-    double diff = double(prev - current);
-    // limit the diff to the limit
-		// save difference to global var
-    difference = diff >= 0 ? min(diff, limit) : max(diff, -limit);
-  }
-
-  /*
-  Checks air temp difference/trend, then applies that to setpoint to
-  determine if we're warm enough
-
-  // take the air temp medium ema compared to current ema
-  // medium ema - current === difference,
-  // (or slow ema - medium ema === difference)
-  //    this way a sudden drop in temp (from opening the door) will
-  //      not trigger the pump quickly
-  // if difference is positive this means we have extra capacity of heat
-  // if difference is negative this means we don't have extra capacity of heat
-
-  @return {bool}
-  */
-	bool isAboveAdjustedSetPoint()
-	{
-    updateAirLimitedTempDifference(0);
-		return weightedAirTemp >= setPoint - difference;
-	}
-
-
-  /*
   Updates onOffRatioEma based on last on/off cycle
   Runs after the on cycle completes 
   - cycleDuration === duration of the recent ON cycle
@@ -502,3 +456,5 @@ public:
 	}
 
 } pump = Pump_C();
+
+

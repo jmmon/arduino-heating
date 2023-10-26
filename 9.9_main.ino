@@ -1,5 +1,4 @@
-void timeSetup()
-{
+void timeSetup() {
 	// get and display time works!
 	const String startTimeDate = __TIME__ " "__DATE__; // "hrs:mins:secs Jan 10 2022" example
 
@@ -46,8 +45,7 @@ void timeSetup()
 /* 
   Main setup fn
 */
-void setup()
-{
+void setup() {
 	// Serial.begin(9600);
 	Serial.begin(57600);
 	pump.stop(true);
@@ -74,8 +72,7 @@ void setup()
 	WATER_FLOW_INTERRUPT = digitalPinToInterrupt(WATER_FLOW_PIN); // set in setup
 																																//    attachInterrupt(WATER_FLOW_INTERRUPT, waterPulseCount, FALLING);
 
-	for (uint8_t k = 0; k < AIR_SENSOR_COUNT; k++)
-	{
+	for (uint8_t k = 0; k < AIR_SENSOR_COUNT; k++) {
 		dht[k].begin();
 		//        dhtnew[k].setType(22);
 	}
@@ -84,15 +81,14 @@ void setup()
 	Tstat.initialize();
 	DEBUG_startup();
 	waterTank.init();
-	updateTEMP();
+	updateTemps();
 
 	tone(TONE_PIN, NOTE_C5, 100); // quick beep at startup
 
 	prevLoopStartTime = 0;
 }
 
-void loop()
-{
+void loop() {
 	currentTime = millis();
 
 	// // AutoPID loop:
@@ -102,26 +98,23 @@ void loop()
 	// ArduPIDController.compute();
 
 	// 250ms Loop, which also regulates a 1000ms loop and a 2500ms loop
-	if (currentTime - prevLoopStartTime >= 250)
-	{
+	if (currentTime - prevLoopStartTime >= 250) {
 		prevLoopStartTime += 250;
 		Tstat.update();
 
+		// 2500ms Loop:
+		if (prevLoopStartTime % MS_2500_INTERVAL == 0) {
+			waterTank.update();
+			updateTemps(); // read air temp
+		}
+
 		// 1000ms Loop:
-		if (prevLoopStartTime % MS_1000_INTERVAL == 0)
-		{
+		if (prevLoopStartTime % MS_1000_INTERVAL == 0) {
 			pump.update();
 
 			// // calc flowrate (not working)
 			// calcFlow();
 			// waterCalcFlow();
-		}
-
-		// 2500ms Loop:
-		if (prevLoopStartTime % MS_2500_INTERVAL == 0)
-		{
-			waterTank.update();
-			updateTEMP(); // read air temp
 		}
 	}
 }
@@ -129,54 +122,53 @@ void loop()
 /*
 Insterrupt Service Routine ( not working )
  */
-void waterPulseCounter()
-{
+void waterPulseCounter() {
 	// Increment the pulse counter
 	waterPulseCount++;
 }
 
 // not working
-void waterCalcFlow()
-{
+void waterCalcFlow() {
 	// Only process counters once per second
-	if (waterPulseCount > 0)
-	{
-		// Disable the interrupt while calculating flow rate and sending the value to
-		// the host
-		detachInterrupt(WATER_FLOW_INTERRUPT);
-
-		// Because this loop may not complete in exactly 1 second intervals we calculate
-		// the number of milliseconds that have passed since the last execution and use
-		// that to scale the output. We also apply the calibrationFactor to scale the output
-		// based on the number of pulses per second per units of measure (litres/minute in
-		// this case) coming from the sensor.
-		flowRate = ((1000.0 / (currentTime - oldTime)) * waterPulseCount) / calibrationFactor;
-
-		// Note the time this processing pass was executed. Note that because we've
-		// disabled interrupts the millis() function won't actually be incrementing right
-		// at this point, but it will still return the value it was set to just before
-		// interrupts went away.
-		oldTime = currentTime;
-
-		// Divide the flow rate in litres/minute by 60 to determine how many litres have
-		// passed through the sensor in this 1 second interval, then multiply by 1000 to
-		// convert to millilitres.
-		flowMilliLitres = (flowRate / 60) * 1000;
-
-		// Add the millilitres passed in this second to the cumulative total
-		totalMilliLitres += flowMilliLitres;
-
-		// // Print the flow rate for this second in litres / minute
-		// Serial.print(int(flowRate));  // Print the integer part of the variable
-
-		// // Print the cumulative total of litres flowed since starting
-		// Serial.print(totalMilliLitres/1000);
-		// Serial.print("L");
-
-		// Reset the pulse counter so we can start incrementing again
-		waterPulseCount = 0;
-
-		// Enable the interrupt again now that we've finished sending output
-		attachInterrupt(WATER_FLOW_INTERRUPT, waterPulseCount, FALLING);
+	if (waterPulseCount == 0) {
+    return;
 	}
+
+  // Disable the interrupt while calculating flow rate and sending the value to
+  // the host
+  detachInterrupt(WATER_FLOW_INTERRUPT);
+
+  // Because this loop may not complete in exactly 1 second intervals we calculate
+  // the number of milliseconds that have passed since the last execution and use
+  // that to scale the output. We also apply the calibrationFactor to scale the output
+  // based on the number of pulses per second per units of measure (litres/minute in
+  // this case) coming from the sensor.
+  flowRate = ((1000.0 / (currentTime - oldTime)) * waterPulseCount) / calibrationFactor;
+
+  // Note the time this processing pass was executed. Note that because we've
+  // disabled interrupts the millis() function won't actually be incrementing right
+  // at this point, but it will still return the value it was set to just before
+  // interrupts went away.
+  oldTime = currentTime;
+
+  // Divide the flow rate in litres/minute by 60 to determine how many litres have
+  // passed through the sensor in this 1 second interval, then multiply by 1000 to
+  // convert to millilitres.
+  flowMilliLitres = (flowRate / 60) * 1000;
+
+  // Add the millilitres passed in this second to the cumulative total
+  totalMilliLitres += flowMilliLitres;
+
+  // // Print the flow rate for this second in litres / minute
+  // Serial.print(int(flowRate));  // Print the integer part of the variable
+
+  // // Print the cumulative total of litres flowed since starting
+  // Serial.print(totalMilliLitres/1000);
+  // Serial.print("L");
+
+  // Reset the pulse counter so we can start incrementing again
+  waterPulseCount = 0;
+
+  // Enable the interrupt again now that we've finished sending output
+  attachInterrupt(WATER_FLOW_INTERRUPT, waterPulseCount, FALLING);
 }

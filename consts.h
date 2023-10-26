@@ -51,7 +51,10 @@ LiquidCrystal_I2C lcd(0x27, 16, 2); // set the LCD address to 0x27 for a 16 char
 
 //  2 / (1 + n)   =>  where (n * TEMPERATURE_READ_INTERVAL) = milliseconds defining EMA calculation
 const uint16_t EMA_MULT_PERIODS[3] = {
-		12, 600, 1800};
+	12, 
+  600, 
+  1800
+};
 // 12 * 2.5s = 30s   EMA =   0.5m
 // 600 * 2.5s = 1500s EMA =  25m
 // 1800 * 2.5s = 4500s EMA = 75m
@@ -88,9 +91,6 @@ unsigned long oldTime = 0;
 
 float l_minute = 0;
 float totalVolume = 0;
-uint8_t changePerHourMinuteCounter = 0;
-
-// float last59MedEMAs[59];
 
 // Time:
 

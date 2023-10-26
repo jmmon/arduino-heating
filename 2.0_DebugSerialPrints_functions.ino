@@ -87,8 +87,12 @@ void DEBUG_airEmas() {
 void DEBUG_heartbeat() {
   if (DEBUG) {
     Serial.println();
-    Serial.print(F("Heartbeat: "));
-    Serial.print(heartbeatOnOffRatioEMA);
+    Serial.print(F("Heartbeat ratio: "));
+    Serial.print(heartbeatOnOffRatioEMA, 2);
+    Serial.print(F(" / "));
+    Serial.print(HEARTBEAT_RATIO_THRESHOLD, 2);
+    Serial.print(F(" --- is ABOVE threshold: "));
+    Serial.print(isHeartbeatRatioAboveThreshold);
   }
 }
 
@@ -193,14 +197,6 @@ void DEBUG_highsLowsFloor() {
       }
       //Serial.println();
 
-
-
-      // if (changePerHourMinuteCounter == 60) {
-      //     Serial.print(F("Temp Change per Hr (Medium EMA): "));
-      //     float avgNow = (air[0].currentEMA[1] + air[1].currentEMA[1]) / 2;
-      //     float diff = last59MedEMAs[0] - avgNow;
-      //     Serial.print(diff);
-      // }
       Serial.println();
     }
   }

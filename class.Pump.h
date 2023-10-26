@@ -36,12 +36,14 @@ const uint8_t EMERGENCY_ON_TRIGGER_OFFSET = 5; // degrees from setpoint
  * Heartbeat functionality vars
  * ========================================================================== */
 const uint8_t HEARTBEAT_CYCLE_PWM = 145; // slightly faster than normal
-const uint16_t HEARTBEAT_CYCLE_MINIMUM_OFF_DURATION = 30 * 60; //30m
+const uint16_t HEARTBEAT_OFF_CYCLE_MIN_DURATION = 30 * 60; //30m
 const uint32_t HEARTBEAT_ON_CYCLE_DURATION = 1 * 60; // 1m
-const uint32_t HEARTBEAT_ON_RATIO_EMA_PERIOD = 1 * 60 * 60 * 24; // 1 day
-// initially set, and then calculated after each off cycle
-uint32_t heartbeatCalculatedOffTime = HEARTBEAT_CYCLE_MINIMUM_OFF_DURATION - HEARTBEAT_ON_CYCLE_DURATION;
 
+const uint32_t HEARTBEAT_RATIO_EMA_PERIOD = 1 * 60 * 60 * 24; // 1 day
+const double HEARTBEAT_RATIO_THRESHOLD = 0.1;
+
+// initially set, and then calculated after each off cycle
+uint32_t heartbeatCalculatedOffTime = HEARTBEAT_OFF_CYCLE_MIN_DURATION - HEARTBEAT_ON_CYCLE_DURATION;
 // on off ratio ranges 0-1
 float heartbeatOnOffRatioEMA = 0;
 // to determine how far in the heartbeat cycle we are (to turn on and off the pump)
@@ -50,6 +52,8 @@ uint32_t heartbeatTimer = 0;
 uint32_t lastOffCycleDuration = 0;
 bool isHeartbeatOn = false;
 
+bool isHeartbeatRatioAboveThreshold = false;
+
 /* ==========================================================================
  * Pump class
  * ========================================================================== */
@@ -57,7 +61,6 @@ class Pump_C {
 public:
 	uint32_t accumOn = 0;		 // time spent On
 	uint32_t accumAbove = 0; // total time spent above setpoint
-
 	uint8_t pwm = 0; // holds motor PWM
 
   /* 
@@ -74,8 +77,8 @@ public:
 
 
   /*
-  Constructor function
-  set up pump pin
+  * Constructor function
+  * set up pump pin
   */
 	Pump_C() {
 		pinMode(HEAT_PUMP_PIN, OUTPUT);
@@ -83,34 +86,35 @@ public:
 
   /*
   Updates onOffRatioEma based on last on/off cycle
-  Runs after the on cycle completes 
+  Runs after the on cycle completes (e.g. when stopping the pump)
   - cycleDuration === duration of the recent ON cycle
 
-  @param {uint32_t} totalTime - on+off total time
+  @param {uint32_t} totalOnOffCycleDuration - on+off total time
   */
-  void updateOnOffRatioEMA(uint32_t totalTime) {
-    float thisRatio = (totalTime == 0 && cycleDuration == 0) 
+  void updateOnOffRatioEMA(uint32_t totalOnOffCycleDuration) {
+    float thisRatio = (totalOnOffCycleDuration == 0 || cycleDuration == 0) 
         ? 0 
-        : cycleDuration / totalTime;
+        : cycleDuration / totalOnOffCycleDuration;
 
-    heartbeatOnOffRatioEMA = (thisRatio * (2. / 1 + HEARTBEAT_ON_RATIO_EMA_PERIOD)) +
-        heartbeatOnOffRatioEMA * (1 - (2. / 1 + HEARTBEAT_ON_RATIO_EMA_PERIOD));
+    heartbeatOnOffRatioEMA = (thisRatio * (2. / 1 + HEARTBEAT_RATIO_EMA_PERIOD)) +
+        heartbeatOnOffRatioEMA * (1 - (2. / 1 + HEARTBEAT_RATIO_EMA_PERIOD));
 
+    isHeartbeatRatioAboveThreshold = heartbeatOnOffRatioEMA >= HEARTBEAT_RATIO_THRESHOLD;
     DEBUG_heartbeat();
   }
 
   /* 
-  only runs when pump is OFF
+  only runs while pump is OFF
   */
   void updateHeartbeat(bool initialize = false) {
       if (initialize) {
         heartbeatTimer = 0;
         isHeartbeatOn = false;
         // could have this update every run, or only on init
-        // heartbeatCalculatedOffTime = (HEARTBEAT_CYCLE_MINIMUM_OFF_DURATION 
+        // heartbeatCalculatedOffTime = (HEARTBEAT_OFF_CYCLE_MIN_DURATION 
         //   / (heartbeatOnOffRatioEMA - HEARTBEAT_ON_CYCLE_DURATION));
       }
-      heartbeatCalculatedOffTime = (HEARTBEAT_CYCLE_MINIMUM_OFF_DURATION 
+      heartbeatCalculatedOffTime = (HEARTBEAT_OFF_CYCLE_MIN_DURATION 
         / (heartbeatOnOffRatioEMA - HEARTBEAT_ON_CYCLE_DURATION));
 
       if (!isHeartbeatOn) {
@@ -146,9 +150,10 @@ public:
   Returns PWM, depending on cold floor and heartbeat cycle
   */
 	uint8_t getLimitedBasePwm() {
-    uint8_t base = (state == 5 || state == 4) 
-      ? HEARTBEAT_CYCLE_PWM 
-      : ON_PHASE_BASE_PWM;
+    // uint8_t base = (state == 5 || state == 4) 
+    //   ? HEARTBEAT_CYCLE_PWM 
+    //   : ON_PHASE_BASE_PWM;
+    uint8_t base = ON_PHASE_BASE_PWM;
 		return limitPwm(base + (coldFloor) ? COLD_FLOOR_PWM_BOOST : 0);
 	}
 
@@ -195,12 +200,12 @@ public:
     // smooth pwm transition, subtract this from pwm, and then --
     startingPhasePwmStepAdjust = STARTING_PHASE_INITIAL_STEP;
 
-    // if heartbeat cycle, adjust some variables
-    if (isHeartbeatOn) {
-      state = 5; // Heartbeat starting phase
-      timeRemaining = HEARTBEAT_ON_CYCLE_DURATION;
-      basePwm = HEARTBEAT_CYCLE_PWM;
-    }
+    // // if heartbeat cycle, adjust some variables
+    // if (isHeartbeatOn) {
+    //   state = 5; // Heartbeat starting phase
+    //   timeRemaining = HEARTBEAT_ON_CYCLE_DURATION;
+    //   basePwm = HEARTBEAT_CYCLE_PWM;
+    // }
 
     // reset "pwm pulse" counter when turning on
     pulsePwmCounter = 0;
@@ -223,9 +228,8 @@ public:
   @param {bool} isInitialization - is this initialization?
   **/
 	void stop(uint32_t nextDuration = 0, bool isInitialization = false)	{
-    // for our AntiFreeze function
-    uint32_t totalOffOnDuration = lastOffCycleDuration + cycleDuration;
-    updateOnOffRatioEMA(totalOffOnDuration);
+    // for our Heartbeat function
+    updateOnOffRatioEMA(lastOffCycleDuration + cycleDuration);
 
 		// check for cold floor so it stays up to date
 		coldFloor = isFloorCold();
@@ -253,10 +257,10 @@ public:
   @param {bool} isHeartbeatCycle - is this Antifreeze cycle
   */
 	void runOn() {
-    if (state == 5 || state == 2) {
-      state -= 1;
-    }
-    // state = 1;
+    // if (state == 5 || state == 2) {
+    //   state -= 1;
+    // }
+    state = 1;
 
 		// turn off coldFloor if floor stays warm for a bit
 		coldFloor = isFloorCold();
@@ -294,34 +298,6 @@ public:
 		}
 	}
 
-  /**
-  * called every second by the main loop,
-  * update times, check if cycle needs to change, then update PWM if changed
-  */
-	void update() {
-		cycleDuration++; // this cycle cycleDuration
-		DEBUG_highsLowsFloor(); // log the highs/lows and floor temp
-
-		// time spent on
-		bool isPumpOn = pwm > 0;
-		if (isPumpOn) {
-      accumOn++;
-    }
-
-		// time spent above setpoint
-		// bool isAboveTargetTemperature = weightedAirTemp >= setPoint;
-		if (isAboveAdjustedSetPoint()) {
-      accumAbove++;
-    }
-
-		// check for cycle change
-		bool pwmHasChanged = checkCycle(isPumpOn);
-
-		// adjust pump if needed
-		if (pwmHasChanged) {
-      analogWrite(HEAT_PUMP_PIN, pwm);
-    }
-	}
 
   // ===========================================================================
   // Switching to different cycles:
@@ -356,7 +332,10 @@ public:
   */
   void whilePumpOnExtended(bool _isAboveAdjustedSetPoint) {
     // skip stopping if we're in heartbeat cycle
-    if ((state != 4 && state != 5) && _isAboveAdjustedSetPoint) {
+    if (
+      // (state != 4 && state != 5) && 
+      _isAboveAdjustedSetPoint
+    ) {
       stop(); // most common stop trigger
     } else {
       whilePumpOn();
@@ -370,7 +349,7 @@ public:
   */
   void whilePumpOff() {
     // update heartbeat timer while off
-    updateHeartbeat(true);
+    updateHeartbeat();
 
     // special cases in extreme change
     if (weightedAirTemp <= setPoint - EMERGENCY_ON_TRIGGER_OFFSET) {
@@ -389,11 +368,15 @@ public:
     if (_isAboveAdjustedSetPoint) {
       updateHeartbeat();
 
-      if (isHeartbeatOn) {
-        start();
-      } else if (isPumpOn) {
+      if (isPumpOn) {
         stop(); // coming from delay, in case we need to stop
       }
+
+      // if (isHeartbeatOn) {
+      //   start();
+      // } else if (isPumpOn) {
+      //   stop(); // coming from delay, in case we need to stop
+      // }
     } else {
       // not warm enough, so we start the pump
 
@@ -424,11 +407,11 @@ public:
 			timeRemaining--;
 
       switch(state) {
-        case(0): whilePumpOff();
-        case(1): 
-        case(4): whilePumpOn();
-        case(2): 
-        case(5): whilePumpStarting();
+        case(0): whilePumpOff(); break;
+        case(1): whilePumpOn(); break;
+        // case(4): whilePumpOn(); break;
+        case(2): whilePumpStarting(); break;
+        // case(5): whilePumpStarting(); break;
       }
 
 		} else {
@@ -436,14 +419,43 @@ public:
       bool _isAboveAdjustedSetPoint = isAboveAdjustedSetPoint();
  
       switch(state) {
-        case(0): whilePumpOffExtended(isPumpOn, _isAboveAdjustedSetPoint);
-        case(1): whilePumpOnExtended(_isAboveAdjustedSetPoint);
-        case(3): whileEndingDelayStartTimer();
+        case(0): whilePumpOffExtended(isPumpOn, _isAboveAdjustedSetPoint); break;
+        case(1): whilePumpOnExtended(_isAboveAdjustedSetPoint); break;
+        case(3): whileEndingDelayStartTimer(); break;
       }
 		}
 
 		// return true if changed
 		return pwm != lastPwm;
+	}
+
+  /**
+  * called every second by the main loop,
+  * update accum times, check if cycle needs to change, then update PWM if changed
+  */
+	void update() {
+		cycleDuration++; // this cycle cycleDuration
+		DEBUG_highsLowsFloor(); // log the highs/lows and floor temp
+
+		// time spent on
+		bool isPumpOn = pwm > 0;
+		if (isPumpOn) {
+      accumOn++;
+    }
+
+		// time spent above setpoint
+		// bool isAboveTargetTemperature = weightedAirTemp >= setPoint;
+		if (isAboveAdjustedSetPoint()) {
+      accumAbove++;
+    }
+
+		// update state/PWM if needed
+		bool pwmHasChanged = checkCycle(isPumpOn);
+
+		// adjust pump if needed
+		if (pwmHasChanged) {
+      analogWrite(HEAT_PUMP_PIN, pwm);
+    }
 	}
 
 } pump = Pump_C();

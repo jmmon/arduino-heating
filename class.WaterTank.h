@@ -57,8 +57,7 @@ const uint8_t ERROR_HIGH_BOUND = 190;
 /* ==========================================================================
  * WaterTank class
  * ========================================================================== */
-class WaterTank_C
-{
+class WaterTank_C {
 public:
 	bool filling = false;
 	bool newlyFull = false;
@@ -82,22 +81,20 @@ public:
 	// 255 || -1 == "--"; // initial state
 	uint8_t percent, lastPercent, displayPercent = 255; // initialize as '--'
 
-	WaterTank_C()
-	{ // constructor
+  // constructor
+	WaterTank_C() {
 		pinMode(WATER_FLOAT_SENSOR_PIN, INPUT);
 	}
 
-	init()
-	{ // run at setup
+  // run at setup
+	init() {
 		ema = lastEma = slowEma = lastSlowEma = analogRead(WATER_FLOAT_SENSOR_PIN);
 	}
 
 	
-	String getDisplayString()
-	{
+	String getDisplayString() {
 		// handle conversion / formatting:
-		switch (displayPercent)
-		{
+		switch (displayPercent) {
 		case (100):
 			return F("FF");
 		case (0):
@@ -111,18 +108,19 @@ public:
 		}
 	}
 
-	uint8_t calculateTankPercent()
-	{
-		return ((ema <= ERROR_HIGH_BOUND) ? 101 : // error (lowest)
-								(ema <= LOW_BOUND) ? 0
-																	 : // empty
-								(ema <= HIGH_BOUND) ? (float)100 * (ema - LOW_BOUND) / (HIGH_BOUND - LOW_BOUND)
-																		: // normal range
-								100);									// full
+	uint8_t calculateTankPercent() {
+		return ((ema <= ERROR_HIGH_BOUND) 
+      ? 101 // error (lowest)
+      : (ema <= LOW_BOUND) 
+        ? 0 // empty
+        : (ema <= HIGH_BOUND) 
+          ? (float)100 * (ema - LOW_BOUND) / (HIGH_BOUND - LOW_BOUND) // normal range
+          : 100 // full
+    );
 	}
 
-	update()
-	{																																			// every 2.5 seconds
+  // every 2.5s
+	update() {
 		uint16_t floatSensorReadValue = analogRead(WATER_FLOAT_SENSOR_PIN); // float sensor
 
 		// calculate water level EMAs
@@ -149,16 +147,18 @@ public:
 
 		// set to percent instead of '--' (initialization)
 		bool isInitialization = displayPercent == 255;
-		if (isInitialization)
-			displayPercent = (displayPercent != percent) ? percent : displayPercent;
+		if (isInitialization) {
+      displayPercent = (displayPercent != percent) ? percent : displayPercent;
+    }
 
 		// stabilize readings: stops wobble, i.e. 55 -> 54 -> 55 -> 54 -> 55
 		bool isFillingAndGreater = filling && percent > displayPercent;
 		bool isDrainingAndLesser = !filling && percent < displayPercent;
 		// when not filling, allow it to decrease
 		// when filling, allow it to increase
-		if ((isFillingAndGreater) || (isDrainingAndLesser))
-			displayPercent = percent;
+		if ((isFillingAndGreater) || (isDrainingAndLesser)) {
+      displayPercent = percent;
+    }
 
 		bool isTankRising = diffEma >= FILL_TRIGGER;
 		bool isFull = percent == 100;
@@ -175,19 +175,17 @@ public:
 		// Determine if tank is currently being filled:
 
 		// while tank is rising, adjust filling boolean based on if tank is at 100%
-		if (isTankRising)
-		{
+		if (isTankRising) {
 			filling = (percent != 100);
-		}
-		else
-		{
+		}	else {
 			bool shouldStopRising = diffEma <= STOP_FILL_TRIGGER;
-			if (shouldStopRising)
-				filling = false;
+			if (shouldStopRising) {
+        filling = false;
+      }
 		}
+
 		// detect moment the tank fills to 100%
-		if (filling && (percent == 100))
-		{
+		if (filling && (percent == 100)) {
 			filling = false;
 			newlyFull = true;
 

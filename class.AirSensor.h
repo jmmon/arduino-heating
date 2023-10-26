@@ -1,8 +1,7 @@
 /* ==========================================================================
  * AirSensor class
  * ========================================================================== */
-class Air_C
-{
+class Air_C {
 private:
 	DHT *sensor;
 	//         DHTNEW *sensor;
@@ -20,8 +19,8 @@ public:
 
 	bool working = true;
 
-	Air_C(DHT *s, float w)
-	{ // constructor
+  // constructor
+	Air_C(DHT *s, float w) {
 		sensor = s;
 		WEIGHT = w;
 	}
@@ -32,8 +31,7 @@ public:
 	//            WEIGHT = w;
 	//        }
 
-	void readTemp()
-	{
+	void readTemp()	{
 		// read temp/humid
 		tempC = sensor->readTemperature();
 		tempF = sensor->readTemperature(true);
@@ -51,14 +49,12 @@ public:
 	//          humid = sensor->getHumidity();
 	//        }
 
-	float getTempEma(bool weighted = false)
-	{
+	float getTempEma(bool weighted = false)	{
 		return (weighted) ? (WEIGHT * currentEMA[0]) : currentEMA[0];
 	}
 
 	// update runs every 2.5s
-	updateRecords()
-	{
+	updateRecords()	{
 		// update highest / lowest
 		if (highest < tempF)
 			highest = tempF;

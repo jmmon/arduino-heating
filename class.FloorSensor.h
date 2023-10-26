@@ -5,8 +5,7 @@ const uint16_t FLOOR_EMA_DAYS_SLOW = 60; // 60 readings EMA (150s == 2.5min)
 /* ==========================================================================
  * FloorSensor class
  * ========================================================================== */
-class FloorSensor_C
-{
+class FloorSensor_C {
 private:
 	uint8_t PIN;
 
@@ -17,14 +16,12 @@ public:
 	uint16_t lastEma = 480;
 	uint16_t lastSlowEma = 480;
 
-	FloorSensor_C(uint8_t _pin)
-	{ // constructor
+	FloorSensor_C(uint8_t _pin) { // constructor
 		PIN = _pin;
 		pinMode(_pin, INPUT);
 	}
 
-  uint16_t readTemp(uint8_t loops = 5)
-	{
+  uint16_t readTemp(uint8_t loops = 5) {
 		uint16_t val = 0;
 
 		for (uint8_t z = 0; z < loops; z++)
@@ -33,8 +30,7 @@ public:
 		return val / loops;
 	}
 
-	void update()
-	{
+	void update() {
 		uint16_t floorRead = readTemp();
 
 		// save old emas
@@ -52,4 +48,5 @@ public:
 
 } floorSensor[] = {
 		FloorSensor_C(FLOOR_TEMP_PIN[0]),
-		FloorSensor_C(FLOOR_TEMP_PIN[1])};
+		FloorSensor_C(FLOOR_TEMP_PIN[1])
+};

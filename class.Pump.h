@@ -53,8 +53,7 @@ bool isHeartbeatOn = false;
 /* ==========================================================================
  * Pump class
  * ========================================================================== */
-class Pump_C
-{
+class Pump_C {
 public:
 	uint32_t accumOn = 0;		 // time spent On
 	uint32_t accumAbove = 0; // total time spent above setpoint
@@ -78,8 +77,7 @@ public:
   Constructor function
   set up pump pin
   */
-	Pump_C()
-	{
+	Pump_C() {
 		pinMode(HEAT_PUMP_PIN, OUTPUT);
 	}
 
@@ -167,8 +165,7 @@ public:
   /*
   Resets cycle duration
   */
-	void resetCycleDuration()
-	{
+	void resetCycleDuration() {
 		cycleDuration = 0;
 	}
 
@@ -185,8 +182,7 @@ public:
 
   @param {bool} isHeartbeatCycle - is this going into a heartbeat cycle
   **/
-	void start()
-	{
+	void start() {
     // save off cycle time for our AntiFreeze function
     lastOffCycleDuration = cycleDuration;
     resetCycleDuration();
@@ -226,8 +222,7 @@ public:
   that could prevent our heat from  turning on for 30m
   @param {bool} isInitialization - is this initialization?
   **/
-	void stop(uint32_t nextDuration = 0, bool isInitialization = false)
-	{
+	void stop(uint32_t nextDuration = 0, bool isInitialization = false)	{
     // for our AntiFreeze function
     uint32_t totalOffOnDuration = lastOffCycleDuration + cycleDuration;
     updateOnOffRatioEMA(totalOffOnDuration);
@@ -245,8 +240,7 @@ public:
   e.g. will force a check of the temp/state after delaySeconds
   @param {uint16_t} delaySeconds - seconds after which to check the state
   */
-	void checkAfter(uint16_t delaySeconds = DELAY_SECONDS)
-	{
+	void checkAfter(uint16_t delaySeconds = DELAY_SECONDS) {
 		state = 3; // "delay" state
 		timeRemaining = delaySeconds;
 	}
@@ -273,8 +267,7 @@ public:
   * During pump startup phase, step down PWM each cycle
   @param {bool} isHeartbeatCycle - is this Antifreeze cycle
   */
-	void stepDownPwm()
-	{
+	void stepDownPwm() {
 		// base pwm
 		uint8_t basePwm = getLimitedBasePwm();
 
@@ -289,8 +282,7 @@ public:
   /**
   * called every second while pump is ON
   */
-	void pulsePwm()
-	{ // occasional high power pulse to prevent motor hangups
+	void pulsePwm() { // occasional high power pulse to prevent motor hangups
 		pulsePwmCounter++;
 		bool isTimeForPwmPulse = pulsePwmCounter >= PULSE_PWM_SECONDS_INTERVAL;
 
@@ -306,8 +298,7 @@ public:
   * called every second by the main loop,
   * update times, check if cycle needs to change, then update PWM if changed
   */
-	void update()
-	{
+	void update() {
 		cycleDuration++; // this cycle cycleDuration
 		DEBUG_highsLowsFloor(); // log the highs/lows and floor temp
 
@@ -398,9 +389,9 @@ public:
     if (_isAboveAdjustedSetPoint) {
       updateHeartbeat();
 
-        if (isHeartbeatOn) {
-          start();
-        } else if (isPumpOn) {
+      if (isHeartbeatOn) {
+        start();
+      } else if (isPumpOn) {
         stop(); // coming from delay, in case we need to stop
       }
     } else {
@@ -425,8 +416,7 @@ public:
   /**
   * change cycles if needed, and returns true if PWM changed
   */
-	bool checkCycle(bool isPumpOn)
-	{
+	bool checkCycle(bool isPumpOn) {
 		uint8_t lastPwm = pwm;
 
     // if during a timed cycle
@@ -449,7 +439,6 @@ public:
         case(0): whilePumpOffExtended(isPumpOn, _isAboveAdjustedSetPoint);
         case(1): whilePumpOnExtended(_isAboveAdjustedSetPoint);
         case(3): whileEndingDelayStartTimer();
-
       }
 		}
 

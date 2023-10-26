@@ -3,7 +3,7 @@
   @param {uint32_t} _seconds - the time to convert
   @return {String} - time as hh:mm:ss
 */
-String formatTimeToString(uint32_t _seconds){ 
+String formatTimeToString(uint32_t _seconds) { 
   // get base time from seconds count
   uint16_t hours = _seconds / 3600;
   _seconds -= (hours * 3600);
@@ -33,8 +33,7 @@ String formatTimeToString(uint32_t _seconds){
   @param {uint32_t} _seconds - the time to convert
   @return {String} - hours with tenths as h.h
 */
-String formatHoursWithTenths(int32_t _seconds)
-{
+String formatHoursWithTenths(int32_t _seconds) {
   return String((_seconds / 3600.), 1);
 }
 
@@ -43,8 +42,7 @@ String formatHoursWithTenths(int32_t _seconds)
   @param {uint32_t} _currentTime - the time to convert, in ms
   @return {uint32_t} - seconds, rounded
 */
-uint32_t getTotalSeconds(uint32_t _currentTime)
-{
+uint32_t getTotalSeconds(uint32_t _currentTime) {
   return uint32_t(round(_currentTime / 1000.));
 }
 

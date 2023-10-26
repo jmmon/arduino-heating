@@ -128,8 +128,7 @@ const uint16_t VALVE_CLOSE_DURATION = 21600; // seconds (6 hours)
 /* ==========================================================================
  * Display class
  * ========================================================================== */
-class Display_c
-{
+class Display_c {
 private:
 	// consts 1
 	uint8_t setpointTimer = SETPOINT_TIMER_INTERVAL;
@@ -156,13 +155,12 @@ private:
 	String previousLine2 = "";
 
 public:
-	Display_c()
-	{ // constructor
+  // constructor
+	Display_c() {
 		pinMode(T_STAT_BUTTON_PIN, INPUT);
 	}
 
-	void initialize()
-	{
+	void initialize() {
 		lcd.init(); // initialize the lcd
 		lcd.clear();
 		lcd.backlight(); // open the backlight
@@ -181,29 +179,25 @@ public:
 	// Utility functions:
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-	void detectButtons()
-	{
+	void detectButtons() {
 		uint16_t buttonRead = analogRead(T_STAT_BUTTON_PIN);
 
 		bool isButtonPressDetected = buttonRead > 63;
 
-		if (!isButtonPressDetected)
-		{
+		if (!isButtonPressDetected) {
 			// save for next time
 			lastButtonRead = buttonRead;
 			return;
 		}
 
-		if (DEBUG)
-			Serial.println(buttonRead);
+		if (DEBUG) Serial.println(buttonRead);
 
 		// initialize variable
 		int8_t changeTstatByAmount = 0;
 
 		// button press will turn off alarm! Yay!
 		bool alarmIsOn = alarmCountdown > 0 || alarmCounter > 1;
-		if (alarmIsOn)
-		{
+		if (alarmIsOn) {
 			alarmCountdown = 0;
 			alarmCounter = 1; // set to odd number
 			checkBeep(2);			// silences tone if odd number
@@ -211,17 +205,14 @@ public:
 
 		bool isButtonHeldForSecondTick = lastButtonRead > 63;
 		bool isTopButton = buttonRead > 850;
-		if (isButtonHeldForSecondTick)
-		{ // delays adjustment by 1 tick
-			if (isTopButton)
-			{
+		if (isButtonHeldForSecondTick) { // delays adjustment by 1 tick
+			if (isTopButton) {
 				changeTstatByAmount = 1;
 				// reset record lows
 				for (uint8_t k = 0; k < 2; k++)
 					air[k].lowest = air[k].tempF;
-			}
-			else // bottom button
-			{
+			  }	else {
+        // bottom button
 				changeTstatByAmount = -1;
 				// reset record highs
 				for (uint8_t k = 0; k < 2; k++)
@@ -244,13 +235,11 @@ public:
 	}
 
 	// render current page every call, and rollover currentPage when needed
-	void printCurrentPage()
-	{
+	void printCurrentPage() {
 		previousLine1 = currentLine1;
 		previousLine2 = currentLine2;
 
-		switch (currentPage)
-		{
+		switch (currentPage) {
 		case (0):
 			drawTemperaturePage();
 			break;
@@ -279,8 +268,7 @@ public:
 		}
 	}
 
-	void incrementSwitchPageCounter()
-	{
+	void incrementSwitchPageCounter() {
 		// if holding, and pump moves out of "delayed" phase, turn off holdSetPage
 		if (holdSetPage && pump.state != 3)
 			holdSetPage = false;
@@ -288,23 +276,19 @@ public:
 		// increment currentPage every 3.5 seconds
 		lcdPageSwitchCounter--;
 		bool readyToSwitchPage = lcdPageSwitchCounter <= 0;
-		if (readyToSwitchPage)
-		{
+		if (readyToSwitchPage) {
 			currentPage++; // is rolled over in the printCurrentPage function
 			lcdPageSwitchCounter = LCD_INTERVAL_QTR_SECS;
 		}
 
 		// render lcdPageSet if locked to that page; else refresh the page
-		if (holdSetPage)
-		{
+		if (holdSetPage) {
 			drawSetPage();
 
 			// String str = "H" + String(pump.state) + symbols[3] + String(timeRemaining);
 			String str = "H" + String(pump.state) + ":" + String(timeRemaining);
 			drawLine(str, 11, 0);
-		}
-		else
-		{
+		}	else {
 			// if going into a new page, clear it
 			bool isNewPageNext = lcdPageSwitchCounter == LCD_INTERVAL_QTR_SECS;
 			if (isNewPageNext)
@@ -315,16 +299,16 @@ public:
 		// printCurrentPage();
 	}
 
-	void regulateValve()
-	{
+	void regulateValve() {
 		// should be closed during our timer (when tank gets full)
 		bool shouldValveBeClosed = valveCloseTimer > 0;
 
-		if (shouldValveBeClosed)
-			valveCloseTimer--;
-		else
-			// after timer, open the valve
-			isValveClosed = false;
+		if (shouldValveBeClosed) {
+      valveCloseTimer--;
+    } else {
+      // after timer, open the valve
+      isValveClosed = false;
+    }
 
 		digitalWrite(WATER_VALVE_PIN, (isValveClosed) ? HIGH : LOW);
 	}
@@ -334,13 +318,11 @@ public:
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	// runs every 0.25s
-	void update()
-	{
+	void update() {
 		// setpoint delay
 		setpointTimer--;
 		bool shouldDetectButtons = setpointTimer == 0;
-		if (shouldDetectButtons)
-		{
+		if (shouldDetectButtons) {
 			detectButtons();
 			setpointTimer = SETPOINT_TIMER_INTERVAL;
 		}
@@ -358,8 +340,7 @@ public:
 		// 		The beeper should beep every ~0.5 seconds for a duration of 180 seconds.
 		//		(Increment a counter, and if counter % 2 == 0, do a beep, else, stop the beep)
 
-		if (waterTank.filling)
-		{
+		if (waterTank.filling) {
 			drawWaterLevel(); // draw waterLevel
 
 			// do alarm stuff
@@ -367,8 +348,7 @@ public:
 			bool isWaterOver90 = waterTank.displayPercent >= TONE_TIMER_TRIGGER_PERCENT_SLOW;
 			bool isWaterOver85 = waterTank.displayPercent >= 85;
 
-			if (isWaterOver85)
-			{
+			if (isWaterOver85) {
 				alarmCounter++; // count while above 85% (and filling)
 
 				// beep when it should
@@ -379,9 +359,7 @@ public:
 				else
 					checkBeep(16); // slow beeping
 			}
-		}
-		else if (waterTank.newlyFull)
-		{
+		}	else if (waterTank.newlyFull) {
 			// moment it hits 100%
 			waterTank.newlyFull = false;
 
@@ -393,26 +371,25 @@ public:
 
 		regulateValve();
 
-		//
-		if (alarmCountdown > 0)
-			checkBeep(2, alarmCountdown);
-	} // end update (every 0.25 seconds)
 
-	void beepOnTime(uint8_t counter, uint16_t spacing)
-	{
-		if (counter % spacing == 0)
-			tone(TONE_PIN, NOTE_C5, 250); // play our tone on pin for 250ms
-		else
-			noTone(TONE_PIN);
+		if (alarmCountdown > 0) {
+      checkBeep(2, alarmCountdown);
+    }
+	} // END update (every 0.25 seconds)
+
+	void beepOnTime(uint8_t counter, uint16_t spacing) {
+		if (counter % spacing == 0) {
+      tone(TONE_PIN, NOTE_C5, 250); // play our tone on pin for 250ms
+    } else {
+      noTone(TONE_PIN);
+    }
 	}
 
 	// takes spacing (n * 0.25s) and optional countdown timer for when hitting maximum
-	void checkBeep(uint8_t spacing, uint16_t countdown = 0)
-	{
+	void checkBeep(uint8_t spacing, uint16_t countdown = 0) {
 		// if countdown, we count down the timer and beep when needed
 		uint16_t counter = alarmCounter;
-		if (countdown > 0)
-		{
+		if (countdown > 0) {
 			countdown--;
 			counter = countdown;
 		}
@@ -424,32 +401,29 @@ public:
 	// Pages:
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-	void drawLines(String line1, String line2)
-	{
+	void drawLines(String line1, String line2) {
 		drawLine(line1, 0, 0);
 		drawLine(line2, 0, 1);
 	}
 
-	void drawLine(String string, uint8_t slot, uint8_t lineNum)
-	{
+	void drawLine(String string, uint8_t slot, uint8_t lineNum) {
 		lcd.setCursor(slot, lineNum);
 		lcd.print(string);
 	}
 
-	void drawLinesIfDifferent(String l1, String l2)
-	{
-		if (previousLine1 != l1 || previousLine2 != l2) // for after all pages are switched over...
-			drawLines(currentLine1, currentLine2);
+  // diff the lines before drawing the new page
+	void drawLinesIfDifferent(String l1, String l2) {
+		if (previousLine1 != l1 || previousLine2 != l2)  {
+      drawLines(currentLine1, currentLine2);
+    }
 	}
 
-	void drawWaterLevel(uint8_t lineNum = 1)
-	{
+	void drawWaterLevel(uint8_t lineNum = 1) {
 		String extra = "\005" + waterTank.getDisplayString();
 		drawLine(extra, 13, lineNum);
 	}
 
-	void drawTemperaturePage()
-	{
+	void drawTemperaturePage() {
 		currentLine1 = "\008" + limitDecimals(weightedAirTemp, 1) + " " + limitDecimals(air[0].getTempEma(), 1) + "/" + limitDecimals(air[1].getTempEma(), 1) + "\001";
 		currentLine2 = "\006" + limitDecimals(setPoint, 1) + "\001 " + limitDecimals(difference, 1) + "   ";
 
@@ -458,16 +432,15 @@ public:
 	}
 
 	// display cycle info, time/cycleDuration
-	void drawPumpCycleInfoPage()
-	{
+	void drawPumpCycleInfoPage() {
 		currentLine1 = pump.getStatusString() + " " + formatTimeToString(pump.cycleDuration);
 		currentLine2 = "RunTtl\004" + formatHoursWithTenths(getTotalSeconds(currentTime));
 
 		drawLinesIfDifferent(currentLine1, currentLine2);
 	}
-
-	void drawAccumTimePage()
-	{ // Total time and time spent with pump on/off
+  //
+ // Total time and time spent with pump on/off
+	void drawAccumTimePage() {
 		const uint32_t totalSeconds = getTotalSeconds(currentTime);
 		const uint32_t accumBelow = (totalSeconds - pump.accumAbove);
 		const int32_t netAccumAboveTarget = pump.accumAbove - accumBelow; // positive or negative
@@ -477,13 +450,16 @@ public:
 		const int32_t netAccumOn = pump.accumOn - accumOff;
 
 		currentLine1 = "\006\004 " + String((netAccumAboveTarget < 0) ? hours : "+" + hours);
-		currentLine2 = "State\004" + String(pump.state) + (netAccumOn < 0 ? " Off" : "  On") + "\004" + formatHoursWithTenths((netAccumOn < 0) ? netAccumOn * -1 : netAccumOn);
+		currentLine2 = "State\004" + String(pump.state) + (
+      netAccumOn < 0 ? " Off" : "  On"
+    ) + "\004" + formatHoursWithTenths(
+      (netAccumOn < 0) ? netAccumOn * -1 : netAccumOn
+    );
 
 		drawLinesIfDifferent(currentLine1, currentLine2);
 	}
 
-	void drawSetPage()
-	{ // Set Temperature page
+	void drawSetPage() { // Set Temperature page
 		currentLine1 = "Temp\004" + limitDecimals(weightedAirTemp, 1) + "\001      ";
 		currentLine2 = "   \006" + limitDecimals(setPoint, 1) + "        ";
 
@@ -491,16 +467,14 @@ public:
 	}
 
 	// Show greenhouse and exterior sensor readings
-	void drawGreenhouse()
-	{
+	void drawGreenhouse() {
 		currentLine1 = "GH\004" + limitDecimals(air[3].currentEMA[0], 1) + "\001 " + limitDecimals(air[3].humid, 1) + "%  ";
 		currentLine2 = " \007 " + limitDecimals(air[2].currentEMA[0], 1) + "\001 " + limitDecimals(air[2].humid, 1) + "%  ";
 
 		drawLinesIfDifferent(currentLine1, currentLine2);
 	}
 
-	void drawWaterFillingPage()
-	{ // Water Filling Temp Page
+	void drawWaterFillingPage() { // Water Filling Temp Page
 		currentLine1 = "\005 " + String(waterTank.ema) + ":" + String(waterTank.slowEma) + " \x7e" + (waterTank.diffEma < 10 ? "  " : " ") + String(waterTank.diffEma);
 		currentLine2 = "Flr\004" + String(int(floorEmaAvg)) + ":" + String(int(floorEmaAvgSlow)) + "     ";
 

@@ -1,7 +1,5 @@
-void DEBUG_startup()
-{
-	if (DEBUG)
-	{
+void DEBUG_startup() {
+	if (DEBUG) {
 		Serial.println();
 		Serial.print(F("Version "));
 		Serial.println(VERSION_NUMBER);
@@ -25,38 +23,32 @@ void DEBUG_floorReadError(uint16_t diff) {
 void DEBUG_printHighsAndLows() {
   Serial.print(F("(HIGHS "));
   Serial.print(air[0].highest);
-  if (air[0].highest != air[1].highest)
-  {
+  if (air[0].highest != air[1].highest) {
     Serial.print(F("/"));
     Serial.print(air[1].highest);
   }
   Serial.print(F(" LOWS "));
   Serial.print(air[0].lowest);
-  if (air[0].lowest != air[1].lowest)
-  {
+  if (air[0].lowest != air[1].lowest) {
     Serial.print(F("/"));
     Serial.print(air[1].lowest);
   }
   Serial.print(F(") "));
 }
 
-void DEBUG_emaWater()
-{
-	if (DEBUG)
-	{
+void DEBUG_emaWater() {
+	if (DEBUG) {
 		Serial.println();
 		Serial.print(F(" °F "));
 		Serial.print(F("  EMA_Long."));
 		Serial.print(air[0].currentEMA[2]);
-		if (air[0].currentEMA[2] != air[1].currentEMA[2])
-		{
+		if (air[0].currentEMA[2] != air[1].currentEMA[2]) {
 			Serial.print(F("/"));
 			Serial.print(air[1].currentEMA[2]);
 		}
 		Serial.print(F("  _Med."));
 		Serial.print(air[0].currentEMA[1]);
-		if (air[0].currentEMA[1] != air[1].currentEMA[1])
-		{
+		if (air[0].currentEMA[1] != air[1].currentEMA[1]) {
 			Serial.print(F("/"));
 			Serial.print(air[1].currentEMA[1]);
 		}
@@ -73,18 +65,15 @@ void DEBUG_emaWater()
 	}
 }
 
-void DEBUG_airEmas()
-{
-	if (tempDispCounter >= 4)
-	{ // every 4 reads = 10 seconds, calculate trend and print info
+void DEBUG_airEmas() {
+   // every 4 reads = 10 seconds, calculate trend and print info
+	if (tempDispCounter >= 4) {
 		tempDispCounter = 0;
 
-		if (DEBUG)
-		{
+		if (DEBUG) {
 			Serial.print(F("Current Temp: "));
 			Serial.print(air[0].currentEMA[0]);
-			if (air[0].currentEMA[0] != air[1].currentEMA[0])
-			{
+			if (air[0].currentEMA[0] != air[1].currentEMA[0]) {
 				Serial.print(F("/"));
 				Serial.print(air[1].currentEMA[0]);
 			}
@@ -104,10 +93,9 @@ void DEBUG_heartbeat() {
 }
 
 uint8_t highsLowsFloorDisplayCounter = 0;
-void DEBUG_highsLowsFloor()
-{
-  if (highsLowsFloorDisplayCounter >= 4)
-  { // every 4 reads = 10 seconds, calculate trend and print info
+void DEBUG_highsLowsFloor() {
+  // every 4 reads = 10 seconds, calculate trend and print info
+  if (highsLowsFloorDisplayCounter >= 4) {
     highsLowsFloorDisplayCounter = 0;
     if (DEBUG) {
       // if (lastCycleDuration != 0) {  // if end of cycle:
@@ -159,8 +147,7 @@ void DEBUG_highsLowsFloor()
       Serial.print(F("°F"));
       Serial.print(F("   Floor: "));
       Serial.print(floorSensor[0].ema);
-      if (floorSensor[0].ema != floorSensor[1].ema)
-      {
+      if (floorSensor[0].ema != floorSensor[1].ema) {
         Serial.print(F(" / ")); // +3
         Serial.print(floorSensor[1].ema); // +3
       } else {

@@ -85,8 +85,7 @@ double calcFloorBatteryCapacity() {
 	return (floorRangePercent * MAX_TEMP_ADJUST_100X / (100. * 100.)) - 1; 
 }
 
-void updateTEMP()
-{
+void updateTEMP() {
 	// floor temp stuff
 	// update floor emas
 	for (uint8_t i = 0; i < FLOOR_SENSOR_COUNT; i++)
@@ -95,7 +94,6 @@ void updateTEMP()
 	// floor thermistor difference check, for outlier errors
 	uint16_t difference = uint16_t(abs(floorSensor[0].ema - floorSensor[1].ema));
 	if (difference > 100) {
-
     DEBUG_floorReadError(difference);
 
     // use the other reading if it's faulty
@@ -134,8 +132,7 @@ void updateTEMP()
 	DEBUG_airEmas();
 
 	// counter for what? other than DEBUG_emaWater
-	if (tempDispCounter2 >= 24)
-	{ // every minute:
+	if (tempDispCounter2 >= 24) { // every minute:
 		//        DEBUG_emaWater();
 
 		if (changePerHourMinuteCounter < 59)
@@ -152,13 +149,11 @@ void updateTEMP()
 
 }
 
-void countWater()
-{
+void countWater() {
 	waterPulseCount++;
 }
 
-void waterResetTotal()
-{
+void waterResetTotal() {
 	totalMilliLitres = 0;
 }
 
@@ -223,9 +218,11 @@ void waterResetTotal()
 Check if floor is cold
 @return {bool}
 */
-bool isFloorCold()
-{
-  return (floorEmaAvg < FLOOR_WARMUP_TEMPERATURE || floorEmaAvgSlow < FLOOR_WARMUP_TEMPERATURE);
+bool isFloorCold() {
+  return (
+    floorEmaAvg < FLOOR_WARMUP_TEMPERATURE || 
+    floorEmaAvgSlow < FLOOR_WARMUP_TEMPERATURE
+  );
 }
 
 /*
@@ -233,8 +230,7 @@ Compares EMAs for given air sensor, and limits the result
 @param {uint8_t} airSensorIndex - index of air sensor
 @param {double} limit - temperature limit
 */
-double updateAirLimitedTempDifference(uint8_t airSensorIndex = 0, double limit = 2) 
-{
+double updateAirLimitedTempDifference(uint8_t airSensorIndex = 0, double limit = 2) {
   float prev = air[airSensorIndex].currentEMA[2];
   float current = air[airSensorIndex].currentEMA[1];
   // get absolute difference
@@ -260,8 +256,7 @@ determine if we're warm enough
 
 @return {bool}
 */
-bool isAboveAdjustedSetPoint()
-{
+bool isAboveAdjustedSetPoint() {
   updateAirLimitedTempDifference(0);
   return weightedAirTemp >= setPoint - difference;
 }

@@ -1,5 +1,4 @@
-void airSensorNanCheck()
-{
+void airSensorNanCheck() {
 	if (
 			isnan(air[0].humid) ||
 			isnan(air[0].tempF)
@@ -85,16 +84,15 @@ double calcFloorBatteryCapacity() {
 	return (floorRangePercent * MAX_TEMP_ADJUST_100X / (100. * 100.)) - 1; 
 }
 
-void updateTEMP() {
-	// floor temp stuff
+void updateFloorTemps () {
 	// update floor emas
 	for (uint8_t i = 0; i < FLOOR_SENSOR_COUNT; i++)
 		floorSensor[i].update();
 
 	// floor thermistor difference check, for outlier errors
-	uint16_t difference = uint16_t(abs(floorSensor[0].ema - floorSensor[1].ema));
-	if (difference > 100) {
-    DEBUG_floorReadError(difference);
+	uint16_t diff= uint16_t(abs(floorSensor[0].ema - floorSensor[1].ema));
+	if (diff> 100) {
+    DEBUG_floorReadError(diff);
 
     // use the other reading if it's faulty
 		if (floorSensor[0].ema > floorSensor[1].ema)
@@ -106,11 +104,16 @@ void updateTEMP() {
 	floorEmaAvg = (floorSensor[0].ema + floorSensor[1].ema) / FLOOR_SENSOR_COUNT;							// avg two readings
 	floorEmaAvgSlow = (floorSensor[0].slowEma + floorSensor[1].slowEma) / FLOOR_SENSOR_COUNT; // avg two readings
 
-// used to offset setpoint.
-// As floor warms up this will be higher, so pump will cut off sooner or start later
-// As floor cools, this will be lower so pump will cut off later or start sooner
+  // used to offset setpoint.
+  // As floor warms up this will be higher, so pump will cut off sooner or start later
+  // As floor cools, this will be lower so pump will cut off later or start sooner
 	// the warmer the floor, the higher this will be. setPoint - floorOffset == target temperature
 	floorOffset = calcFloorBatteryCapacity();
+}
+
+void updateTemps() {
+	// floor temp stuff
+  updateFloorTemps();
 
 	// air temp stuff
 	for (uint8_t i = 0; i < AIR_SENSOR_COUNT; i++)
@@ -135,15 +138,7 @@ void updateTEMP() {
 	if (tempDispCounter2 >= 24) { // every minute:
 		//        DEBUG_emaWater();
 
-		if (changePerHourMinuteCounter < 59)
-			changePerHourMinuteCounter++;
-
 		tempDispCounter2 = 0;
-
-		// for (uint8_t k=0; k < changePerHourMinuteCounter - 1; k++) {
-		//     last59MedEMAs[k] = last59MedEMAs[k+1];
-		// }
-		// last59MedEMAs[58] = (air[0].currentEMA[1] + air[1].currentEMA[1]) / 2;
 	}
 	tempDispCounter2++;
 
@@ -226,7 +221,8 @@ bool isFloorCold() {
 }
 
 /*
-Compares EMAs for given air sensor, and limits the result
+Compares long vs med EMAs for given air sensor, and limits the result
+Used to detect trend in air temp so we can offset the setpoint (stop earlier etc)
 @param {uint8_t} airSensorIndex - index of air sensor
 @param {double} limit - temperature limit
 */

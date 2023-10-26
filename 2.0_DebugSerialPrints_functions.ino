@@ -9,6 +9,19 @@ void DEBUG_startup()
 	}
 }
 
+uint8_t floorReadErrorCounter = 0;
+void DEBUG_floorReadError(uint16_t diff) {
+	if (floorReadErrorCounter >= 4) { // every 4 reads = 10 seconds, calculate trend and print info
+		floorReadErrorCounter = 0;
+
+		if (DEBUG) {
+			Serial.print(F("Floor Read Error. Difference: "));
+			Serial.println(diff);
+		}
+	}
+	floorReadErrorCounter++;
+}
+
 void DEBUG_printHighsAndLows() {
   Serial.print(F("(HIGHS "));
   Serial.print(air[0].highest);

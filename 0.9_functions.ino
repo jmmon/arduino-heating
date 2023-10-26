@@ -2,8 +2,8 @@ void airSensorNanCheck()
 {
 	if (
 			isnan(air[0].humid) ||
-			isnan(air[0].tempF))
-	{
+			isnan(air[0].tempF)
+  ) {
 		if (
 				isnan(air[1].humid) ||
 				isnan(air[1].tempF))
@@ -97,14 +97,11 @@ void updateTEMP()
 
 	// floor thermistor difference check, for outlier errors
 	uint16_t difference = uint16_t(abs(floorSensor[0].ema - floorSensor[1].ema));
-	if (difference > 80)
-	{
-		if (DEBUG)
-		{
-			Serial.print(F("Floor Read Error. Difference: "));
-			Serial.println(difference);
-		}
+	if (difference > 100) {
 
+    DEBUG_floorReadError(difference);
+
+    // use the other reading if it's faulty
 		if (floorSensor[0].ema > floorSensor[1].ema)
 			floorSensor[1].ema = floorSensor[0].ema;
 		else

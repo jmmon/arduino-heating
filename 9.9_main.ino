@@ -43,6 +43,9 @@ void timeSetup()
 	setTime(hrs, mins, secs, dys, months, yrs);
 }
 
+/* 
+  Main setup fn
+*/
 void setup()
 {
 	// Serial.begin(9600);

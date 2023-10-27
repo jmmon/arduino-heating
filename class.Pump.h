@@ -216,7 +216,7 @@ public:
 
     uint8_t basePwm = ON_PHASE_BASE_PWM;
 
-    uint8_t newState = 2
+    uint8_t newState = 2;
 
     // smooth pwm transition, subtract this from pwm, and then --
     startingPhasePwmStepAdjust = STARTING_PHASE_INITIAL_STEP;
@@ -400,9 +400,9 @@ public:
       //   stop(); // coming from delay, in case we need to stop
       // }
     
-      if (isPumpOn && !isHeartBeatOn) {
+      if (isPumpOn && !isHeartbeatOn) {
         stop(); // coming from delay, in case we need to stop
-      } else if (isHeartBeatOn && !isPumpOn) {
+      } else if (isHeartbeatOn && !isPumpOn) {
         start(); // Start trigger for heartbeat
       }
     } else {
@@ -493,5 +493,3 @@ public:
 	}
 
 } pump = Pump_C();
-
-

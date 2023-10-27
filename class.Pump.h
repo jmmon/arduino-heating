@@ -357,8 +357,9 @@ public:
   */
   void whilePumpOnExtended() {
     // skip stopping if we're in heartbeat cycle
-    if (
-      // (state != 4 && state != 5) && 
+    if (state == 4) {
+      stop();
+    } else if (
       _isAboveAdjustedSetPoint
     ) {
       stop(); // most common stop trigger
@@ -374,7 +375,9 @@ public:
   */
   void whilePumpOff() {
     // update heartbeat timer while off
-    updateHeartbeat();
+    if (prevState == 1) {
+      updateHeartbeat(true);
+    }
 
     // special cases in extreme change
     if (weightedAirTemp <= setPoint - EMERGENCY_ON_TRIGGER_OFFSET) {
@@ -393,9 +396,9 @@ public:
     if (_isAboveAdjustedSetPoint) {
       updateHeartbeat();
 
-      if (isPumpOn) {
-        stop(); // coming from delay, in case we need to stop
-      }
+      // if (isPumpOn) {
+      //   stop(); // coming from delay, in case we need to stop
+      // }
     
       if (isPumpOn && !isHeartBeatOn) {
         stop(); // coming from delay, in case we need to stop

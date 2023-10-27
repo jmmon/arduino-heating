@@ -88,6 +88,10 @@ public:
 		pinMode(HEAT_PUMP_PIN, OUTPUT);
 	}
 
+  /*
+  * save prev state and new state
+  * @param {uint8_t} _state - new state
+  */
   void setState(uint8_t _state) {
     prevState = state;
     state = _state;
@@ -114,34 +118,41 @@ public:
   }
 
   /* 
-  * only runs while pump is OFF
+  * only runs while pump is OFF (and when pump on/off ratio > threshold
   */
   void updateHeartbeat(bool initialize = false) {
-      if (initialize) {
-        heartbeatTimer = 0;
-        isHeartbeatOn = false;
-        // could have this update every run, or only on init
-        // heartbeatCalculatedOffTime = (HEARTBEAT_OFF_CYCLE_MIN_DURATION 
-        //   / (heartbeatOnOffRatioEMA - HEARTBEAT_ON_CYCLE_DURATION));
-      }
+    if (!isHeartbeatRatioAboveThreshold) {
+      heartbeatTimer = 0;
+      isHeartbeatOn = false;
+      return;
+    }
+
+    if (initialize ) {
+      heartbeatTimer = 0;
+      isHeartbeatOn = false;
+      // could have this update every run, or only on init
       heartbeatCalculatedOffTime = (HEARTBEAT_OFF_CYCLE_MIN_DURATION 
         / (heartbeatOnOffRatioEMA - HEARTBEAT_ON_CYCLE_DURATION));
+    }
+    // heartbeatCalculatedOffTime = 
+    //   (HEARTBEAT_OFF_CYCLE_MIN_DURATION / heartbeatOnOffRatioEMA) -
+    //   HEARTBEAT_ON_CYCLE_DURATION;
 
-      if (!isHeartbeatOn) {
-        // turn on heartbeat after enough time has passed
-        if (heartbeatTimer >= heartbeatCalculatedOffTime) {
-          isHeartbeatOn = true;
-        }
-
-      } else {
-        // turn off heartbeat after some more time
-        if (heartbeatTimer >= heartbeatCalculatedOffTime + HEARTBEAT_ON_CYCLE_DURATION) {
-          heartbeatTimer = 0; // reset timer
-          isHeartbeatOn = false;
-        }
+    if (!isHeartbeatOn) {
+      // turn on heartbeat after enough time has passed
+      if (heartbeatTimer >= heartbeatCalculatedOffTime) {
+        isHeartbeatOn = true;
       }
 
-      heartbeatTimer++;
+    } else {
+      // turn off heartbeat after some more time
+      if (heartbeatTimer >= heartbeatCalculatedOffTime + HEARTBEAT_ON_CYCLE_DURATION) {
+        heartbeatTimer = 0; // reset timer
+        isHeartbeatOn = false;
+      }
+    }
+
+    heartbeatTimer++;
   }
 
   
@@ -211,11 +222,11 @@ public:
     startingPhasePwmStepAdjust = STARTING_PHASE_INITIAL_STEP;
 
     // // if heartbeat cycle, adjust some variables
-    // if (isHeartbeatOn) {
-    //   newState = 5; // Heartbeat starting phase
-    //   timeRemaining = HEARTBEAT_ON_CYCLE_DURATION;
-    //   basePwm = HEARTBEAT_CYCLE_PWM;
-    // }
+    if (isHeartbeatOn) {
+      newState = 5; // Heartbeat starting phase
+      timeRemaining = HEARTBEAT_ON_CYCLE_DURATION;
+      basePwm = HEARTBEAT_CYCLE_PWM;
+    }
 
     setState(newState);
 
@@ -269,12 +280,12 @@ public:
   @param {bool} isHeartbeatCycle - is this Antifreeze cycle
   */
 	void runOn() {
-    if (state == 5 || state == 2) {
+    if (
+      state == 5 || 
+      state == 2
+    ) {
       setState(state - 1);
     }
-    // if (state == 2) {
-    //   setState(state - 1);
-    // }
 
 		// turn off coldFloor if floor stays warm for a bit
 		coldFloor = isFloorCold();
@@ -340,7 +351,7 @@ public:
   }
 
   /*
-  state === 1 (on/run phase)
+  state === 1 || state === 4 (on/run phase)
   While pump is continuing on (extended, no timer)
   Stop if needed, else we do the same as whilePumpOn
   */
@@ -382,9 +393,9 @@ public:
     if (_isAboveAdjustedSetPoint) {
       updateHeartbeat();
 
-      // if (isPumpOn) {
-      //   stop(); // coming from delay, in case we need to stop
-      // }
+      if (isPumpOn) {
+        stop(); // coming from delay, in case we need to stop
+      }
     
       if (isPumpOn && !isHeartBeatOn) {
         stop(); // coming from delay, in case we need to stop
@@ -422,8 +433,10 @@ public:
 
       switch(state) {
         case(0): whilePumpOff(); break;
+
         case(1): whilePumpOn(); break;
         case(4): whilePumpOn(); break;
+
         case(2): whilePumpStarting(); break;
         case(5): whilePumpStarting(); break;
       }
@@ -432,7 +445,10 @@ public:
 			// NO timer restriction, we can change if needed
       switch(state) {
         case(0): whilePumpOffExtended(); break;
+
         case(1): whilePumpOnExtended(); break;
+        case(4): whilePumpOnExtended(); break;
+
         case(3): whileEndingDelayStartTimer(); break;
       }
 		}
